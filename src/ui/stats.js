@@ -109,6 +109,10 @@ export function statsHtml(scene, compact = false) {
   const abs = byCount(st.abilities);
   if (abs.length) html += '<h3>Abilities used</h3>' + grid(abs.map(([k, n]) => gridCell('#9be7ff', ABILITIES[k] ? ABILITIES[k].name : k, n)));
 
+  const taken = byCount(st.takenBy);
+  html += '<h3>Damage to the core by ship</h3>';
+  if (!taken.length) html += '<div class="muted">Nothing has touched the core.</div>';
+  else html += grid(taken.map(([type, v]) => { const d = MOBS[type] || { name: type === 'other' ? 'Other' : type, color: 0x7d8bb0 }; return gridCell(hex(d.color), `${d.name} · ${pct(v, st.taken || 1, 0)}%`, v); }));
   const kills = byCount(st.kills);
   html += '<h3>Ships destroyed</h3>';
   if (!kills.length) html += '<div class="muted">None yet.</div>';

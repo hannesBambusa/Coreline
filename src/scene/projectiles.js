@@ -28,7 +28,7 @@ export function spawnEnemyBullet(scene, b) {
   if (Math.random() < SPAWN.droneAggro) {
     let best = null, bd = DRONE_AGGRO_RANGE;
     for (const bay of scene.tower.weapons) {
-      if (bay.type !== 'drones') continue;
+      if (!Array.isArray(bay.drones)) continue;
       for (const d of bay.drones) {
         if (!d.alive) continue;
         const dd = distXY(b.x, b.y, d.x, d.y);
@@ -128,14 +128,14 @@ function updateTowerBullets(scene, dt) {
 
 function updateEnemyBullets(scene, dt) {
   const t = scene.tower;
-  const bays = t.weapons.filter(w => w.type === 'drones');
+  const bays = t.weapons.filter(w => Array.isArray(w.drones));
   for (const b of scene.enemyBullets) {
     const k = b.chrono || 1;   // chrono field slows shots inside it
     b.x += b.vx * dt * k; b.y += b.vy * dt * k; b.age += dt;
     if (bays.length && bays.some(w => w.absorb(b))) { b.age = DEAD_AGE; continue; }
     const d = distXY(b.x, b.y, t.x, t.y);
     const hitR = t.shield > 0 ? t.shieldR : t.r + 4;
-    if (d < hitR) { t.takeDamage(b.dmg, b.x, b.y); b.age = DEAD_AGE; }
+    if (d < hitR) { t.takeDamage(b.dmg, b.x, b.y, false, b.from); b.age = DEAD_AGE; }
   }
   scene.enemyBullets = scene.enemyBullets.filter(b => b.age < b.life);
 }

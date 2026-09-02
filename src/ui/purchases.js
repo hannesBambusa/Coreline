@@ -26,7 +26,7 @@ export function purchase(scene, id) {
     if (t.slots[+idx] === null && !isMounted(t, type) && s.scrap >= cost) { spend(cost); t.installWeapon(+idx, type); }
   } else if (kind === 'dmode') {
     const [, idx, mode] = id.split(':'), w = t.slots[+idx];
-    if (w && w.type === 'drones') w.focus = mode === 'focus';
+    if (w && Array.isArray(w.drones)) w.focus = mode === 'focus';
   } else if (kind === 'doswap') {
     const [, idx, type] = id.split(':'), cost = WEAPONS[type].install, cur = t.slots[+idx];
     const ok = cur && cur.type !== type && !isMounted(t, type, +idx) && scene.swapsLeft() > 0 && s.scrap >= cost;

@@ -84,9 +84,12 @@ export class Tower {
 
   setPosition(x, y) { this.x = x; this.y = y; this.glow.setPosition(x, y); }
 
-  takeDamage(amount, hx, hy) {
+  /** `source` is the ship type that dealt it, for the damage-taken stats */
+  takeDamage(amount, hx, hy, quiet = false, source = 'other') {
     if (!Number.isFinite(amount) || amount <= 0) return;
-    if (this.scene.stats) this.scene.stats.taken += amount;
+    const st = this.scene.stats;
+    if (st) { st.taken += amount; if (!st.takenBy) st.takenBy = {}; st.takenBy[source] = (st.takenBy[source] || 0) + amount; }
+    if (this.scene.takenLog) this.scene.logTaken(amount);
     const fx = this.scene.fx;
     if (this.shield > 0) {
       this.shield -= amount;

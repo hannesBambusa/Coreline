@@ -42,7 +42,8 @@ export class GameScene extends Phaser.Scene {
     this.settings = { shake: true, sound: true, volume: 0.7, music: true, transmissions: true };
     this.stats = this.freshStats();
     this.scrapLog = [];
-    this.dmgLog = [];          // [time, amount] for recentDps
+    this.dmgLog = [];          // [second, amount] buckets for recentDps
+    this.takenLog = [];        // same, for damage the core took
     this.seen = {};                    // mob types already announced this session
 
     // entities
@@ -223,7 +224,7 @@ export class GameScene extends Phaser.Scene {
     this.tower = new Tower(this, this.scale.width / 2, this.scale.height / 2);
     this.state.scrap = this.tree.mods.startScrap; this.state.time = 0; this.state.tier = 1; this.state.kills = 0; this.state.swapsUsed = 0;
     this.showStart();
-    this.spawnTimer = 2; this.scrapLog = []; this.dmgLog = []; this.warlord = null; this.siege = null; this.siegesCleared = 0; this.surgeType = null; this.ui.removeEffect('surge');
+    this.spawnTimer = 2; this.scrapLog = []; this.dmgLog = []; this.takenLog = []; this.warlord = null; this.siege = null; this.siegesCleared = 0; this.surgeType = null; this.ui.removeEffect('surge');
     this.stats = this.freshStats();
     this.levelMods = baseLevelMods(); this.levelChoice = null; this.choice = null; this.choosing = false; this.ui.hideChoice();
     this.combos.cd = {}; this.combos.count = 0;
@@ -318,7 +319,9 @@ export class GameScene extends Phaser.Scene {
   // ---------- delegates: damage ----------
   freshStats() { return damage.freshStats(); }
   addDmg(source, amount, crit = false) { damage.addDmg(this, source, amount, crit); }
-  recentDps() { return damage.recentDps(this); }
+  recentDps(window) { return damage.recentDps(this, window); }
+  recentTaken(window) { return damage.recentTaken(this, window); }
+  logTaken(amount) { damage.logTaken(this, amount); }
   hit(m, weapon, x, y, opts = {}) { return damage.hit(this, m, weapon, x, y, opts); }
   damageRadius(x, y, r, dmg, color, weapon) { damage.damageRadius(this, x, y, r, dmg, color, weapon); }
   damageDrones(x, y, r, dmg, line = null) { damage.damageDrones(this, x, y, r, dmg, line); }

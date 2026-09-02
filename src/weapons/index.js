@@ -9,14 +9,18 @@ import { DroneBay } from './drones.js';
 import { ChronoField } from './chrono.js';
 import { ReplicatorSwarm } from './nanite.js';
 import { SingularityCore } from './singularity.js';
+import { BeamDrones } from './beamdrones.js';
+import { IonStorm } from './ionstorm.js';
+import { MissileDrones } from './missiledrones.js';
+import { KamikazeDrones } from './kamikaze.js';
 
 export { Weapon, formatStats } from './base.js';
-export { PulseCannon, Railgun, MissilePod, LaserBeam, TeslaArc, GravityWell, ShockEmitter, DroneBay, ChronoField, ReplicatorSwarm, SingularityCore };
+export { PulseCannon, Railgun, MissilePod, LaserBeam, TeslaArc, GravityWell, ShockEmitter, DroneBay, ChronoField, ReplicatorSwarm, SingularityCore, BeamDrones, IonStorm, MissileDrones, KamikazeDrones };
 
 export const CLASSES = {
   pulse: PulseCannon, shock: ShockEmitter, drones: DroneBay, railgun: Railgun,
   missile: MissilePod, laser: LaserBeam, tesla: TeslaArc, gravity: GravityWell,
-  chrono: ChronoField, nanite: ReplicatorSwarm, singularity: SingularityCore,
+  chrono: ChronoField, nanite: ReplicatorSwarm, singularity: SingularityCore, beamdrones: BeamDrones, ionstorm: IonStorm, missiledrones: MissileDrones, kamikaze: KamikazeDrones,
 };
 
 export function createWeapon(scene, tower, type, slotIndex) {

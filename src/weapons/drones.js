@@ -18,6 +18,9 @@ const TUNING = {
   respawnFlash: 0.8,
 };
 
+/** true for any weapon that fields drones (drone bay, beam drones) */
+export const isBay = (w) => !!(w && Array.isArray(w.drones));
+
 export class DroneBay extends Weapon {
   constructor(...a) {
     super(...a);
@@ -97,16 +100,21 @@ export class DroneBay extends Weapon {
       }
       if (!d.alive) claim(d.target, -1);   // lost to a ram: its target is free for the others
       if (Math.random() < dt * TUNING.trailRate) sc.fx.trailAt(d.x - d.vx * 0.03, d.y - d.vy * 0.03, this.color);
-      d.cd -= dt * rm;
-      if (d.target && d.cd <= 0 && dist(d, d.target) < this.def.fireRange) {
-        d.cd = 1 / this.rate;
-        const fa = angleTo(d, d.target);
-        sc.spawnBullet({
-          x: d.x, y: d.y, vx: Math.cos(fa) * this.def.speed, vy: Math.sin(fa) * this.def.speed,
-          dmg: this.dmg, weapon: this, color: this.color, life: TUNING.boltLife, target: d.target,
-        });
-        sc.sfx.shot('pulse', d.x);
-      }
+      this.fireFrom(d, dt, rm, mobs);
+    }
+  }
+  /** one drone's weapon for this frame: a bolt when its cooldown is up and the target is close (beam drones override) */
+  fireFrom(d, dt, rm) {
+    const sc = this.scene;
+    d.cd -= dt * rm;
+    if (d.target && d.cd <= 0 && dist(d, d.target) < this.def.fireRange) {
+      d.cd = 1 / this.rate;
+      const fa = angleTo(d, d.target);
+      sc.spawnBullet({
+        x: d.x, y: d.y, vx: Math.cos(fa) * this.def.speed, vy: Math.sin(fa) * this.def.speed,
+        dmg: this.dmg, weapon: this, color: this.color, life: TUNING.boltLife, target: d.target,
+      });
+      sc.sfx.shot('pulse', d.x);
     }
   }
   /**

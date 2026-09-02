@@ -47,7 +47,7 @@ function swapStrip(scene, w, slot) {
 }
 
 function droneModeRow(w, slot) {
-  if (w.type !== 'drones') return '';
+  if (!Array.isArray(w.drones)) return '';
   return `<div class="mode-row"><span class="swap-lbl">drones</span>` +
     `<button class="mode ${w.focus ? '' : 'on'}" data-buy="dmode:${slot}:spread">Spread</button>` +
     `<button class="mode ${w.focus ? 'on' : ''}" data-buy="dmode:${slot}:focus">Focus fire</button>` +

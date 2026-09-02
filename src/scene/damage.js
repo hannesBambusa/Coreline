@@ -9,17 +9,25 @@ const SUPER_SIZE = 34;
 const CRIT_MIN_SIZE = 18;
 
 export function freshStats() {
-  return { dmg: {}, crits: {}, killsBy: {}, kills: {}, procs: {}, abilities: {}, hits: {}, critExtra: {}, supers: {}, superExtra: {}, taken: 0, total: 0 };
+  return { dmg: {}, crits: {}, killsBy: {}, kills: {}, procs: {}, abilities: {}, hits: {}, critExtra: {}, supers: {}, superExtra: {}, taken: 0, takenBy: {}, total: 0 };
 }
 
 const DPS_WINDOW = 20;   // seconds of damage history kept for recentDps
 
-/** Sustained damage per second over the last DPS_WINDOW seconds of run time. Bosses scale their hp from it. */
-export function recentDps(scene) {
-  const now = scene.state.time;
-  const span = Math.min(DPS_WINDOW, Math.max(1, now));
-  return sumWindow(scene.dmgLog, now, DPS_WINDOW) / span;
+/** Average per second over the last `window` seconds of a per-second bucket log; the log itself keeps DPS_WINDOW. */
+function rate(log, now, window) {
+  sumWindow(log, now, DPS_WINDOW);   // trims old buckets
+  const from = Math.floor(now) - window, span = Math.min(window, Math.max(1, now));
+  let sum = 0; for (const e of log) if (e[0] > from) sum += e[1];
+  return sum / span;
 }
+
+/** Damage dealt per second. Default window is the sustained 20 s figure bosses scale from; the HUD asks for 2 s. */
+export function recentDps(scene, window = DPS_WINDOW) { return rate(scene.dmgLog, scene.state.time, window); }
+
+/** Damage the core took per second, same windows. */
+export function recentTaken(scene, window = DPS_WINDOW) { return rate(scene.takenLog, scene.state.time, window); }
+export function logTaken(scene, amount) { pushBucket(scene.takenLog, Math.floor(scene.state.time), amount); }
 
 export function addDmg(scene, source, amount, crit = false) {
   const st = scene.stats;
@@ -118,7 +126,7 @@ export function damageRadius(scene, x, y, r, dmg, color, weapon) {
 /** Hurt friendly drones in an area (bomber blasts, mines) or along a line (siege beam). */
 export function damageDrones(scene, x, y, r, dmg, line = null) {
   for (const bay of scene.tower.weapons) {
-    if (bay.type !== 'drones') continue;
+    if (!Array.isArray(bay.drones)) continue;
     for (const d of bay.drones) {
       if (!d.alive) continue;
       let inRange;

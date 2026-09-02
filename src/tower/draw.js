@@ -274,6 +274,30 @@ function drawTurret(g, w, mx, my, a, c, recoil) {
       g.lineStyle(1, c, 0.7); line(g, mx, my, a, 2, -4, 8, -4); line(g, mx, my, a, 2, 4, 8, 4);
       break;
     }
+    case 'beamdrones': {   // hangar pad with a lens on the door
+      g.lineStyle(1.5, c, 0.9); g.fillStyle(BODY, 1);
+      poly(g, [P(mx, my, a, -1, -7), P(mx, my, a, 10, -5), P(mx, my, a, 10, 5), P(mx, my, a, -1, 7)]); g.fillPath(); g.strokePath();
+      const [lx, ly] = P(mx, my, a, 6, 0); g.lineStyle(1.5, c, 1); g.strokeCircle(lx, ly, 3);
+      break;
+    }
+    case 'missiledrones': {   // hangar pad with two tubes on the door
+      g.lineStyle(1.5, c, 0.9); g.fillStyle(BODY, 1);
+      poly(g, [P(mx, my, a, -1, -7), P(mx, my, a, 10, -5), P(mx, my, a, 10, 5), P(mx, my, a, -1, 7)]); g.fillPath(); g.strokePath();
+      for (const s of [-3, 3]) { const [px, py] = P(mx, my, a, 7, s); g.fillStyle(c, 0.9); g.fillCircle(px, py, 1.6); }
+      break;
+    }
+    case 'kamikaze': {     // hangar pad with a warning chevron
+      g.lineStyle(1.5, c, 0.9); g.fillStyle(BODY, 1);
+      poly(g, [P(mx, my, a, -1, -7), P(mx, my, a, 10, -5), P(mx, my, a, 10, 5), P(mx, my, a, -1, 7)]); g.fillPath(); g.strokePath();
+      g.lineStyle(1.5, c, 1); line(g, mx, my, a, 3, -4, 8, 0); line(g, mx, my, a, 3, 4, 8, 0);
+      break;
+    }
+    case 'ionstorm': {     // antenna mast with a dish
+      g.lineStyle(2, c, 0.9); line(g, mx, my, a, 0, 0, 12, 0);
+      const [dx, dy] = P(mx, my, a, 12, 0); g.lineStyle(1.5, c, 1); g.beginPath(); g.arc(dx, dy, 5, a - 1.3, a + 1.3, false); g.strokePath();
+      g.lineStyle(1, c, 0.6); line(g, mx, my, a, 6, -4, 6, 4);
+      break;
+    }
     case 'chrono': {   // clock disc with a hand
       const [px, py] = P(mx, my, a, 8, 0);
       g.lineStyle(2, c, 1); g.strokeCircle(px, py, 6);

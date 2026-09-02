@@ -133,6 +133,13 @@ export function makeTextures(scene) {
     g.lineStyle(2, WHITE, 1); g.beginPath(); g.arc(c, c, 9, 0.6, 5.7, false); g.strokePath();
     g.fillStyle(WHITE, 0.8); g.fillCircle(c + 6, c - 6, 2); g.fillCircle(c + 6, c + 6, 2);
   });
+  // blinker: split chevron, two halves with a gap
+  shape('ship_blinker', 26, (c) => {
+    g.lineStyle(1.5, WHITE, 1); g.fillStyle(WHITE, 0.2);
+    poly(g, [[c + 11, c - 1], [c - 3, c - 9], [c - 9, c - 5], [c + 1, c - 1]]);
+    poly(g, [[c + 11, c + 1], [c - 3, c + 9], [c - 9, c + 5], [c + 1, c + 1]]);
+    g.fillStyle(WHITE, 1); g.fillCircle(c - 5, c, 2);
+  });
   // phantom: thin diamond
   shape('ship_phantom', 30, (c) => {
     g.lineStyle(1.5, WHITE, 1); g.fillStyle(WHITE, 0.15);

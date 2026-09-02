@@ -58,7 +58,7 @@ export class Weapon {
   get dmg() {
     const lm = this.lm;
     return this.def.dmg * this.dmgGrowth(this.level) * this.mods.dmg * this.wm.dmg * lm.dmg * this.lw.dmg
-      * (this.type === 'drones' ? lm.droneDmg : lm.otherDmg);
+      * (Array.isArray(this.drones) ? lm.droneDmg : lm.otherDmg);
   }
   get rate() { return this.def.rate * this.rateGrowth(this.level) * this.mods.rate * this.wm.rate * this.lm.rate * this.lw.rate; }
   /** this level's choice-card mods for this weapon type (old saves may lack the map) */

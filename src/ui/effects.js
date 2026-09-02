@@ -14,7 +14,8 @@ const CHOICE_AUTO_MS = 4500;   // auto-assigned card stays this long
 const ENDING_S = 1;                   // blink when less than this is left
 const WHOLE_SECONDS_FROM_S = 10;      // above this show whole seconds, below one decimal
 const TIP_GAP = 12, TIP_MARGIN = 8, TIP_DEFAULT_W = 260, TIP_DEFAULT_H = 80;
-const COOLDOWN_TYPES = ['drones', 'railgun', 'shock', 'singularity', 'chrono'];   // weapons that get a cooldown card
+const DRONE_CARD_NAME = { drones: 'Drones', beamdrones: 'Beam drones', missiledrones: 'Missile drones', kamikaze: 'Kamikaze' };
+const COOLDOWN_TYPES = ['drones', 'beamdrones', 'missiledrones', 'kamikaze', 'railgun', 'shock', 'singularity', 'chrono', 'ionstorm'];   // weapons that get a cooldown card
 
 // ---- Card markup shared by effects and cooldowns -------------------------
 
@@ -84,6 +85,16 @@ export function updateEffects(ui, dt) {
 const cooldownCard = (w) =>
   `<div class="fx-item cd show" data-slot="${w.slot}" style="--fx:${hex(w.color)}">${fxCard(ICONS[w.type], w.def.name, 'cooldown')}</div>`;
 
+function updateStormCard(card, w) {
+  const hunting = w.clouds.filter(c => c.vx * c.vx + c.vy * c.vy > 100).length;
+  setRing(card, 1);
+  card.nameEl.textContent = `Ion storm ×${w.clouds.length}`;
+  card.subEl.textContent = w.jammed > 0 ? 'jammed' : hunting ? 'hunting a pack' : 'drifting';
+  card.timeEl.textContent = '';
+  card.el.classList.toggle('ready', true);
+  card.el.classList.toggle('jammed', w.jammed > 0);
+}
+
 function updateChargeCard(card, w) {
   const c = w.charge, full = c >= 1;
   setRing(card, c);
@@ -108,8 +119,8 @@ function updateDroneCard(card, w) {
   const alive = w.drones.filter(d => d.alive).length;
   const building = w.drones.filter(d => !d.alive).sort((a, b) => a.respawnT - b.respawnT)[0];
   setRing(card, Math.min(1, building ? 1 - building.respawnT / w.respawn : 1));
-  card.nameEl.textContent = `Drones ${alive} / ${w.droneCount}`;
-  card.subEl.textContent = w.jammed > 0 ? 'jammed' : building ? 'building' : 'all deployed';
+  card.nameEl.textContent = DRONE_CARD_NAME[w.type] || 'Drones';
+  card.subEl.textContent = `${alive} / ${w.droneCount} · ` + (w.jammed > 0 ? 'jammed' : building ? 'building' : 'deployed');
   card.timeEl.textContent = building ? building.respawnT.toFixed(1) + 's' : '';
   card.el.classList.toggle('ready', !building);
   card.el.classList.toggle('jammed', w.jammed > 0);
@@ -137,7 +148,7 @@ export function updateCooldowns(ui) {
   for (const w of ws) {
     const card = ui.cooldownRows[w.slot];
     if (!card) continue;
-    if (w.type === 'drones') updateDroneCard(card, w); else if (w.type === 'singularity') updateChargeCard(card, w); else if (w.type === 'chrono') updateChronoCard(card, w); else updateWeaponCard(card, w);
+    if (Array.isArray(w.drones)) updateDroneCard(card, w); else if (w.type === 'ionstorm') updateStormCard(card, w); else if (w.type === 'singularity') updateChargeCard(card, w); else if (w.type === 'chrono') updateChronoCard(card, w); else updateWeaponCard(card, w);
   }
 }
 

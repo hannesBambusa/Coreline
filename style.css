@@ -39,7 +39,9 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 .stat.violet span:last-child { color: var(--violet); text-shadow: 0 0 10px rgba(192,132,252,0.6); }
 .stat.red span:last-child { color: var(--red); text-shadow: 0 0 10px rgba(255,77,109,0.6); }
 .stat.cyan span:last-child { color: var(--cyan); text-shadow: 0 0 10px rgba(79,242,255,0.6); }
-#vol { margin-left: auto; pointer-events: auto; display: flex; align-items: center; gap: 6px; }
+#dps-hud { margin-left: auto; display: flex; gap: 14px; }
+#dps-hud .stat span:last-child { font-size: 15px; }
+#vol { margin-left: 14px; pointer-events: auto; display: flex; align-items: center; gap: 6px; }
 #btn-mute { background: none; border: 1px solid var(--line); color: var(--cyan); border-radius: 6px; width: 34px; height: 30px; cursor: pointer; font-size: 14px; }
 #vol.muted #btn-mute { color: var(--muted); }
 #vol-slider { width: 90px; accent-color: var(--cyan); }

@@ -143,7 +143,7 @@ export class Mine extends Mob {
   }
   detonate() {
     if (this.dead) return;
-    if (this.distToTower() < this.tower.shieldR + MINE_TRIGGER_MARGIN) this.tower.takeDamage(this.dmg, this.x, this.y);
+    if (this.distToTower() < this.tower.shieldR + MINE_TRIGGER_MARGIN) this.tower.takeDamage(this.dmg, this.x, this.y, false, 'mine');
     this.scene.damageDrones(this.x, this.y, MINE_BLAST_R, this.dmg);
     this.scene.fx.explode(this.x, this.y, this.def.color, 30);
     this.scene.fx.ripple(this.x, this.y, this.def.color, 8, MINE_BLAST_R);

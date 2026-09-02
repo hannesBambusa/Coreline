@@ -183,7 +183,7 @@ export class Titan extends Mob {
       const beamDmg = this.tierDrain(this.def.beamDps, dt) * (1 + BEAM_DMG_PER_LEVEL * (this.level - 1));
       // the beam lands on the near side of the shield
       const hx = this.tower.x + Math.cos(a + Math.PI) * this.tower.shieldR, hy = this.tower.y + Math.sin(a + Math.PI) * this.tower.shieldR;
-      this.tower.takeDamage(beamDmg, hx, hy, true);
+      this.tower.takeDamage(beamDmg, hx, hy, true, 'titan');
       this.scene.damageDrones(0, 0, 22, beamDmg * 2, new Phaser.Geom.Line(this.x, this.y, this.tower.x, this.tower.y));
       if (Math.random() < dt * 30) this.scene.fx.spark(hx, hy, BEAM_COLOR, 2);
       if (this.beamT <= 0) { this.beamState = 'idle'; this.beamCd = this.def.beamEvery; }

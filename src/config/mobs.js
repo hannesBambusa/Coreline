@@ -49,6 +49,12 @@ export const MOBS = {
     color: COLORS.violet, fromWave: 7, chance: 0.05,
     desc: 'Phases out of reality every few seconds. Only solid ships can be hit.',
   },
+  blinker: {
+    name: 'Blinker', hp: 20, speed: 30, dmg: 5, scrap: 11, r: 10,
+    blinkEvery: 1, blinkCharge: 0.25, ringMin: 200, ringMax: 320, burst: 2, burstSpread: 0.12, bulletSpeed: 320,
+    color: COLORS.ice, fromWave: 6, chance: 0.05,
+    desc: 'Teleports every second and fires a burst at the core from each new spot. Guns lose their lock when it jumps.',
+  },
   hydra: {
     name: 'Hydra', hp: 70, speed: 60, dmg: 8, scrap: 14, r: 14,
     splits: 2, gens: 2, color: COLORS.magenta, fromWave: 9, chance: 0.05,

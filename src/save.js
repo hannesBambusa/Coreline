@@ -33,7 +33,7 @@ export class SaveSystem {
           t: m.type, x: Math.round(m.x - t.x), y: Math.round(m.y - t.y), hp: Math.round(m.hp), sh: m.shield ? Math.round(m.shield) : undefined,
           e: m.elite || undefined, g: m.gen || undefined, tier: m.tierAtSpawn,
         })),
-        drones: t.weapons.filter(w => w.type === 'drones').map(w => ({ slot: w.slot, d: w.drones.map(d => ({ alive: d.alive, hp: Math.round(d.hp), r: +d.respawnT.toFixed(1) })) })),
+        drones: t.weapons.filter(w => Array.isArray(w.drones)).map(w => ({ slot: w.slot, d: w.drones.map(d => ({ alive: d.alive, hp: Math.round(d.hp), r: +d.respawnT.toFixed(1) })) })),
         scrapRate: this.scrapRate(),
         gameOver: s.gameOver,
       },
@@ -113,7 +113,7 @@ export class SaveSystem {
       }
     }
     if (Array.isArray(r.drones)) for (const b of r.drones) {
-      const w = t.slots[b.slot]; if (!w || w.type !== 'drones') continue;
+      const w = t.slots[b.slot]; if (!w || !Array.isArray(w.drones)) continue;
       w.sync();
       b.d.forEach((d, i) => { if (!w.drones[i]) return; w.drones[i].alive = d.alive; w.drones[i].hp = d.hp; w.drones[i].respawnT = d.r || 0; });
     }

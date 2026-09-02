@@ -1,6 +1,6 @@
 // Mobs that keep their distance and shoot at the core.
 import { MOBS } from '../config.js';
-import { pick } from '../utils.js';
+import { TAU, pick } from '../utils.js';
 import { Mob, orbitOpts } from './base.js';
 
 /** raider bullets leave with up to this much angular spread */
@@ -80,6 +80,47 @@ export class Shielder extends Mob {
     const f = this.shield / this.shieldMax;
     g.lineStyle(1 + 3 * f, this.def.color, this.shieldHit > 0 ? 0.9 : 0.25 + f * 0.3);
     g.strokeCircle(this.x, this.y, this.r + 9);
+  }
+}
+
+/** Blinker: charges for a moment, vanishes, reappears somewhere else on its ring and fires a burst at the core. */
+export class Blinker extends Mob {
+  constructor(scene, tier, x, y) {
+    super(scene, 'blinker', tier, x, y);
+    this.blinkT = this.def.blinkEvery * (0.5 + Math.random() * 0.5);   // first jump comes early
+    this.charging = 0;
+  }
+  update(dt) {
+    const a = this.angleToTower();
+    if (this.charging > 0) {
+      this.charging -= dt;
+      this.sprite.setAlpha(0.3 + 0.7 * Math.abs(Math.sin(this.charging * 30)));
+      if (Math.random() < dt * 30) { const aa = Math.random() * TAU; this.scene.fx.trailAt(this.x + Math.cos(aa) * this.r, this.y + Math.sin(aa) * this.r, this.def.color); }
+      if (this.charging <= 0) this.blink();
+    } else {
+      this.blinkT -= dt;
+      this.sprite.setAlpha(this.baseAlpha);
+      this.move(dt, Math.cos(a) * this.def.speed, Math.sin(a) * this.def.speed);   // slow drift inward between jumps
+      if (this.blinkT <= 0) { this.charging = this.def.blinkCharge; this.blinkT = this.def.blinkEvery; }
+    }
+    this.sprite.setRotation(a);
+    super.update(dt);
+  }
+  /** jump to a random point on the ring around the core, drop every gun's lock, fire a burst */
+  blink() {
+    const sc = this.scene, t = this.tower, d = this.def;
+    sc.fx.ripple(this.x, this.y, d.color, this.r + 6, 2);
+    const na = Math.random() * TAU, nd = d.ringMin + Math.random() * (d.ringMax - d.ringMin);
+    this.x = t.x + Math.cos(na) * nd; this.y = t.y + Math.sin(na) * nd;
+    this.dodgeVx = 0; this.dodgeVy = 0;
+    sc.fx.ripple(this.x, this.y, d.color, 2, this.r + 14);
+    sc.fx.spark(this.x, this.y, d.color, 4);
+    for (const w of t.weapons) if (w.target === this) w.target = null;
+    const a = this.angleToTower();
+    for (let i = 0; i < d.burst; i++) this.fireAt(a + (i - (d.burst - 1) / 2) * d.burstSpread);
+  }
+  drawExtra(g) {
+    if (this.charging > 0) { const k = 1 - this.charging / this.def.blinkCharge; g.lineStyle(1.5, this.def.color, 0.4 + 0.5 * k); g.strokeCircle(this.x, this.y, this.r + 10 - k * 8); }
   }
 }
 

@@ -196,7 +196,7 @@ export class Warlord extends Mob {
     if (this.phaseIdx < ph.length && this.hp < this.hpMax * ph[this.phaseIdx]) { this.phaseIdx++; this.raisePylons(); }
     if (d <= this.def.range + 30 && this.tickCooldown(dt, this.def.fireRate)) this.fireBurst(a, this.def.burst, 0.14);
     // flak against player drones
-    if (this.tickTimer('flakCd', dt, this.def.flakEvery) && this.tower.weapons.some(w => w.type === 'drones')) {
+    if (this.tickTimer('flakCd', dt, this.def.flakEvery) && this.tower.weapons.some(w => Array.isArray(w.drones))) {
       this.scene.damageDrones(this.x, this.y, this.def.flakRadius, this.dmg * this.def.flakMul);
       this.scene.fx.ripple(this.x, this.y, this.def.color, this.r, this.def.flakRadius);
       this.scene.fx.shake(0.005, 150);

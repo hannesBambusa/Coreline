@@ -66,7 +66,7 @@ export class Mob {
 
   /** crash into the core: deal contact damage, run any impact fx, then remove self (not a kill) */
   ramCore(onImpact) {
-    this.tower.takeDamage(this.dmg, this.x, this.y);
+    this.tower.takeDamage(this.dmg, this.x, this.y, false, this.type);
     if (onImpact) onImpact();
     this.die(false);
   }
@@ -120,7 +120,7 @@ export class Mob {
     this.scene.spawnEnemyBullet({
       x, y,
       vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-      dmg, color,
+      dmg, color, from: this.type,
     });
   }
 

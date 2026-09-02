@@ -354,3 +354,16 @@ The idle ambient drone (55 Hz sawtooth pad plus wind noise, started on first int
 Twenty more pair combos so every pair of the original eight weapons has one, plus six for the new three. Weapons call a hook on their event (`onPulseShot`, `onRailShot`, `onMissileLaunch`, `onMissileImpact`, `onTeslaShot`/`onTeslaChain`, `onShockPulse`, `onLaserTick`, `onWellLand`, `onChronoTick`, `onNaniteShot`, `onSingularityBlast`); the hook rolls the combos for whatever else is mounted. Sabot volley, Orbital rounds, Flak burst, Gun run, Slingshot, Spotter, Ion warheads, Guided burn, Concussion, Conductor, Lensing, Flashpoint, Relay net, Orbit strike, Time dilation, Static field, Carrier strain, Spore warheads, Accretion, Collapsar rounds. Total 39 pair combos. Descriptions in `COMBOS`.
 
 Combo procs no longer draw the expanding ring, screen tint, shake or slow-mo (it read as a second shockwave next to the Shock emitter). A proc now shows as the tray card on the left plus a small flash on the two hardpoints involved.
+
+**Blinker** (`MOBS.blinker`, threat 6+): 20 hp, drifts slowly, every 1 s it charges for 0.25 s (flicker, shrinking ring), teleports to a random point 200–320 px from the core, drops every weapon's lock on it and fires a two-shot burst at the core. Counters: area damage, drones, chrono (slows its drift but not the jump), anything that retargets fast.
+
+Top bar: "DPS out" and "DPS in" next to the volume control, both 2 s rolling averages (the Stats tab and boss scaling use 20 s) (`scene.recentDps()`, `scene.recentTaken()`, per-second buckets). The Stats tab also lists damage to the core by ship type (`stats.takenBy`, every hit on the core carries its source ship type).
+
+## Beam drones, Missile drones, Ion storm
+
+- **Beam drones** (`beamdrones`): the drone bay with continuous short lasers (`fireFrom` override). The beam forks to nearby ships at Lv 6 / 10 / 14 / 18 (five targets), forks at 60 %. Combos: **Prism** (+laser), **Arc lattice** (+tesla), **Painted targets** (+drone bay), **Laser guided** (+missile drones).
+- **Missile drones** (`missiledrones`): the drone bay with homing mini-missiles with splash; salvo of 2 at Lv 8, 3 at Lv 16. Combos: **Cluster drop** (+shock), **Well seekers** (+gravity), **Escort volley** (+drone bay), **Laser guided** (+beam drones).
+- **Ion storm** (`ionstorm`): one cloud (two from Lv 12) drifting after the densest pack inside range, never closer than 180 px to the core. Each tick arcs into up to 4 ships inside; enemy shots inside are eaten. Combos: **Thunderhead** (+tesla), **Downburst** (+gravity).
+- Any weapon with a `drones` array counts as a bay for saves, drone aggro, flak, absorb, the tray card and the focus toggle (`isBay`). `DroneBay.fireFrom(d, dt, rm, mobs)` is the per-drone weapon hook the two variants override.
+
+**Kamikaze drones** (`kamikaze`, unlock 3, install 700): bigger (r 11), slower (170 px/s) drones with no gun. They fly straight into their target and detonate (90 px blast, +3 per level, 60 damage ×1.15 per level), then the bay rebuilds them in 5 s. Every blast counts as a proc (tray card + intrinsic combo entry). Combos: **Wingmen** (+drone bay), **Target lock** (+beam drones), **Chain detonation** (+missile drones), **Spore bomb** (+nanite).

@@ -10,6 +10,7 @@ import { QUEUE_LEN } from './panel.js';
 const BANNER_MS = 1800;
 const COMBO_BANNER_MS = 1600;
 const COMBO_BANNER_FADE_MS = 300;
+const HUD_DPS_WINDOW = 2;          // seconds: the top-bar dps readouts follow the fight; Stats and boss scaling use 20 s
 const THREAT_SOON_S = 5;           // timer blinks red below this
 const CORE_COLOR = 0x4ff2ff;       // quick-buy colour for tower upgrades and slots
 const ABILITY_COLOR = 0x9be7ff;
@@ -18,7 +19,7 @@ const QUICK_BUY_TOWER_KEYS = ['shieldRegen', 'shieldMax', 'hull'];
 // Elements read every frame, looked up once.
 let els = null;
 const topEls = () => els || (els = {
-  scrap: $('#scrap'), fragments: $('#fragments'), time: $('#time'), tier: $('#tier'), kills: $('#kills'), diff: $('#hud-diff'),
+  scrap: $('#scrap'), fragments: $('#fragments'), time: $('#time'), tier: $('#tier'), kills: $('#kills'), diff: $('#hud-diff'), dps: $('#hud-dps'), dtaken: $('#hud-dtaken'),
   threat: $('#threat-timer'), threatFill: $('#threat-timer .tt-fill'), threatNum: $('#threat-timer .tt-num'),
   boss: $('#boss-bar'), bossFill: $('#boss-fill'), bossName: $('#boss-name'), bossSub: $('#boss-sub'),
 });
@@ -32,6 +33,7 @@ export function renderTopBar(scene) {
   e.time.textContent = fmtTime(s.time);
   e.tier.textContent = s.tier;
   e.kills.textContent = fmt(s.kills);
+  e.dps.textContent = fmt(scene.recentDps(HUD_DPS_WINDOW)); e.dtaken.textContent = fmt(scene.recentTaken(HUD_DPS_WINDOW));
   const d = scene.diff; if (e.diff.textContent !== d.name) { e.diff.textContent = d.name; e.diff.style.color = d.color; }
 }
 

@@ -33,7 +33,7 @@ export class Leech extends Mob {
       this.sprite.setRotation(this.ang + Math.PI);
       this.pulse += dt;
       const drain = this.tierDrain(this.def.drain, dt);
-      if (t.shield > 0) t.shield = Math.max(0, t.shield - drain); else t.takeDamage(drain, this.x, this.y);
+      if (t.shield > 0) t.shield = Math.max(0, t.shield - drain); else t.takeDamage(drain, this.x, this.y, false, this.type);
       if (Math.random() < dt * 8) this.scene.fx.trailAt(this.x, this.y, this.def.color);
     }
     super.update(dt);

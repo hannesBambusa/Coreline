@@ -82,6 +82,32 @@ export const COMBOS = {
                  desc: 'A missile impact infects every ship in its splash.' },
   accretion:   { name: 'Accretion',        pair: ['singularity', 'drones'], chance: 0.30, cd: 12, color: 0x60a5fa,
                  desc: 'The blast rebuilds every lost drone at once and boosts them 4 s.' },
+  prism:       { name: 'Prism',            pair: ['beamdrones', 'laser'], chance: 0.20, cd: 9,  color: 0xff3df2, effectDur: 4,
+                 desc: 'While the laser is at full ramp, drone beams run at +50 % damage and split to one more ship for 4 s.' },
+  lattice:     { name: 'Arc lattice',      pair: ['beamdrones', 'tesla'], chance: 0.20, cd: 8,  color: 0x9be7ff,
+                 desc: 'A tesla arc that hits a drone\'s target jumps to every ship the drones are beaming.' },
+  thunderhead: { name: 'Thunderhead',      pair: ['ionstorm', 'tesla'],   chance: 0.20, cd: 8,  color: 0x9be7ff,
+                 desc: 'A tesla arc that reaches a ship inside the storm jumps to every ship in the cloud.' },
+  downburst:   { name: 'Downburst',        pair: ['ionstorm', 'gravity'], chance: 0.25, cd: 10, color: 0xc084fc,
+                 desc: 'A well landing inside the storm collapses it into one 4× bolt on every ship in the cloud.' },
+  cluster:     { name: 'Cluster drop',     pair: ['missiledrones', 'shock'], chance: 0.20, cd: 9, color: 0xff9f43,
+                 desc: 'The shock pulse makes every missile drone dump a full salvo at once.' },
+  seekers:     { name: 'Well seekers',     pair: ['missiledrones', 'gravity'], chance: 0.25, cd: 9, color: 0xc084fc,
+                 desc: 'A drone missile fired at a ship in a well hits for double.' },
+  painted:     { name: 'Painted targets',  pair: ['drones', 'beamdrones'],   chance: 0.20, cd: 8, color: 0x60a5fa, effectDur: 3,
+                 desc: 'Ships held in a drone beam are marked (+50 % damage taken) for 3 s, and the interceptors dive on them.' },
+  escortvolley:{ name: 'Escort volley',    pair: ['drones', 'missiledrones'], chance: 0.20, cd: 8, color: 0x60a5fa,
+                 desc: 'When a missile drone fires, every interceptor drone puts a burst into the same ship.' },
+  laserguided: { name: 'Laser guided',     pair: ['beamdrones', 'missiledrones'], chance: 0.25, cd: 8, color: 0xff3df2,
+                 desc: 'A drone missile fired at a ship under a drone beam hits for double and cannot miss.' },
+  wingmen:     { name: 'Wingmen',          pair: ['kamikaze', 'drones'],     chance: 0.25, cd: 8, color: 0x60a5fa,
+                 desc: 'A kamikaze blast sends every interceptor into a 3 s boost with a burst at the nearest survivor.' },
+  targetlock:  { name: 'Target lock',      pair: ['kamikaze', 'beamdrones'], chance: 0.25, cd: 8, color: 0xff3df2,
+                 desc: 'A kamikaze that dives into a beamed ship blasts for double.' },
+  chainblast:  { name: 'Chain detonation', pair: ['kamikaze', 'missiledrones'], chance: 0.25, cd: 9, color: 0xff9f43,
+                 desc: 'A kamikaze blast makes every missile drone salvo the ships caught in it.' },
+  sporebomb:   { name: 'Spore bomb',       pair: ['kamikaze', 'nanite'],     chance: 0.25, cd: 9, color: 0x5eead4,
+                 desc: 'Every ship caught in a kamikaze blast is infected.' },
   collapsar:   { name: 'Collapsar rounds', pair: ['singularity', 'railgun'], chance: 0.25, cd: 12, color: 0xffffff,
                  desc: 'The blast lands a triple railgun hit on the three biggest ships in range.' },
 };
@@ -89,6 +115,7 @@ export const COMBOS = {
 // intrinsic procs that show up in stats alongside combos
 COMBOS.rewind = { name: 'Rewind', pair: ['chrono', 'chrono'], chance: 0, cd: 0, color: 0x9be7ff, intrinsic: true, desc: 'Chrono field Lv 10+: every ship inside jumps back 3 s every 20 s.' };
 COMBOS.replicate = { name: 'Replicate', pair: ['nanite', 'nanite'], chance: 0, cd: 0, color: 0x5eead4, intrinsic: true, desc: 'Nanites jump to nearby ships when a host dies.' };
+COMBOS.kamikaze = { name: 'Kamikaze', pair: ['kamikaze', 'kamikaze'], chance: 0, cd: 0, color: 0xff4d6d, intrinsic: true, desc: 'A kamikaze drone detonated on its target.' };
 COMBOS.sweep = { name: 'Ring sweep', pair: ['laser', 'laser'], chance: 0, cd: 0, color: 0xff3df2, intrinsic: true, desc: 'Laser at full ramp sweeps the whole ring every 6 s. From half ramp it forks to nearby ships.' };
 
 export class Combos {

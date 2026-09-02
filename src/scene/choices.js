@@ -1,8 +1,8 @@
 // Scene-side glue for the threat-level choice cards. The card data and the mod maths live in ../choices.js.
 import { SPAWN } from '../config.js';
 import { CHOICES, applyChoice, baseLevelMods, rollChoices } from '../choices.js';
+import { ICONS_CHOICE } from './icons.js';
 
-const ICONS_CHOICE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5"/></svg>`;
 const CHOICE_COLOR = 0xffd166;
 
 /** Seconds of game time until the next choice tier, from the current run time. */

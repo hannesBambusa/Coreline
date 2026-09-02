@@ -251,3 +251,11 @@ Spawn table is generic: every `MOBS` entry with `chance` and `fromWave` joins th
 
 Plus Escort strike (Missile + Drones) and the laser's intrinsic Ring sweep. Total: 13 pair combos.
 - **Pulse cannon late-game** (2026-09-02): extra barrels at Lv 10/20/30 (2/3/4 bolts in a fan), bolts pierce one extra ship from Lv 15 and two from Lv 30, and a bolt that kills its target ricochets to the nearest ship within 220 px for 70 %. Panel shows barrels, pierce and the next milestone. Also fixed a bug where uncharged weapon bolts applied damage twice (introduced with Charged rounds).
+
+## QA pass (2026-09-02)
+
+Full review and refactor. Bugs fixed: Dreadnought shield sector now checks the attacker's direction (all damage sources), derived missiles (Barrage, Escort, Buster, Singularity) keep their intended multipliers on preferred targets, Jammer locks clear when out of range or the weapon is swapped and the laser honours the slow, level choices and modifiers are saved (an open choice reappears on reload), prestige from the death screen no longer saves `gameOver`, resetRun clears combo cooldowns / tray cards / slow-mo, restored hydras keep their generation, stats count only damage that landed (armour, phase and blocked hits excluded), leech eases instead of snapping when the shield breaks, overload survives a target change, tooltips hide when their element is replaced, pierce off-by-one, cloaked elites of alpha-animating ships, music pause state, background ticker double-step, duplicated HTML ids, missing `--green` CSS var, gravity well cluster targeting (was reading a missing field and always picking the first ship).
+
+Structure: `src/utils.js` helpers; `scene.js` 772 → 309 lines with `src/scene/*`; `mobs.js` 850 → 9-line shim with `src/mobs/*` and shared `approachAndOrbit` / `fireAt` / `fireBurst` / `tickCooldown` / `spawnChild` / `tierDrain` helpers; `ui.js` 628 → 165 with `src/ui/*`, tab HTML built only for the active tab and skipped when the panel is hidden, per-frame DOM queries cached; `weapons.js` split per weapon with `TUNING` blocks; `config.js` split by domain; `sfx.js` split into engine and a recipe table; CSS sectioned with keyframes at the end.
+
+Also: tesla range 240 → 420 and chain range 140 → 180; start screen lets the player pick the slot-1 weapon from unlocked types.

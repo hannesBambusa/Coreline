@@ -1,0 +1,116 @@
+import { WEAPONS, COLORS } from '../config.js';
+import { dist, angleTo, minBy } from '../utils.js';
+
+const TUNING = {
+  turnSpeed: 12,        // turret tracking, rad/s
+  jamSparkRate: 10,     // sparks per second while a Dreadnought jam holds the hardpoint
+  jamSparkCount: 2,
+  muzzleLen: 16,        // default barrel length from the mount point
+};
+
+/**
+ * One stat line for the upgrade panel. Parts are joined with ' · ' in this order:
+ * prefix, dmg, rate, extra..., dps, then suffix appended verbatim.
+ * Every field is optional so each weapon can pick the columns it has.
+ */
+export function formatStats({ prefix, dmg, dmgUnit = 'dmg', rate, rateUnit = '/s', extra, dps, suffix }) {
+  const parts = [];
+  if (prefix) parts.push(prefix);
+  if (dmg !== undefined) parts.push(`<b>${dmg.toFixed(1)}</b> ${dmgUnit}`);
+  if (rate !== undefined) parts.push(`<b>${rate.toFixed(2)}</b>${rateUnit}`);
+  if (extra) parts.push(...(Array.isArray(extra) ? extra : [extra]).filter(Boolean));
+  if (dps !== undefined) parts.push(`<b>${dps.toFixed(1)}</b> dps`);
+  const line = parts.join(' · ');
+  return suffix ? line + suffix : line;
+}
+
+export class Weapon {
+  constructor(scene, tower, type, slotIndex) {
+    this.scene = scene;
+    this.tower = tower;
+    this.type = type;
+    this.def = WEAPONS[type];
+    this.slot = slotIndex;
+    this.level = 1;
+    this.cd = 0;
+    this.angle = 0;
+    this.target = null;
+    this.jammed = 0;      // seconds left of a Dreadnought jam (weapon fully disabled)
+    this.jamSlow = 0;     // fire-rate multiplier while a Jammer holds a lock (0 = none)
+  }
+  /** overcharge and jammer effects on fire rate */
+  get effectiveRateMul() { return this.scene.abilities.rateMul * (this.jamSlow ? this.jamSlow : 1); }
+  get mods() { return this.scene.tree.mods; }
+  get wm() { return this.mods.w[this.type]; }
+  get lm() { return this.scene.levelMods; }
+  get dmg() {
+    const lm = this.lm;
+    return this.def.dmg * Math.pow(this.def.dmgMul, this.level - 1) * this.mods.dmg * this.wm.dmg * lm.dmg
+      * (this.type === 'drones' ? lm.droneDmg : lm.otherDmg);
+  }
+  get rate() { return this.def.rate * Math.pow(this.def.rateMul, this.level - 1) * this.mods.rate * this.wm.rate * this.lm.rate; }
+  get range() { return this.def.range; }
+  get dps() { return this.dmg * this.rate; }
+  get color() { return this.def.color; }
+  upgradeCost() { return Math.floor(this.def.cost * Math.pow(this.def.costGrowth, this.level - 1)); }
+  /** dmg/rate/dps at a given level, without the threat-level modifiers */
+  statsAt(level) {
+    const dmg = this.def.dmg * Math.pow(this.def.dmgMul, level - 1) * this.mods.dmg * this.wm.dmg;
+    const rate = this.def.rate * Math.pow(this.def.rateMul, level - 1) * this.mods.rate * this.wm.rate;
+    return { dmg, rate, dps: dmg * rate };
+  }
+  statLine() { return formatStats({ dmg: this.dmg, rate: this.rate, dps: this.dps }); }
+  nextLine() { return formatStats(this.statsAt(this.level + 1)); }
+
+  inRange(mobs) { return mobs.filter(m => !m.dead && dist(this.tower, m) <= this.range); }
+  prefers(mob) { return this.def.prefer.includes(mob.type); }
+  dmgVs(mob) { return this.dmg * (this.prefers(mob) ? this.def.bonus : 1); }
+
+  // preferred mob types first, then the weapon's own rule within that pool
+  pickTarget(mobs) {
+    const list = this.inRange(mobs);
+    if (!list.length) return null;
+    const pref = list.filter(m => this.prefers(m));
+    return this.selectFrom(pref.length ? pref : list);
+  }
+  // default: nearest to the tower
+  selectFrom(list) { return minBy(list, m => dist(this.tower, m)); }
+
+  // mount point on tower rim
+  mount() {
+    const a = this.tower.slotAngle(this.slot);
+    return { x: this.tower.x + Math.cos(a) * this.tower.r, y: this.tower.y + Math.sin(a) * this.tower.r };
+  }
+  muzzle(len = TUNING.muzzleLen) {
+    const m = this.mount();
+    return { x: m.x + Math.cos(this.angle) * len, y: m.y + Math.sin(this.angle) * len };
+  }
+
+  update(dt, mobs) {
+    if (this.jammed > 0) {
+      this.jammed -= dt;
+      this.target = null;
+      if (Math.random() < dt * TUNING.jamSparkRate) {
+        const m = this.mount();
+        this.scene.fx.spark(m.x, m.y, COLORS.red, TUNING.jamSparkCount);
+      }
+      return;
+    }
+    this.cd -= dt * this.effectiveRateMul;
+    if (!this.target || this.target.dead || dist(this.tower, this.target) > this.range) {
+      this.target = this.pickTarget(mobs);
+    }
+    if (this.target) {
+      const want = angleTo(this.mount(), this.target);
+      this.angle = Phaser.Math.Angle.RotateTo(this.angle, want, dt * TUNING.turnSpeed);
+      if (this.cd <= 0) {
+        this.fire(this.target, mobs);
+        this.scene.sfx.shot(this.type, this.target.x);
+        this.cd = 1 / this.rate;
+      }
+    }
+  }
+
+  fire(target, mobs) {}
+  draw(g) {}
+}

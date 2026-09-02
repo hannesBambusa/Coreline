@@ -1,4 +1,5 @@
 // Mobs that keep their distance and shoot at the core.
+import { MOBS } from '../config.js';
 import { pick } from '../utils.js';
 import { Mob, orbitOpts } from './base.js';
 
@@ -41,7 +42,7 @@ export class Orbiter extends Mob {
 
 export class Shielder extends Mob {
   constructor(scene, tier, x, y) {
-    super(scene, 'shielder', tier, x, y, { preferred: MobRange('shielder') * 0.9 });
+    super(scene, 'shielder', tier, x, y, { preferred: MOBS.shielder.range * 0.9 });
     // shield scales with the same tier growth as hp
     const scale = this.hpMax / this.def.hp;
     this.shieldMax = this.def.shield * scale; this.shield = this.shieldMax;

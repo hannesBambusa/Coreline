@@ -2,8 +2,8 @@
 import { SPAWN, SIEGE } from '../config.js';
 import { Titan, Warden } from '../mobs.js';
 import { TAU } from '../utils.js';
+import { ICONS_SIEGE } from './icons.js';
 
-const ICONS_SIEGE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 2l3 6 6 1-4.5 4 1.5 6-6-3-6 3 1.5-6L3 9l6-1z"/></svg>`;
 const SIEGE_COLOR = 0xff4d6d;
 const WARDEN_ANGLE_STEP = 0.35;      // radians between wardens fanned out around the titan
 const WARDEN_EXTRA_RADIUS = 60;      // wardens spawn a bit further out than the titan

@@ -3,8 +3,8 @@ import { SPAWN, MOBS, ELITES, SLOT_GATES } from '../config.js';
 import { createMob } from '../mobs.js';
 import { baseLevelMods } from '../choices.js';
 import { TAU, pick, rnd } from '../utils.js';
+import { ICONS_SURGE } from './icons.js';
 
-const ICONS_SURGE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 17l5-5 4 4 7-8"/><path d="M14 8h6v6"/></svg>`;
 const SPAWN_RADIUS_JITTER = 80;        // mobs spawn up to this far beyond the spawn ring
 const BURST_SPREAD = 0.6;              // radians of angular scatter within a spawn burst
 const SWARM_SPREAD = 0.4;              // tighter scatter for swarm groups

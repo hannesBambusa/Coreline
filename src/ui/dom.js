@@ -1,7 +1,7 @@
 // Small DOM helpers shared by the UI modules. No game logic here.
-import { hex, fmt, fmtTime } from '../utils.js';
+import { hex, fmt, fmtTime, TAU } from '../utils.js';
 
-export { hex, fmt, fmtTime };
+export { hex, fmt, fmtTime, TAU };
 
 export const $ = (s) => document.querySelector(s);
 export const $$ = (s, root = document) => root.querySelectorAll(s);

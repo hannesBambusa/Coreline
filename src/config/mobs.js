@@ -89,6 +89,22 @@ export const MOBS = {
     fireRate: 1.0, burst: 3, range: 300, bulletSpeed: 260, spawnEvery: 4, spawnCount: 3,
     fragments: 1, color: COLORS.magenta, every: 5,
   },
+  // Warlord: every 10th threat level (sieges take the 30s and 60s). Built to test the loadout: adapts to the weapon
+  // hurting it most, hides behind relay pylons twice, flaks player drones, and its armour caps how fast it can die.
+  warlord: {
+    name: 'Warlord', hp: BOSS_HP * 4, speed: 85, dmg: 9, scrap: BOSS_SCRAP * 4, r: 44,
+    fireRate: 0.9, burst: 5, range: 380, bulletSpeed: 280, keepDistance: 330,
+    adaptEvery: 10, adaptDur: 4,                   // immune to the weapon type that dealt the most damage since the last adapt
+    pylonPhases: [0.66, 0.33], pylons: 3, pylonRadius: 130,   // at these hp fractions: invulnerable until the pylons die
+    flakEvery: 7, flakRadius: 220, flakMul: 4,     // burst that hurts player drones in range (dmg * flakMul)
+    escortEvery: 8, escortCount: 3,
+    minKillSec: 12, dpsSeconds: 12,                // armour: at most hpMax/minKillSec per second; hp at least recent dps * dpsSeconds
+    fragments: 3, color: COLORS.gold, every: 10,
+  },
+  pylon: {
+    name: 'Relay pylon', hp: 150, speed: 0, dmg: 0, scrap: 25, r: 12,
+    color: COLORS.ice, fromWave: 999, chance: 0,
+  },
   // Siege bosses. hp/scrap are multiples of the Overseer at the same threat.
   titan: {
     name: 'Dreadnought', hp: BOSS_HP * TITAN_HP_MUL, speed: 32, dmg: 10, scrap: BOSS_SCRAP * TITAN_SCRAP_MUL, r: 64,
@@ -99,6 +115,8 @@ export const MOBS = {
     jamEvery: 15, jamDur: 5,                             // from siege level 2: disables a hardpoint
     blinkEvery: 11, blinkCharge: 0.7, blinkRing: 12,     // teleport: charge, vanish, reappear elsewhere, bullet ring
     mineEvery: 9, mineCount: 4,                          // drops drifting mines
+    adaptEvery: 12, adaptDur: 5,                         // immune to the weapon hurting it most
+    minKillSec: 30, dpsSeconds: 40,                      // armour cap and dps-scaled hp: a siege lasts at least 30 s
     color: COLORS.red,
   },
   mine: {

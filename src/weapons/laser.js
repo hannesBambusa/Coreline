@@ -28,11 +28,24 @@ export class LaserBeam extends Weapon {
     this.ramp = 1;              // current damage multiplier, read by the scene for the hum
   }
   get dps() { return this.dmg; }
+  get rampTime() { return this.def.rampTime * (this.lm.laserRamp || 1); }
+  forksAt(level) { return this.def.forksAt.filter(l => level >= l).length; }
+  get forks() { return this.forksAt(this.level); }
+  get areaBurst() { return this.level >= this.def.burstAt; }
   /** continuous damage tick, credited to the laser */
   beamDamage(m, amount) { m.lastHit = 'laser'; m.takeDamage(amount, m.x, m.y, true); this.scene.addDmg('laser', m.lastDealt ?? 0); }
-  rampText() { return `ramps to <b>×${this.def.rampMax}</b>`; }
-  statLine() { return formatStats({ dmg: this.dmg, dmgUnit: 'dps', extra: this.rampText() }); }
-  nextLine() { return formatStats({ dmg: this.statsAt(this.level + 1).dmg, dmgUnit: 'dps', extra: this.rampText() }); }
+  rampText(level = this.level) {
+    const f = this.forksAt(level), parts = [`ramps to <b>×${this.def.rampMax}</b>`, `<b>${f}</b> fork${f === 1 ? '' : 's'}`];
+    if (level >= this.def.burstAt) parts.push('area crits');
+    return parts.join(' · ');
+  }
+  /** the next level that adds a fork or the area crit, if any */
+  nextMilestone() {
+    const L = this.level, ms = [...this.def.forksAt.map(l => [l, 'fork']), [this.def.burstAt, 'area crits']].filter(([l]) => l > L).sort((a, b) => a[0] - b[0]);
+    return ms.length ? ` · Lv ${ms[0][0]}: +${ms[0][1]}` : '';
+  }
+  statLine() { return formatStats({ dmg: this.dmg, dmgUnit: 'dps', extra: this.rampText() }) + this.nextMilestone(); }
+  nextLine() { return formatStats({ dmg: this.statsAt(this.level + 1).dmg, dmgUnit: 'dps', extra: this.rampText(this.level + 1) }); }
   // farthest from the tower
   selectFrom(list) { return maxBy(list, m => dist(this.tower, m)); }
   update(dt, mobs) {
@@ -40,16 +53,16 @@ export class LaserBeam extends Weapon {
     if (!this.target || this.target.dead || dist(this.tower, this.target) > this.range) {
       this.target = this.pickTarget(mobs);
     }
-    // new target resets the ramp, unless overloaded: then it starts at full
-    if (this.target !== this.lastTarget) { this.held = this.overload > 0 ? this.def.rampTime : 0; this.lastTarget = this.target; }
+    // new target keeps part of the ramp (all of it while overloaded)
+    if (this.target !== this.lastTarget) { this.held = this.overload > 0 ? this.rampTime : this.held * this.def.keepRamp; this.lastTarget = this.target; }
     if (!this.target) return;
     const sc = this.scene, tw = this.tower;
-    this.held += dt;
+    this.held = Math.min(this.held + dt, this.rampTime);   // capped so the carry-over on a target switch is a real 60 %
     this.overload = Math.max(0, this.overload - dt);
     this.flare = Math.max(0, this.flare - dt);
     this.angle = angleTo(this.mount(), this.target);
     const rampMax = this.def.rampMax + this.wm.rampMax;
-    const ramp = (1 + (rampMax - 1) * Math.min(1, this.held / this.def.rampTime)) * (this.overload > 0 ? TUNING.overloadMul : 1);
+    const ramp = (1 + (rampMax - 1) * Math.min(1, this.held / this.rampTime)) * (this.overload > 0 ? TUNING.overloadMul : 1);
     this.ramp = ramp;
     this.beamDamage(this.target, this.dmgVs(this.target) * ramp * dt * this.effectiveRateMul);
     // Target paint: drones pile on the laser target
@@ -59,16 +72,18 @@ export class LaserBeam extends Weapon {
       for (const d of bay.drones) d.target = this.target;
       sc.fx.ripple(this.target.x, this.target.y, COLORS.magenta, this.target.r, this.target.r + 40);
     }
-    // at full ramp: fork to nearby ships and charge a ring sweep
-    const full = this.held >= this.def.rampTime;
+    // from half ramp: fork to the ships nearest the target; at full ramp: charge a ring sweep
+    const full = this.held >= this.rampTime;
     this.forkTargets = [];
-    if (full) {
+    if (this.held >= this.rampTime * this.def.forkRamp) {
       const others = mobs.filter(o => !o.dead && o !== this.target && dist(tw, o) <= this.range)
-        .sort((a, b) => dist(this.target, a) - dist(this.target, b)).slice(0, this.def.forks);
+        .sort((a, b) => dist(this.target, a) - dist(this.target, b)).slice(0, this.forks);
       for (const o of others) {
         this.beamDamage(o, this.dmgVs(o) * ramp * this.def.forkDmg * dt * this.effectiveRateMul);
         this.forkTargets.push(o);
       }
+    }
+    if (full) {
       this.sweepCd -= dt;
       if (this.sweepCd <= 0) this.sweep(mobs);
     } else this.sweepCd = Math.min(this.sweepCd + dt * TUNING.sweepRecharge, this.def.sweepEvery);
@@ -80,10 +95,17 @@ export class LaserBeam extends Weapon {
       this.critTimer = 0;
       if (Math.random() < (this.def.crit ?? CRIT.chance)) {
         const t = this.target;
-        const burst = this.dmgVs(t) * ramp * TUNING.critBurst * ((this.def.critMul ?? CRIT.mul) - 1);
-        sc.hit(t, this, t.x, t.y, { dmg: burst, noCrit: true, color: TUNING.critText, size: 20, tag: '' });
+        const burst = this.dmg * ramp * TUNING.critBurst * ((this.def.critMul ?? CRIT.mul) - 1);
+        // from burstAt the crit tick explodes around the target (damageRadius applies the type bonus per ship)
+        // Temporal bloom: inside a chrono field the crit tick echoes three times
+        const cf = tw.weapons.find(w => w.type === 'chrono');
+        const echoes = cf && dist(tw, t) <= cf.range && sc.combos.roll('bloom') ? 3 : 1;
+        for (let e = 0; e < echoes; e++) {
+          if (this.areaBurst) sc.damageRadius(t.x, t.y, this.def.burstRadius, burst, TUNING.critColor, this);
+          else sc.hit(t, this, t.x, t.y, { dmg: burst * (this.prefers(t) ? this.def.bonus : 1), noCrit: true, color: TUNING.critText, size: 20, tag: '' });
+        }
         sc.fx.spark(t.x, t.y, TUNING.critColor, 8);
-        sc.fx.ripple(t.x, t.y, TUNING.critColor, t.r, t.r + 22);
+        sc.fx.ripple(t.x, t.y, TUNING.critColor, t.r, this.areaBurst ? this.def.burstRadius : t.r + 22);
         this.flare = Math.max(this.flare, TUNING.flareDur);
       }
     }

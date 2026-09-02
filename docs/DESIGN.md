@@ -268,3 +268,45 @@ Two caps, both in `LEVELS` in `src/config/meta.js`.
 - **Hard cap.** Weapon levels and tower upgrade levels stop at 20 + 5 per prestige. Rows show "Max" and a "Level cap N · +5 per prestige" note; purchases, auto-buy and the quick-buy cards skip capped items. Levels already above the cap in an old save are kept, they just cannot be bought further.
 
 Tesla range 420 → 520, chain range 180 → 220.
+
+## Laser rework (forks by level)
+
+Forks were gated on a full 3 s ramp on one target, which the farthest-first targeting rarely held, so they almost never showed. Now: the ramp carries 60 % over a target switch (`keepRamp`), forks start at half ramp, the fork count comes from level (`forksAt: [1, 8, 16, 24]`, fork damage 35 % → 50 %), and from Lv 5 the beam's crit ticks burst in an 80 px area (`burstAt`, `burstRadius`). Ring sweep is unchanged and still needs full ramp. The tower row lists forks and the next milestone.
+
+## Threat-level choices, second pass
+
+The pool now fits the loadout: weapon cards carry `needs` (offered only while that weapon is mounted), ability cards `needsAbility`. Numbers went up on both sides. New cards:
+
+- **Hunts**, one per ship type (`hunt_<type>`, generated from `MOBS`): only that ship spawns, ×4 scrap, ×1.8 HP, and ×2.5 numbers for light ships (≤ 35 HP). Unlocks one level after the ship joins the roster. Never two hunts in one offer.
+- **Per weapon**: Rapid cycling (pulse), Sabot surplus (railgun), Warhead surplus (missile), Focus lens (laser), Storm front (tesla), Deep wells (gravity), Overcharged coils (shock), Hive protocol (drones).
+- **Global gambles**: Blood money, Fragment fever, Elite parade (every ship elite), All in, Reactor surge.
+
+`levelMods` grew: `w[type].dmg/rate`, `typeScrap`, `teslaChains`, `laserRamp`, `missileSplash`, `gravityPull`, `allElite`. Old saves with a removed card id (Swarm storm) load with no modifier.
+
+## Difficulty
+
+Picked on the start screen (`DIFFICULTY` in `src/config/meta.js`), locked once the run starts, saved with the run and kept for the next run. Easy ×0.7 HP / ×0.7 damage / ×0.8 spawns; Normal ×1; Hard ×1.5 / ×1.4 / ×1.3; Really hard ×2.2 / ×1.9 / ×1.6; Insane ×3.5 / ×2.8 / ×4 (spawns doubled after play, scrap cut to ×0.7). Harder runs pay more fragments and, up to Really hard, more scrap: ×0.9 … ×1.3 and fragments ×0.75 … ×2. HP and damage scale every ship including bosses and drains; the spawn multiplier applies after the rate cap so it still matters late. Shown in the Stats tab and on the death card.
+
+## Bosses, second pass
+
+- **Overseer** still every 5th level. **Warlord** (`MOBS.warlord`) every 10th level, except 30 and 60 where the siege takes over. **Dreadnought sieges** at 30 and 60 unchanged in structure but harder.
+- **Adaptive armour** (shared by Warlord and Dreadnought, `armour*` helpers in `src/mobs/bosses.js`):
+  - HP is raised to the player's sustained DPS over the last 20 s (`scene.recentDps()`) × `dpsSeconds` (12 s Warlord, 40 s Dreadnought), so the boss scales with the loadout instead of only with threat.
+  - Damage cap: at most `hpMax / minKillSec` per second (12 s Warlord, 30 s Dreadnought); surplus shows as "absorbed". A siege therefore lasts at least 30 s even for an overbuilt tower.
+  - Adapt: every `adaptEvery` seconds the boss becomes immune for `adaptDur` seconds to the weapon type that has dealt it the most damage since the last adapt (ring in that weapon's colour, banner, "immune" floaters, boss bar shows the timer). Single-weapon builds stall; mixed builds keep going.
+- **Warlord extras**: five-shot bursts at mid range, flak burst every 7 s that hurts player drones within 220 px, escort spawns, and relay pylons at 66 % and 33 % HP: three pylons orbit the boss and it is invulnerable until they are destroyed (tests reach and area damage). Pays 3 fragments (+Core harvester) and 4× Overseer scrap. Not saved: a reload mid-fight drops it.
+- Boss bar now also shows the Warlord with its status line.
+
+Warlord tuned down after play: base HP 6× → 4× Overseer, dps-scaled floor 22 s → 12 s, kill floor 18 s → 12 s, immunity 6 s → 4 s.
+
+## Three new weapons
+
+- **Chrono field** (`chrono`, unlock 3 frag, install 900): bubble around the tower. Ships inside move at ×0.6 (→ ×0.25 with levels), enemy shots inside crawl, your bullets gain +60 % damage per second spent inside (max 2 s). Small time-shear dps on everything inside. Lv 10: rewind, every 20 s ships inside jump back to where they were 3 s earlier. Combos: **Stasis lock** (+shock: freeze everything inside 2 s), **Temporal bloom** (+laser: crit tick echoes ×3 inside the field).
+- **Replicator swarm** (`nanite`, unlock 3, install 750): bolts infect a ship (dps over 8 s). On death the nanites jump to the nearest 1 ship (2 at Lv 8, 3 at Lv 16), +35 % per generation. Lv 12 outbreak: dying hosts burst. Targets healthy ships in the densest pack. Combos: **Plague wind** (+shock: spread to every ship within 140 px of a host), **Culture well** (+gravity: a shot seeds every ship in a well).
+- **Singularity core** (`singularity`, unlock 4, install 1200): charges from scrap earned (`scene.onKill` calls `onScrap`) plus a trickle; at full charge it removes 25 % (→ 80 %) of max HP from every ship in range (bosses capped at 8 %) and erases enemy shots. Lv 8 afterglow: 5 s where every hit crits (`scene.afterglow`). Combos: **Event horizon** (+gravity: tower-sized well for 4 s), **Supernova** (+tesla: arcs to every ship for 3× tesla damage).
+
+Hooks added: `bullet.onHit`, `bullet.chronoT` (damage multiplier in `bulletHit`), `enemyBullet.chrono` (speed factor), `Weapon.onScrap`, `scene.afterglow`.
+
+## Threat-level choices, auto mode
+
+The two cards are still rolled but one is picked at random and applied immediately. The game no longer pauses; the picked card shows top centre for 4.5 s. The HUD top bar shows the run's difficulty ("Mode").

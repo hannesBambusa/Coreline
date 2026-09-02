@@ -10,10 +10,11 @@ const RING_C = TAU * RING_R;          // circumference of the countdown ring, fo
 const EFFECT_PERMANENT_S = 9999;      // effects with dur at or above this show no countdown
 const EFFECT_FADE_MS = 250;
 const CHOICE_FADE_MS = 350;
+const CHOICE_AUTO_MS = 4500;   // auto-assigned card stays this long
 const ENDING_S = 1;                   // blink when less than this is left
 const WHOLE_SECONDS_FROM_S = 10;      // above this show whole seconds, below one decimal
 const TIP_GAP = 12, TIP_MARGIN = 8, TIP_DEFAULT_W = 260, TIP_DEFAULT_H = 80;
-const COOLDOWN_TYPES = ['drones', 'railgun', 'shock'];   // weapons that get a cooldown card
+const COOLDOWN_TYPES = ['drones', 'railgun', 'shock', 'singularity', 'chrono'];   // weapons that get a cooldown card
 
 // ---- Card markup shared by effects and cooldowns -------------------------
 
@@ -83,6 +84,26 @@ export function updateEffects(ui, dt) {
 const cooldownCard = (w) =>
   `<div class="fx-item cd show" data-slot="${w.slot}" style="--fx:${hex(w.color)}">${fxCard(ICONS[w.type], w.def.name, 'cooldown')}</div>`;
 
+function updateChargeCard(card, w) {
+  const c = w.charge, full = c >= 1;
+  setRing(card, c);
+  card.nameEl.textContent = `Singularity ${Math.floor(c * 100)}%`;
+  card.subEl.textContent = w.jammed > 0 ? 'jammed' : full ? 'waiting for a target' : 'charging from scrap';
+  card.timeEl.textContent = '';
+  card.el.classList.toggle('ready', full);
+  card.el.classList.toggle('jammed', w.jammed > 0);
+}
+
+function updateChronoCard(card, w) {
+  const can = w.canRewind, f = can ? 1 - w.rewindCd / w.def.rewindEvery : 0;
+  setRing(card, f);
+  card.nameEl.textContent = `Chrono ×${w.ratio.toFixed(2)}`;
+  card.subEl.textContent = w.jammed > 0 ? 'jammed' : can ? 'rewind' : `rewind at Lv ${w.def.rewindAt}`;
+  card.timeEl.textContent = can ? w.rewindCd.toFixed(1) + 's' : '';
+  card.el.classList.toggle('ready', can && f >= 1);
+  card.el.classList.toggle('jammed', w.jammed > 0);
+}
+
 function updateDroneCard(card, w) {
   const alive = w.drones.filter(d => d.alive).length;
   const building = w.drones.filter(d => !d.alive).sort((a, b) => a.respawnT - b.respawnT)[0];
@@ -116,7 +137,7 @@ export function updateCooldowns(ui) {
   for (const w of ws) {
     const card = ui.cooldownRows[w.slot];
     if (!card) continue;
-    if (w.type === 'drones') updateDroneCard(card, w); else updateWeaponCard(card, w);
+    if (w.type === 'drones') updateDroneCard(card, w); else if (w.type === 'singularity') updateChargeCard(card, w); else if (w.type === 'chrono') updateChronoCard(card, w); else updateWeaponCard(card, w);
   }
 }
 
@@ -166,9 +187,15 @@ const choiceCard = (id) => {
 export function showChoice(ui, ch) {
   const el = $('#choice');
   el.querySelector('.ch-cards').innerHTML = ch.opts.map(choiceCard).join('');
-  for (const b of $$('.ch-card', el)) b.onclick = () => ui.scene.pickChoice(b.dataset.choice);
+  el.querySelector('.ch-title').textContent = ch.auto ? 'Threat rising · modifier assigned' : 'Threat rising. Choose.';
+  el.querySelector('.ch-hint').textContent = ch.auto ? 'lasts 3 threat levels' : 'Game paused until you pick';
+  el.classList.toggle('auto', !!ch.auto);
+  if (ch.auto) { for (const b of $$('.ch-card', el)) b.classList.add('picked'); }
+  else for (const b of $$('.ch-card', el)) b.onclick = () => ui.scene.pickChoice(b.dataset.choice);
   el.hidden = false;
   restartAnimation(el, 'show');
+  clearTimeout(ui.choiceTimer);
+  if (ch.auto) ui.choiceTimer = setTimeout(() => hideChoice(), CHOICE_AUTO_MS);
 }
 
 export function hideChoice(id) {
@@ -187,7 +214,7 @@ export function showOffline(o) {
 
 export function showGameOver(scene) {
   const s = scene.state, n = scene.fragmentsForRun();
-  $('#overlay-text').innerHTML = `You held the core for <b>${fmtTime(s.time)}</b> at threat level <b>${s.tier}</b>. ${s.kills} ships destroyed.` +
+  $('#overlay-text').innerHTML = `You held the core for <b>${fmtTime(s.time)}</b> at threat level <b>${s.tier}</b> on <b style="color:${scene.diff.color}">${scene.diff.name}</b>. ${s.kills} ships destroyed.` +
     `<br><br>Salvaged <b class="violet">${n} core fragment${n === 1 ? '' : 's'}</b> for the skill tree.`;
   $('#overlay-stats').innerHTML = statsHtml(scene, true);
   $('#overlay').hidden = false;

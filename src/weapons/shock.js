@@ -57,6 +57,8 @@ export class ShockEmitter extends Weapon {
     sc.enemyBullets = sc.enemyBullets.filter(b => dist(t, b) > R);
     this.collapse(mobs);
     this.scramble();
+    this.stasis(mobs);
+    this.plague(mobs);
     this.ring = { r: t.shieldR, r1: R, a: 1 };
     sc.fx.ripple(t.x, t.y, this.color, t.shieldR, R);
     sc.fx.ripple(t.x, t.y, COLORS.white, t.shieldR, R * 0.8);
@@ -82,6 +84,23 @@ export class ShockEmitter extends Weapon {
     sc.fx.explode(well.x, well.y, COLORS.white, 40);
     sc.fx.shake(C.shake, C.shakeMs);
     well.age = well.life;
+  }
+  // Stasis lock: everything inside the chrono field freezes
+  stasis(mobs) {
+    const sc = this.scene, cf = this.tower.weapons.find(w => w.type === 'chrono');
+    if (!cf || !sc.combos.roll('stasis')) return;
+    for (const m of mobs) if (!m.dead && dist(this.tower, m) <= cf.range + m.r) { m.stun = Math.max(m.stun, 2); m.dodgeVx = 0; m.dodgeVy = 0; }
+    sc.fx.ripple(this.tower.x, this.tower.y, COLORS.ice, cf.range, this.tower.shieldR);
+  }
+  // Plague wind: every infection spreads to its neighbours
+  plague(mobs) {
+    const sc = this.scene, ns = this.tower.weapons.find(w => w.type === 'nanite');
+    if (!ns || !ns.hosts.size || !sc.combos.roll('plague')) return;
+    const hosts = [...ns.hosts].filter(h => !h.dead && h.infect);
+    for (const h of hosts) for (const m of mobs) {
+      if (m.dead || m.infect || dist(h, m) > 140) continue;
+      sc.fx.bolt(h.x, h.y, m.x, m.y, ns.color); ns.infect(m, h.infect.gen + 1);
+    }
   }
   // Scramble: drones get a burst
   scramble() {

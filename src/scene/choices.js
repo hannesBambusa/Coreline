@@ -11,28 +11,31 @@ function secondsUntilNextChoice(scene) {
   return period - (scene.state.time % period);
 }
 
-/** Roll the cards, freeze the game and show them. The pause button lights up so the state is visible. */
+/** Roll two cards, let fate pick one, apply it at once and show the result top centre. The game keeps running. */
 export function offerChoice(scene, tierInt) {
-  const opts = rollChoices(tierInt);
-  scene.choice = { tier: tierInt, opts };
-  scene.choosing = true;
-  scene.paused = true;
-  document.getElementById('btn-pause').classList.add('on');
-  scene.ui.showChoice(scene.choice);
+  const opts = rollChoices(scene, tierInt);
+  const id = opts[Math.floor(Math.random() * opts.length)];
+  scene.ui.showChoice({ tier: tierInt, opts: [id], auto: true });
   scene.tx.say('choice', 120);
+  applyPick(scene, id);
 }
 
-/** Apply the picked card, unfreeze, and show the effect chip for the levels it lasts. */
+/** Manual pick (kept for the keyboard shortcut path and old saves with an open choice). */
 export function pickChoice(scene, id) {
   if (!scene.choice) return;
-  scene.levelMods = applyChoice(id, baseLevelMods());
-  scene.levelChoice = id === 'nothing' ? null : id;
-  scene.tower.recompute();
   scene.ui.hideChoice(id);
   scene.choice = null;
   scene.choosing = false;
   scene.paused = false;
   document.getElementById('btn-pause').classList.remove('on');
+  applyPick(scene, id);
+}
+
+/** Apply a card for the coming levels and show its effect chip. */
+function applyPick(scene, id) {
+  scene.levelMods = applyChoice(id, baseLevelMods());
+  scene.levelChoice = id === 'nothing' ? null : id;
+  scene.tower.recompute();
   const c = CHOICES[id];
   if (id !== 'nothing') {
     const tip = c.name + '\n+ ' + c.good + (c.bad ? '\n- ' + c.bad : '') + '\nlasts ' + SPAWN.choiceEvery + ' threat levels';

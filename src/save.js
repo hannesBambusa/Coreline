@@ -1,5 +1,5 @@
 import { OFFLINE, SIEGE, SLOT_COSTS } from './config.js';
-import { applyChoice, baseLevelMods } from './choices.js';
+import { CHOICES, applyChoice, baseLevelMods } from './choices.js';
 
 export const SAVE_KEY = 'core-defence-v1';
 const VERSION = 1;
@@ -18,7 +18,7 @@ export class SaveSystem {
       v: VERSION,
       lastTick: Date.now(),
       run: {
-        scrap: s.state.scrap, time: s.state.time, tier: s.state.tier, kills: s.state.kills, swapsUsed: s.state.swapsUsed || 0,
+        difficulty: s.state.difficulty || 'normal', scrap: s.state.scrap, time: s.state.time, tier: s.state.tier, kills: s.state.kills, swapsUsed: s.state.swapsUsed || 0,
         hull: t.hull, shield: t.shield, upgrades: { ...t.upgrades },
         slots: t.slots.map(w => w ? { type: w.type, level: w.level, focus: w.focus || false } : null),
         abilities: s.abilities.serialize(),
@@ -28,7 +28,7 @@ export class SaveSystem {
         stats: s.stats,
         levelChoice: s.levelChoice || null,
         openChoice: s.choice ? { tier: s.choice.tier, opts: s.choice.opts } : null,
-        mobs: s.mobs.filter(m => !m.dead && !['titan', 'warden', 'mine'].includes(m.type)).slice(0, 300).map(m => ({
+        mobs: s.mobs.filter(m => !m.dead && !['titan', 'warden', 'mine', 'warlord', 'pylon'].includes(m.type)).slice(0, 300).map(m => ({
           t: m.type, x: Math.round(m.x - t.x), y: Math.round(m.y - t.y), hp: Math.round(m.hp), sh: m.shield ? Math.round(m.shield) : undefined,
           e: m.elite || undefined, g: m.gen || undefined, tier: m.tierAtSpawn,
         })),
@@ -86,7 +86,7 @@ export class SaveSystem {
     s.tree.restore(data.profile?.tree);
     if (data.settings) { Object.assign(s.settings, data.settings); s.sfx.setEnabled(s.settings.sound !== false); }
     if (r.gameOver) return { offline: null };
-    s.state.scrap = r.scrap || 0; s.state.time = r.time || 0; s.state.tier = r.tier || 1; s.state.kills = r.kills || 0; s.state.swapsUsed = r.swapsUsed || 0;
+    s.state.difficulty = r.difficulty || 'normal'; s.state.scrap = r.scrap || 0; s.state.time = r.time || 0; s.state.tier = r.tier || 1; s.state.kills = r.kills || 0; s.state.swapsUsed = r.swapsUsed || 0;
     if (r.upgrades) { Object.assign(t.upgrades, r.upgrades); t.recompute(); }
     t.hull = Number.isFinite(r.hull) ? Math.min(t.hullMax, r.hull) : t.hullMax;
     t.shield = Number.isFinite(r.shield) ? Math.min(t.shieldMax, r.shield) : t.shieldMax;
@@ -99,7 +99,7 @@ export class SaveSystem {
     s.siegesCleared = Number.isInteger(r.siegesCleared) ? r.siegesCleared : Math.floor(s.tier / SIEGE.every);
     s.surgeType = r.surgeType || null;
     if (r.levelChoice) { s.levelChoice = r.levelChoice; s.levelMods = applyChoice(r.levelChoice, baseLevelMods()); }
-    if (r.openChoice) { s.choice = { tier: r.openChoice.tier, opts: r.openChoice.opts }; s.choosing = true; s.paused = true; s.ui.showChoice(s.choice); }
+    if (r.openChoice && r.openChoice.opts.every(id => CHOICES[id])) { s.choice = { tier: r.openChoice.tier, opts: r.openChoice.opts }; s.choosing = true; s.paused = true; s.ui.showChoice(s.choice); }
     if (r.stats) { s.stats = Object.assign(s.freshStats(), r.stats); if (!r.stats.hits) { s.stats.crits = {}; s.stats.critExtra = {}; } }   // older saves counted crits before hits: restart the ratio cleanly
     // ships that were alive: recreate them where they were
     if (Array.isArray(r.mobs)) {

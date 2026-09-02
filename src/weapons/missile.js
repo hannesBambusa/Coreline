@@ -24,7 +24,7 @@ export class MissilePod extends Weapon {
     const v0 = this.def.speed * TUNING.launchSpeedMul;
     sc.spawnMissile({
       x: m.x, y: m.y, vx: Math.cos(a) * v0, vy: Math.sin(a) * v0,
-      speed: this.def.speed, turn: this.def.turn, dmg: this.dmg, weapon: this, splash: this.def.splash * this.wm.splash,
+      speed: this.def.speed, turn: this.def.turn, dmg: this.dmg, weapon: this, splash: this.def.splash * this.wm.splash * (this.lm.missileSplash || 1),
       color: this.color, life: TUNING.life, target,
     });
     sc.fx.flash(m.x, m.y, this.color, TUNING.flash);

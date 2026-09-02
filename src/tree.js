@@ -43,6 +43,9 @@ export const TREE = {
   u_drones: { branch: 'weapons', name: 'Unlock Drone bay', max: 1, cost: () => 2, unlock: 'drones', effect: () => {}, text: () => 'drone bay can be mounted' },
   m_drones: { branch: 'weapons', weapon: 'drones', name: 'Extra hangar',     max: 2, cost: lin(3, 2), requires: 'u_drones', effect: (m, l) => { m.w.drones.extra = (m.w.drones.extra || 0) + l; }, text: (l) => `+${l} interceptor drone${l > 1 ? 's' : ''}` },
   u_shock:  { branch: 'weapons', name: 'Unlock Shock emitter', max: 1, cost: () => 2, unlock: 'shock', effect: () => {}, text: () => 'shock emitter can be mounted' },
+  u_chrono: { branch: 'weapons', name: 'Unlock Chrono field', max: 1, cost: () => 3, unlock: 'chrono', effect: () => {}, text: () => 'chrono field can be mounted' },
+  u_nanite: { branch: 'weapons', name: 'Unlock Replicator swarm', max: 1, cost: () => 3, unlock: 'nanite', effect: () => {}, text: () => 'replicator swarm can be mounted' },
+  u_singularity: { branch: 'weapons', name: 'Unlock Singularity core', max: 1, cost: () => 4, unlock: 'singularity', effect: () => {}, text: () => 'singularity core can be mounted' },
   m_shock:  { branch: 'weapons', weapon: 'shock', name: 'Resonance coils', max: 4, cost: lin(2, 2), requires: 'u_shock', effect: (m, l) => { m.w.shock.rate *= 1 + 0.12 * l; }, text: (l) => `shock emitter cooldown -${Math.round(100 - 100 / (1 + 0.12 * l))}%` },
   m_pulse:  { branch: 'weapons', weapon: 'pulse', name: 'Twin pulse coils', max: 5, cost: lin(2, 1), effect: (m, l) => { m.w.pulse.rate *= 1 + 0.10 * l; }, text: (l) => `pulse cannon +${pct(0.10 * l)} fire rate` },
   m_rail:   { branch: 'weapons', weapon: 'railgun', name: 'Tungsten sabots', max: 5, cost: lin(2, 1), requires: 'u_railgun', effect: (m, l) => { m.w.railgun.dmg *= 1 + 0.20 * l; }, text: (l) => `railgun +${pct(0.20 * l)} damage` },
@@ -56,7 +59,7 @@ export const TREE = {
 
 export function baseMods() {
   const w = {};
-  for (const k of ['pulse', 'railgun', 'missile', 'laser', 'tesla', 'gravity', 'shock', 'drones']) w[k] = { dmg: 1, rate: 1, splash: 1, chains: 0, rampMax: 0, radius: 1, life: 0 };
+  for (const k of ['pulse', 'railgun', 'missile', 'laser', 'tesla', 'gravity', 'shock', 'drones', 'chrono', 'nanite', 'singularity']) w[k] = { dmg: 1, rate: 1, splash: 1, chains: 0, rampMax: 0, radius: 1, life: 0 };
   return {
     dmg: 1, rate: 1, crit: 0, critMul: 0, abilityCd: 1,
     shieldMax: 1, shieldRegen: 1, hull: 1, hullRegen: 0, calmMul: 0,

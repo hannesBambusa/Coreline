@@ -1,5 +1,5 @@
 // Continuous spawning: threat tier, surge levels, mob type rolls, and the level-start events.
-import { SPAWN, MOBS, ELITES, SLOT_GATES } from '../config.js';
+import { SPAWN, MOBS, ELITES, SLOT_GATES, SIEGE } from '../config.js';
 import { createMob } from '../mobs.js';
 import { baseLevelMods } from '../choices.js';
 import { TAU, pick, rnd } from '../utils.js';
@@ -8,7 +8,7 @@ import { ICONS_SURGE } from './icons.js';
 const SPAWN_RADIUS_JITTER = 80;        // mobs spawn up to this far beyond the spawn ring
 const BURST_SPREAD = 0.6;              // radians of angular scatter within a spawn burst
 const SWARM_SPREAD = 0.4;              // tighter scatter for swarm groups
-const NEVER_SURGE = ['boss', 'titan', 'warden', 'mine'];
+const NEVER_SURGE = ['boss', 'titan', 'warden', 'mine', 'warlord', 'pylon'];
 const LEVEL_SCRAP_BASE = 20;           // scrap bonus at level start = base * scrapGrowth^tier
 
 /** Fractional threat tier: 1 + minutes-ish of run time. */
@@ -23,7 +23,8 @@ export function surgeMultiplier(scene) {
 
 export function spawnRate(scene) {
   const base = SPAWN.baseRate + SPAWN.ratePerSecond * scene.state.time;
-  return Math.min(SPAWN.maxRate * 2, base * surgeMultiplier(scene) * scene.levelMods.spawn);
+  // difficulty multiplies after the cap so it still bites late in a run
+  return Math.min(SPAWN.maxRate * 2, base * surgeMultiplier(scene) * scene.levelMods.spawn) * scene.diff.spawn;
 }
 
 /** Pick a surge type among everything unlocked by this tier, excluding bosses and static hazards. */
@@ -51,8 +52,8 @@ export function pickType(scene) {
 
 /** Elite roll for a natural spawn. Bosses and swarm never go elite. */
 function maybeMakeElite(scene, m, type) {
-  if (type === 'boss' || type === 'swarm') return;
-  const chance = Math.min(ELITES.chanceMax * 2, (ELITES.chanceBase + ELITES.chancePerTier * scene.tier) * scene.levelMods.elite);
+  if (type === 'boss' || type === 'swarm' || type === 'warlord' || type === 'pylon') return;
+  const chance = scene.levelMods.allElite ? 1 : Math.min(ELITES.chanceMax * 2, (ELITES.chanceBase + ELITES.chancePerTier * scene.tier) * scene.levelMods.elite);
   if (Math.random() < chance) {
     m.makeElite(pick(Object.keys(ELITES.mods)));
     scene.tx.say('elite', 90);
@@ -79,7 +80,7 @@ export function spawnMob(scene, type, angle, tierOverride, gen) {
   const natural = tierOverride === undefined;
   if (natural && scene.levelMods.mobHp !== 1) { m.hpMax *= scene.levelMods.mobHp; m.hp = m.hpMax; }
   if (natural) maybeMakeElite(scene, m, type);
-  if (type === 'boss' && natural) scene.sfx.play('boss');
+  if ((type === 'boss' || type === 'warlord') && natural) scene.sfx.play('boss');
   if (natural) announceNewThreat(scene, m, type);
   scene.mobs.push(m);
   return m;
@@ -115,7 +116,12 @@ function onNewTier(scene, tierInt) {
   }
   if (tierInt === 5) scene.tx.say('tier5'); else if (tierInt === 10) scene.tx.say('tier10'); else if (tierInt === 20) scene.tx.say('tier20');
   startSurge(scene, tierInt);
-  if (tierInt % MOBS.boss.every === 0) {
+  const siegeTier = tierInt % SIEGE.every === 0;
+  if (!siegeTier && tierInt % MOBS.warlord.every === 0) {
+    scene.ui.banner('Warlord approaching', true);
+    scene.tx.say('warlord');
+    scene.time.delayedCall(1500, () => { if (!scene.gameOver) scene.spawnMob('warlord'); });
+  } else if (!siegeTier && tierInt % MOBS.boss.every === 0) {
     scene.ui.banner('Overseer approaching', true);
     scene.tx.say('boss');
     scene.time.delayedCall(1500, () => { if (!scene.gameOver) scene.spawnMob('boss'); });

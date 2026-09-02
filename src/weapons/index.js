@@ -6,13 +6,17 @@ import { TeslaArc } from './tesla.js';
 import { GravityWell } from './gravity.js';
 import { ShockEmitter } from './shock.js';
 import { DroneBay } from './drones.js';
+import { ChronoField } from './chrono.js';
+import { ReplicatorSwarm } from './nanite.js';
+import { SingularityCore } from './singularity.js';
 
 export { Weapon, formatStats } from './base.js';
-export { PulseCannon, Railgun, MissilePod, LaserBeam, TeslaArc, GravityWell, ShockEmitter, DroneBay };
+export { PulseCannon, Railgun, MissilePod, LaserBeam, TeslaArc, GravityWell, ShockEmitter, DroneBay, ChronoField, ReplicatorSwarm, SingularityCore };
 
 export const CLASSES = {
   pulse: PulseCannon, shock: ShockEmitter, drones: DroneBay, railgun: Railgun,
   missile: MissilePod, laser: LaserBeam, tesla: TeslaArc, gravity: GravityWell,
+  chrono: ChronoField, nanite: ReplicatorSwarm, singularity: SingularityCore,
 };
 
 export function createWeapon(scene, tower, type, slotIndex) {

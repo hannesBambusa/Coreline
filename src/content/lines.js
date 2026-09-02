@@ -22,6 +22,10 @@ export const LINES = {
     'OVERSEER: I am sending something personal.',
     'OVERSEER: Observe. This is what obedience looks like.',
   ],
+  warlord: [
+    'OVERSEER: A Warlord. It learns what you rely on.',
+    'OVERSEER: Let us see how narrow your arsenal is.',
+  ],
   bossDead: [
     'OVERSEER: An acceptable loss. I have copies.',
     'OVERSEER: ...noted.',

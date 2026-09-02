@@ -106,6 +106,19 @@ export function makeTextures(scene) {
   spokes(g, 12, 12, 8, 6, 11);
   g.generateTexture('ship_mine', 24, 24); g.clear();
 
+  // warlord: broad eight-point star with a core ring
+  g.lineStyle(3, WHITE, 1); g.fillStyle(WHITE, 0.14);
+  starPath(g, 48, 48, 8, 46, 30); g.fillPath(); g.strokePath();
+  g.lineStyle(2, WHITE, 0.8); g.strokeCircle(48, 48, 18); spokes(g, 48, 48, 8, 8, 18);
+  g.fillStyle(WHITE, 1); g.fillCircle(48, 48, 6);
+  g.generateTexture('ship_warlord', 96, 96); g.clear();
+
+  // pylon: tall diamond with a core
+  g.lineStyle(2, WHITE, 1); g.fillStyle(WHITE, 0.25);
+  poly(g, [[12, 1], [22, 12], [12, 23], [2, 12]]);
+  g.fillStyle(WHITE, 1); g.fillCircle(12, 12, 3);
+  g.generateTexture('ship_pylon', 24, 24); g.clear();
+
   // the rest are drawn around their centre c = size / 2
   const shape = (key, size, fn) => { fn(size / 2); g.generateTexture(key, size, size); g.clear(); };
 

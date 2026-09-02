@@ -13,7 +13,7 @@ export class TeslaArc extends Weapon {
     const m = this.muzzle(), sc = this.scene;
     const hit = new Set();
     let from = m, cur = target, falloff = 1;
-    for (let i = 0; i < this.def.chains + this.wm.chains && cur; i++) {
+    for (let i = 0; i < this.def.chains + this.wm.chains + (this.lm.teslaChains || 0) && cur; i++) {
       hit.add(cur);
       sc.fx.bolt(from.x, from.y, cur.x, cur.y, this.color);
       sc.hit(cur, this, cur.x, cur.y, { mul: falloff, color: this.prefers(cur) ? '#ffe66d' : '#9be7ff' });

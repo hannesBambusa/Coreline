@@ -47,6 +47,26 @@ export const RECIPES = {
     sample: { key: 'laserRetro', peak: 0.06, pan: PAN, rate: R(1.4, 2.0), wet: 0.3, dur: 0.2 },
     synth: [seq(3, (_, i) => tone({ type: 'sawtooth', f0: R(1500, 2600), f1: R(200, 500), dur: 0.05, peak: 0.03, pan: PAN, wet: 0.2, delay: i * 0.03 }))],
   },
+  'shot:nanite': {
+    gate: 70,
+    sample: { key: 'laserSmall', peak: 0.06, pan: PAN, rate: R(0.6, 0.8), wet: 0.3, dur: 0.3 },
+    synth: [tone({ type: 'triangle', f0: R(500, 700), f1: 1400, dur: 0.12, peak: 0.04, pan: PAN, wet: 0.3 })],
+  },
+  rewind: {
+    synth: [
+      tone({ type: 'sine', f0: 1200, f1: 200, dur: 0.5, peak: 0.12, pan: PAN, wet: 0.6 }),
+      tone({ type: 'triangle', f0: 300, f1: 900, dur: 0.4, peak: 0.05, pan: PAN, wet: 0.6, delay: 0.1 }),
+    ],
+  },
+  singularity: {
+    sample: { key: 'lowExplosion', peak: 0.5, rate: 0.5, wet: 0.8, pan: PAN },
+    synthAlways: true,
+    synth: [
+      tone({ type: 'sine', f0: 40, f1: 20, dur: 1.6, peak: 0.35, pan: PAN, wet: 0.6 }),
+      tone({ type: 'sawtooth', f0: 900, f1: 60, dur: 0.8, peak: 0.12, pan: PAN, wet: 0.7 }),
+      burst({ dur: 1.0, peak: 0.2, f0: 4000, f1: 100, type: 'lowpass', pan: PAN, wet: 0.8 }),
+    ],
+  },
   'shot:gravity': {
     synth: [
       tone({ type: 'sine', f0: 110, f1: 28, dur: 0.9, peak: 0.14, pan: PAN, wet: 0.6, attack: 0.05 }),

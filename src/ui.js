@@ -1,6 +1,6 @@
 // The scene talks to `scene.ui`; this class wires the DOM once and delegates the work to src/ui/*.js.
 import { hex, $, $$, swapHtml, bindBuy, askConfirm } from './ui/dom.js';
-import { WEAPONS } from './config.js';
+import { WEAPONS, DIFFICULTY } from './config.js';
 import { ICONS } from './icons.js';
 import * as hud from './ui/hud.js';
 import * as fx from './ui/effects.js';
@@ -37,6 +37,7 @@ export class UI {
     $('#btn-offline-ok').onclick = () => { $('#offline').hidden = true; };
     $('#btn-start').onclick = () => scene.beginRun();
     $('#start-weapons').onclick = (e) => { const b = e.target.closest('[data-start]'); if (b) scene.setStartWeapon(b.dataset.start); };
+    $('#start-diff').onclick = (e) => { const b = e.target.closest('[data-diff]'); if (b) scene.setDifficulty(b.dataset.diff); };
     $('#btn-pause').onclick = () => scene.setPaused(!scene.paused);
     $('#btn-auto').onclick = () => this.toggleAuto(true);
     $('#auto-reserve').oninput = (e) => { scene.autobuy.reserve = Math.max(0, +e.target.value || 0); };
@@ -85,10 +86,14 @@ export class UI {
   // icon row on the start screen: every unlocked weapon type, current slot-1 weapon highlighted
   renderStartWeapons() {
     const scene = this.scene, cur = scene.tower.slots[0] ? scene.tower.slots[0].type : 'pulse';
-    const html = Object.entries(WEAPONS).filter(([type]) => scene.tree.unlocked(type)).map(([type, d]) =>
+    const html = Object.entries(WEAPONS).filter(([type, d]) => scene.tree.unlocked(type) && !d.support).map(([type, d]) =>
       `<button class="swap-ic ${type === cur ? 'cur' : ''}" data-start="${type}" style="color:${hex(d.color)}" title="${d.name}">${ICONS[type]}</button>`).join('');
     $('#start-weapons').innerHTML = html;
     $('#start-weapon-name').textContent = WEAPONS[cur].name + ' · ' + WEAPONS[cur].desc;
+    const dk = scene.state.difficulty, d = scene.diff, x = (v) => '×' + v;
+    $('#start-diff').innerHTML = Object.entries(DIFFICULTY).map(([k, o]) =>
+      `<button class="diff-btn ${k === dk ? 'cur' : ''}" data-diff="${k}" style="color:${o.color}">${o.name}</button>`).join('');
+    $('#start-diff-desc').innerHTML = `Ship HP ${x(d.hp)} · damage ${x(d.dmg)} · spawns ${x(d.spawn)} · <span style="color:${d.color}">scrap ${x(d.scrap)}, fragments ${x(d.frag)}</span>`;
   }
 
   showTab(name) {

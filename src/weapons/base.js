@@ -1,6 +1,8 @@
 import { WEAPONS, COLORS, LEVELS } from '../config.js';
 import { dist, angleTo, minBy } from '../utils.js';
 
+const NO_LW = { dmg: 1, rate: 1 };
+
 const TUNING = {
   turnSpeed: 12,        // turret tracking, rad/s
   jamSparkRate: 10,     // sparks per second while a Dreadnought jam holds the hardpoint
@@ -55,10 +57,12 @@ export class Weapon {
   get atCap() { return this.level >= this.maxLevel; }
   get dmg() {
     const lm = this.lm;
-    return this.def.dmg * this.dmgGrowth(this.level) * this.mods.dmg * this.wm.dmg * lm.dmg
+    return this.def.dmg * this.dmgGrowth(this.level) * this.mods.dmg * this.wm.dmg * lm.dmg * this.lw.dmg
       * (this.type === 'drones' ? lm.droneDmg : lm.otherDmg);
   }
-  get rate() { return this.def.rate * this.rateGrowth(this.level) * this.mods.rate * this.wm.rate * this.lm.rate; }
+  get rate() { return this.def.rate * this.rateGrowth(this.level) * this.mods.rate * this.wm.rate * this.lm.rate * this.lw.rate; }
+  /** this level's choice-card mods for this weapon type (old saves may lack the map) */
+  get lw() { return (this.lm.w && this.lm.w[this.type]) || NO_LW; }
   get range() { return this.def.range; }
   get dps() { return this.dmg * this.rate; }
   get color() { return this.def.color; }

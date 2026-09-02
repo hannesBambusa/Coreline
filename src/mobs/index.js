@@ -2,7 +2,7 @@
 import { Drone, Swarm, Hydra, Bomber, Behemoth, Mine } from './rushers.js';
 import { Raider, Orbiter, Shielder, Phantom, Sniper, Jammer } from './shooters.js';
 import { Leech, Siphon, Carrier, Beacon } from './support.js';
-import { Boss, Warden } from './bosses.js';
+import { Boss, Warden, Warlord, Pylon } from './bosses.js';
 import { Titan } from './titan.js';
 
 export { Mob, orbitOpts, DODGE_IMPULSE } from './base.js';
@@ -12,7 +12,7 @@ export { Drone, Swarm, Hydra, Bomber, Behemoth, Mine, Raider, Orbiter, Shielder,
 export const MOB_CLASSES = {
   drone: Drone, raider: Raider, swarm: Swarm, orbiter: Orbiter, shielder: Shielder, boss: Boss,
   bomber: Bomber, leech: Leech, phantom: Phantom, hydra: Hydra, sniper: Sniper, carrier: Carrier,
-  jammer: Jammer, siphon: Siphon, beacon: Beacon, behemoth: Behemoth, titan: Titan, mine: Mine, warden: Warden,
+  jammer: Jammer, siphon: Siphon, beacon: Beacon, behemoth: Behemoth, titan: Titan, mine: Mine, warden: Warden, warlord: Warlord, pylon: Pylon,
 };
 
 /** `gen` is only used by the hydra (split generation); titan level / warden titan are set by the caller */

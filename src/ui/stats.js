@@ -1,5 +1,6 @@
 // Run statistics markup (Stats tab and the game-over card).
-import { WEAPONS, MOBS, ABILITIES } from '../config.js';
+import { WEAPONS, MOBS, ABILITIES, SPAWN, ELITES, CRIT } from '../config.js';
+import { CHOICES } from '../choices.js';
 import { ICONS } from '../icons.js';
 import { COMBOS } from '../combos.js';
 import { fmt, hex } from './dom.js';
@@ -16,6 +17,37 @@ export function sourceMeta(src) {
   if (WEAPONS[src]) return { name: WEAPONS[src].name, color: hex(WEAPONS[src].color), icon: ICONS[src] };
   if (src === 'nova') return { name: 'Nova', tag: 'ability', color: '#ffffff', icon: ICONS.ab_nuke };
   return { name: 'Other', color: OTHER_COLOR, icon: ICONS.level };
+}
+
+/** Live numbers the HUD does not show: rates, multipliers, what is coming next. */
+function liveRows(scene) {
+  const s = scene.state, t = scene.tower, lm = scene.levelMods, d = scene.diff, tier = scene.tier, tierInt = Math.floor(tier);
+  const cell = (label, value) => `<div class="live-cell"><span class="lbl">${label}</span><b>${value}</b></div>`;
+  const spawn = scene.spawnRate(), scrapRate = scene.saves.scrapRate();
+  const hpMul = Math.pow(SPAWN.hpGrowth, tier - 1) * d.hp * lm.mobHp, dmgMul = Math.pow(SPAWN.dmgGrowth, tier - 1) * d.dmg;
+  const scrapMul = Math.pow(SPAWN.scrapGrowth, tier - 1) * scene.tree.mods.scrap * lm.scrap * d.scrap;
+  const elite = lm.allElite ? 1 : Math.min(ELITES.chanceMax * 2, (ELITES.chanceBase + ELITES.chancePerTier * tier) * lm.elite);
+  const crit = CRIT.chance + scene.tree.mods.crit + lm.crit;
+  const nominal = t.weapons.reduce((a, w) => a + (w.dps || 0), 0);
+  const nextChoice = SPAWN.choiceEvery * (Math.floor(tierInt / SPAWN.choiceEvery) + 1);
+  const nextBoss = MOBS.boss.every * (Math.floor(tierInt / MOBS.boss.every) + 1);
+  const nextWarlord = MOBS.warlord.every * (Math.floor(tierInt / MOBS.warlord.every) + 1);
+  const nextSiege = scene.nextSiegeTier();
+  const mod = scene.levelChoice ? CHOICES[scene.levelChoice] : null;
+  const regen = t.shieldRegen * (t.calm ? 2 + scene.tree.mods.calmMul : 1);
+  const cells = [
+    cell('Spawn rate', `${spawn.toFixed(2)} ships/s`), cell('Ships alive', `${scene.mobs.filter(m => !m.dead).length} / ${SPAWN.softCap}`),
+    cell('Scrap rate', `${fmt(scrapRate)} /s`), cell('Scrap per kill', `×${scrapMul.toFixed(2)}`),
+    cell('Ship HP', `×${hpMul.toFixed(2)}`), cell('Ship damage', `×${dmgMul.toFixed(2)}`),
+    cell('Your DPS (20 s)', fmt(scene.recentDps())), cell('Nominal DPS', fmt(nominal)),
+    cell('Crit chance', `${(crit * 100).toFixed(1)}%`), cell('Elite chance', `${(elite * 100).toFixed(1)}%`),
+    cell('Shield regen', `${regen.toFixed(1)} /s${t.calm ? ' (calm)' : ''}`), cell('Max range', `${t.maxRange()} px`),
+    cell('Modifier', mod ? mod.name : 'none'), cell('Next modifier', `threat ${nextChoice}`),
+    cell('Next Overseer', `threat ${nextBoss}`), cell('Next Warlord', `threat ${nextWarlord}`),
+    cell('Next siege', `threat ${nextSiege}`), cell('Fragments on prestige', fmt(scene.fragmentsForRun())),
+    cell('Swaps left', scene.swapsLeft()), cell('Combo chance', `×${scene.tree.mods.comboChance.toFixed(2)}`),
+  ];
+  return `<h3>Live</h3><div class="live-grid">${cells.join('')}</div>`;
 }
 
 function totalsRows(st, s) {
@@ -61,7 +93,8 @@ const byCount = (o) => Object.entries(o || {}).sort((a, b) => b[1] - a[1]);
 export function statsHtml(scene, compact = false) {
   const st = scene.stats, s = scene.state, total = st.total || 1;
   const sources = Object.entries(st.dmg).sort((a, b) => b[1] - a[1]);
-  let html = compact ? '' : totalsRows(st, s);
+  const d = scene.diff;
+  let html = `<div class="muted" style="margin-bottom:6px">Difficulty <b style="color:${d.color}">${d.name}</b> · ship HP ×${d.hp}, damage ×${d.dmg}, spawns ×${d.spawn}</div>` + (compact ? '' : liveRows(scene) + totalsRows(st, s));
 
   html += '<h3>Damage by weapon</h3>';
   if (!sources.length) html += '<div class="muted">No damage yet.</div>';

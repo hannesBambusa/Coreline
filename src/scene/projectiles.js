@@ -96,8 +96,10 @@ function bulletHit(scene, b, m) {
   const opts = {};
   focusCombo(scene, b, m, opts);
   if (b.ricochet) opts.dmg = b.dmg;
+  if (b.chronoT) { const cf = scene.tower.weapons.find(w => w.type === 'chrono'); if (cf) { opts.mul = (opts.mul || 1) * cf.bulletMul(b.chronoT); opts.color = opts.color || '#e0f2fe'; } }
   const hpBefore = m.hp;
   if (b.weapon) scene.hit(m, b.weapon, b.x, b.y, opts);
+  if (b.onHit) b.onHit(m);
   else { m.takeDamage(b.dmg, b.x, b.y); scene.fx.floater(m.x, m.y - m.r - 6, Math.round(b.dmg), '#dbe7ff', 12); }
   if (b.ricochet) scene.fx.floater(m.x, m.y - m.r - 18, 'ricochet', RICOCHET_COLOR, 10);
   chargedArc(scene, b, m);
@@ -127,7 +129,8 @@ function updateEnemyBullets(scene, dt) {
   const t = scene.tower;
   const bays = t.weapons.filter(w => w.type === 'drones');
   for (const b of scene.enemyBullets) {
-    b.x += b.vx * dt; b.y += b.vy * dt; b.age += dt;
+    const k = b.chrono || 1;   // chrono field slows shots inside it
+    b.x += b.vx * dt * k; b.y += b.vy * dt * k; b.age += dt;
     if (bays.length && bays.some(w => w.absorb(b))) { b.age = DEAD_AGE; continue; }
     const d = distXY(b.x, b.y, t.x, t.y);
     const hitR = t.shield > 0 ? t.shieldR : t.r + 4;

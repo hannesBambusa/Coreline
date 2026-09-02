@@ -29,7 +29,7 @@ export class GravityWell extends Weapon {
       tx: target.x, ty: target.y, color: this.color,
       well: {
         r: this.def.wellRadius * this.wm.radius, life: this.def.wellLife + this.wm.life,
-        pull: this.def.pull, slow: this.def.slow, dps: this.dmg, weapon: this, color: this.color,
+        pull: this.def.pull * (this.lm.gravityPull || 1), slow: this.def.slow, dps: this.dmg, weapon: this, color: this.color,
       },
     });
     this.scene.fx.flash(m.x, m.y, this.color, TUNING.flash);

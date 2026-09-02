@@ -12,8 +12,19 @@ export function freshStats() {
   return { dmg: {}, crits: {}, killsBy: {}, kills: {}, procs: {}, abilities: {}, hits: {}, critExtra: {}, supers: {}, superExtra: {}, taken: 0, total: 0 };
 }
 
+const DPS_WINDOW = 20;   // seconds of damage history kept for recentDps
+
+/** Sustained damage per second over the last DPS_WINDOW seconds of run time. Bosses scale their hp from it. */
+export function recentDps(scene) {
+  const now = scene.state.time, log = scene.dmgLog;
+  while (log.length && log[0][0] < now - DPS_WINDOW) log.shift();
+  const span = Math.min(DPS_WINDOW, Math.max(1, now));
+  return log.reduce((a, e) => a + e[1], 0) / span;
+}
+
 export function addDmg(scene, source, amount, crit = false) {
   const st = scene.stats;
+  if (amount > 0) scene.dmgLog.push([scene.state.time, amount]);
   st.dmg[source] = (st.dmg[source] || 0) + amount;
   st.total += amount;
   if (crit) st.crits[source] = (st.crits[source] || 0) + 1;
@@ -30,7 +41,7 @@ function baseDamage(m, weapon, bonus, opts) {
 /** Crit chance = weapon's own chance (or the global one) plus tree and level bonuses. No weapon means no crit. */
 function rollCrit(scene, weapon, opts) {
   const chance = weapon ? (weapon.def.crit ?? CRIT.chance) + scene.tree.mods.crit + scene.levelMods.crit : 0;
-  return !opts.noCrit && Math.random() < chance;
+  return !opts.noCrit && (scene.afterglow > 0 || Math.random() < chance);
 }
 
 function rollSuperCrit(crit) { return crit && Math.random() < CRIT.superChance; }

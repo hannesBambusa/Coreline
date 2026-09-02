@@ -28,8 +28,9 @@ export class Mob {
     this.scene = scene; this.type = type; this.def = MOBS[type];
     this.x = x; this.y = y; this.vx = 0; this.vy = 0;
     this.r = this.def.r;
-    this.hpMax = this.def.hp * Math.pow(SPAWN.hpGrowth, tier - 1); this.hp = this.hpMax;
-    this.dmg = this.def.dmg * Math.pow(SPAWN.dmgGrowth, tier - 1);
+    const diff = scene.diff;
+    this.hpMax = this.def.hp * Math.pow(SPAWN.hpGrowth, tier - 1) * diff.hp; this.hp = this.hpMax;
+    this.dmg = this.def.dmg * Math.pow(SPAWN.dmgGrowth, tier - 1) * diff.dmg;
     this.scrap = Math.max(1, Math.round(this.def.scrap * Math.pow(SPAWN.scrapGrowth, tier - 1)));
     this.dead = false;
     this.hitFlash = 0;
@@ -88,7 +89,7 @@ export class Mob {
 
   /** per-tier drain amount for this frame: base * dmgGrowth^(tier-1) * dt */
   tierDrain(base, dt) {
-    return base * Math.pow(SPAWN.dmgGrowth, this.scene.tier - 1) * dt;
+    return base * Math.pow(SPAWN.dmgGrowth, this.scene.tier - 1) * this.scene.diff.dmg * dt;
   }
 
   /**

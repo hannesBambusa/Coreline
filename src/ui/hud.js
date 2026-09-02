@@ -19,7 +19,7 @@ const QUICK_BUY_TOWER_KEYS = ['shieldRegen', 'shieldMax', 'hull'];
 // Elements read every frame, looked up once.
 let els = null;
 const topEls = () => els || (els = {
-  scrap: $('#scrap'), fragments: $('#fragments'), time: $('#time'), tier: $('#tier'), kills: $('#kills'),
+  scrap: $('#scrap'), fragments: $('#fragments'), time: $('#time'), tier: $('#tier'), kills: $('#kills'), diff: $('#hud-diff'),
   shieldBar: $('.bar.shield'), hullBar: $('.bar.hull'), shieldFill: $('#shield-fill'), hullFill: $('#hull-fill'),
   shieldTxt: $('#shield-txt'), hullTxt: $('#hull-txt'), shieldRegen: $('#shield-regen'),
   threat: $('#threat-timer'), threatFill: $('#threat-timer .tt-fill'), threatNum: $('#threat-timer .tt-num'),
@@ -35,6 +35,7 @@ export function renderTopBar(scene) {
   e.time.textContent = fmtTime(s.time);
   e.tier.textContent = s.tier;
   e.kills.textContent = fmt(s.kills);
+  const d = scene.diff; if (e.diff.textContent !== d.name) { e.diff.textContent = d.name; e.diff.style.color = d.color; }
 }
 
 function regenPerSecond(scene, t) {
@@ -75,7 +76,8 @@ export function renderThreatTimer(scene) {
 
 function bossStatus(titan, wardens) {
   if (titan.dead) return 'destroyed';
-  const base = wardens ? `${wardens} warden${wardens > 1 ? 's' : ''} healing it` : 'wardens down · shield sector rotates';
+  const base = titan.adapt ? `immune to ${WEAPONS[titan.adapt].name} · ${Math.ceil(titan.adaptT)} s`
+    : wardens ? `${wardens} warden${wardens > 1 ? 's' : ''} healing it` : 'wardens down · shield sector rotates';
   const phase = titan.beamState === 'charge' ? ' · CHARGING BEAM'
     : titan.beamState === 'fire' ? ' · FIRING'
     : titan.blinkState === 'charge' ? ' · BLINKING' : '';
@@ -83,8 +85,16 @@ function bossStatus(titan, wardens) {
 }
 
 export function renderBossBar(scene) {
-  const e = topEls(), sg = scene.siege;
-  e.boss.hidden = !sg;
+  const e = topEls(), sg = scene.siege, wl = !sg && scene.warlord && !scene.warlord.dead ? scene.warlord : null;
+  e.boss.hidden = !sg && !wl;
+  if (wl) {
+    const f = Math.max(0, wl.hp / wl.hpMax);
+    e.bossFill.style.transform = `scaleX(${f})`;
+    e.bossName.textContent = `${wl.def.name} · ${Math.ceil(f * 100)}%`;
+    e.bossSub.textContent = wl.status();
+    e.boss.classList.toggle('charge', !!wl.adapt || wl.shielded);
+    return;
+  }
   if (!sg) return;
   const t = sg.titan, f = Math.max(0, t.hp / t.hpMax), wardens = sg.wardens.filter(x => !x.dead).length;
   e.bossFill.style.transform = `scaleX(${f})`;

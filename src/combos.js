@@ -31,10 +31,24 @@ export const COMBOS = {
                  desc: 'For 3 s every pulse bolt arcs lightning to the nearest other ship.' },
   overload:    { name: 'Overload beam',    pair: ['railgun', 'laser'],   chance: 0.20, cd: 12, color: 0xffffff, effectDur: 3,
                  desc: 'Railgun hit on the laser target supercharges the beam for 3 s.' },
+  stasis:      { name: 'Stasis lock',      pair: ['chrono', 'shock'],    chance: 0.25, cd: 10, color: 0x9be7ff,
+                 desc: 'Shock pulse freezes every ship inside the chrono field for 2 s.' },
+  bloom:       { name: 'Temporal bloom',   pair: ['chrono', 'laser'],    chance: 0.15, cd: 9,  color: 0xff3df2,
+                 desc: 'A laser crit tick on a ship inside the field echoes three times.' },
+  plague:      { name: 'Plague wind',      pair: ['nanite', 'shock'],    chance: 0.25, cd: 10, color: 0x5eead4,
+                 desc: 'Shock pulse spreads every infection to all ships within 140 px of a host.' },
+  culture:     { name: 'Culture well',     pair: ['nanite', 'gravity'],  chance: 0.25, cd: 10, color: 0xc084fc,
+                 desc: 'A nanite shot seeds every ship held in a gravity well.' },
+  horizon:     { name: 'Event horizon',    pair: ['singularity', 'gravity'], chance: 0.30, cd: 12, color: 0xc084fc,
+                 desc: 'The singularity blast collapses into a tower-sized gravity well for 4 s.' },
+  supernova:   { name: 'Supernova',        pair: ['singularity', 'tesla'], chance: 0.25, cd: 12, color: 0x9be7ff,
+                 desc: 'The blast arcs to every ship in range for 3× tesla damage.' },
 };
 
 // intrinsic procs that show up in stats alongside combos
-COMBOS.sweep = { name: 'Ring sweep', pair: ['laser', 'laser'], chance: 0, cd: 0, color: 0xff3df2, intrinsic: true, desc: 'Laser at full ramp sweeps the whole ring every 6 s.' };
+COMBOS.rewind = { name: 'Rewind', pair: ['chrono', 'chrono'], chance: 0, cd: 0, color: 0x9be7ff, intrinsic: true, desc: 'Chrono field Lv 10+: every ship inside jumps back 3 s every 20 s.' };
+COMBOS.replicate = { name: 'Replicate', pair: ['nanite', 'nanite'], chance: 0, cd: 0, color: 0x5eead4, intrinsic: true, desc: 'Nanites jump to nearby ships when a host dies.' };
+COMBOS.sweep = { name: 'Ring sweep', pair: ['laser', 'laser'], chance: 0, cd: 0, color: 0xff3df2, intrinsic: true, desc: 'Laser at full ramp sweeps the whole ring every 6 s. From half ramp it forks to nearby ships.' };
 
 export class Combos {
   constructor(scene) {

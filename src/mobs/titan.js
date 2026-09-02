@@ -3,6 +3,7 @@
 import { SIEGE } from '../config.js';
 import { TAU, randomSign, pick } from '../utils.js';
 import { Mob } from './base.js';
+import { armourInit, armourTick, armourFilter, armourDraw } from './bosses.js';
 
 /** shield sector / blink colour */
 const ARC_COLOR = 0x9be7ff;
@@ -27,6 +28,7 @@ export class Titan extends Mob {
     this.level = level;
     const mul = SIEGE.hpMul + SIEGE.hpMulPerLevel * (level - 1);
     this.hpMax *= mul; this.hp = this.hpMax;
+    armourInit(this);
     this.scrap = Math.round(this.scrap * (1 + 0.5 * (level - 1)));
     this.arc = this.def.shieldArc + SIEGE.arcPerLevel * (level - 1);
     this.arcAngle = 0; this.spin = 0;
@@ -53,7 +55,9 @@ export class Titan extends Mob {
       if (!quiet) { this.scene.fx.spark(hx, hy, ARC_COLOR, 4); this.scene.fx.floater(hx, hy - 10, 'blocked', '#9be7ff', 11); }
       return false;
     }
-    return super.takeDamage(amount, hx, hy, quiet);
+    const got = armourFilter(this, amount, hx, hy, quiet);
+    if (got < 0) return false;
+    return super.takeDamage(got, hx, hy, quiet);
   }
 
   /** enrage multiplier for the current phase */
@@ -64,6 +68,7 @@ export class Titan extends Mob {
     this.spin += dt * 0.4 * mul;
     this.arcAngle += dt * this.def.arcSpeed * mul * this.orbitDir;
     this.arcHit = Math.max(0, (this.arcHit || 0) - dt);
+    armourTick(this, dt, 'Dreadnought');
     if (this.phase === 1 && this.hp < this.hpMax * ENRAGE_HP) {
       this.phase = 2;
       this.scene.ui.banner('Dreadnought enraged', true);
@@ -215,6 +220,7 @@ export class Titan extends Mob {
     g.lineStyle(this.arcHit > 0 ? 8 : 5, ARC_COLOR, f);
     g.beginPath(); g.arc(this.x, this.y, this.r + 14, this.arcAngle - this.arc / 2, this.arcAngle + this.arc / 2, false); g.strokePath();
     g.lineStyle(1, ARC_COLOR, 0.2); g.strokeCircle(this.x, this.y, this.r + 14);
+    armourDraw(this, g, this.r + 26);
     // hull rings
     for (let i = 0; i < 3; i++) { g.lineStyle(2, this.def.color, 0.5); g.beginPath(); g.arc(this.x, this.y, this.r + 4 + i * 4, this.spin * (i % 2 ? -1.5 : 1.5) + i, this.spin * (i % 2 ? -1.5 : 1.5) + i + 2, false); g.strokePath(); }
     // blink telegraph

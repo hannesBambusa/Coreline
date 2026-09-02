@@ -1,7 +1,7 @@
 // The one Phaser scene. Owns the run state and the game objects; the mechanics live in ./scene/*.js as
 // plain functions that take the scene first. The thin methods at the bottom keep the old `scene.x()` API
 // for everything else in the game (mobs, weapons, ui, saves).
-import { COLORS, PRESTIGE, ABILITIES } from './config.js';
+import { COLORS, PRESTIGE, ABILITIES, DIFFICULTY, WEAPONS } from './config.js';
 import { Tree } from './tree.js';
 import { Abilities } from './abilities.js';
 import { SFX } from './sfx.js';
@@ -35,11 +35,12 @@ export class GameScene extends Phaser.Scene {
     makeTextures(this);
 
     // run + meta state
-    this.state = { scrap: 0, fragments: 0, time: 0, tier: 1, kills: 0, bestTime: 0, swapsUsed: 0 };
+    this.state = { scrap: 0, fragments: 0, time: 0, tier: 1, kills: 0, bestTime: 0, swapsUsed: 0, difficulty: 'normal' };
     this.profile = { totalKills: 0, prestige: 0 };
     this.settings = { shake: true, sound: true, volume: 0.7, music: true, transmissions: true };
     this.stats = this.freshStats();
     this.scrapLog = [];
+    this.dmgLog = [];          // [time, amount] for recentDps
     this.seen = {};                    // mob types already announced this session
 
     // entities
@@ -55,7 +56,7 @@ export class GameScene extends Phaser.Scene {
     this.levelMods = baseLevelMods();
     this.levelChoice = null;
     this.spawnTimer = 2;
-    this.siege = null; this.siegesCleared = 0;
+    this.siege = null; this.siegesCleared = 0; this.warlord = null;
     this.surgeType = null;
     this.slowTimer = 0; this.timeScale = 1;
     this.musicTimer = 0;
@@ -109,8 +110,16 @@ export class GameScene extends Phaser.Scene {
   // ---------- run lifecycle ----------
   // Fresh run: hold everything until the player presses start, so skills and weapons can be set up first.
   // the start screen lets the player pick the slot-1 weapon from what the tree has unlocked
+  get diff() { return DIFFICULTY[this.state.difficulty] || DIFFICULTY.normal; }
+  /** difficulty can only change on the start screen; the pick sticks for the next runs */
+  setDifficulty(key) {
+    if (!this.starting || !DIFFICULTY[key]) return;
+    this.state.difficulty = key;
+    this.ui.renderStartWeapons();
+  }
+
   setStartWeapon(type) {
-    if (!this.tree.unlocked(type) || this.tower.slots[0]?.type === type) return;
+    if (!this.tree.unlocked(type) || WEAPONS[type].support || this.tower.slots[0]?.type === type) return;
     this.tower.installWeapon(0, type);
     this.ui.renderStartWeapons();
     this.ui.render();
@@ -159,7 +168,7 @@ export class GameScene extends Phaser.Scene {
   swapsLeft() { return Math.max(0, 1 + this.tree.mods.swaps - (this.state.swapsUsed || 0)); }
 
   fragmentsForRun() {
-    return Math.floor(Math.pow(this.tier / PRESTIGE.divisor, PRESTIGE.power));
+    return Math.floor(Math.pow(this.tier / PRESTIGE.divisor, PRESTIGE.power) * this.diff.frag);
   }
   canPrestige() { return this.tier >= PRESTIGE.minTier; }
 
@@ -183,9 +192,10 @@ export class GameScene extends Phaser.Scene {
     const src = m.lastHit || 'other';
     this.stats.killsBy[src] = (this.stats.killsBy[src] || 0) + 1;
     const lm = this.levelMods;
-    const scrap = Math.round(m.scrap * this.tree.mods.scrap * lm.scrap * (m.type === 'swarm' ? lm.swarmScrap : 1) * (m.elite ? lm.eliteScrap : 1));
+    const scrap = Math.round(m.scrap * this.tree.mods.scrap * lm.scrap * this.diff.scrap * (m.type === 'swarm' ? lm.swarmScrap : 1) * (lm.typeScrap[m.type] || 1) * (m.elite ? lm.eliteScrap : 1));
     this.state.scrap += scrap;
     this.scrapLog.push([this.state.time, scrap]);
+    for (const w of this.tower.weapons) if (w.onScrap) w.onScrap(scrap);
     this.sfx.play(m.type === 'boss' ? 'bigExplode' : 'explode', m.r, m.x);
     this.fx.floater(m.x, m.y + 6, `+${scrap}`, '#ffd166', 13);
   }
@@ -209,11 +219,11 @@ export class GameScene extends Phaser.Scene {
     this.tower = new Tower(this, this.scale.width / 2, this.scale.height / 2);
     this.state.scrap = this.tree.mods.startScrap; this.state.time = 0; this.state.tier = 1; this.state.kills = 0; this.state.swapsUsed = 0;
     this.showStart();
-    this.spawnTimer = 2; this.scrapLog = []; this.siege = null; this.siegesCleared = 0; this.surgeType = null; this.ui.removeEffect('surge');
+    this.spawnTimer = 2; this.scrapLog = []; this.dmgLog = []; this.warlord = null; this.siege = null; this.siegesCleared = 0; this.surgeType = null; this.ui.removeEffect('surge');
     this.stats = this.freshStats();
     this.levelMods = baseLevelMods(); this.levelChoice = null; this.choice = null; this.choosing = false; this.ui.hideChoice();
     this.combos.cd = {}; this.combos.count = 0;
-    this.slowTimer = 0; this.timeScale = 1;
+    this.slowTimer = 0; this.timeScale = 1; this.afterglow = 0;
     this.autobuy.lastBuy = null;
     this.ui.clearEffects();
     this.ui.removeEffect('siege');
@@ -238,6 +248,7 @@ export class GameScene extends Phaser.Scene {
     this.autobuy.update(dt);
     this.updateMusic(dt);
     this.combos.update(dt);
+    this.afterglow = Math.max(0, (this.afterglow || 0) - dt);
     this.saves.update(dt);
     this.tower.update(dt, this.mobs);
     for (const m of this.mobs) if (!m.dead) { if (m.marked > 0) m.marked -= dt; if (m.stun > 0) m.stunned(dt); else m.update(dt); }
@@ -302,6 +313,7 @@ export class GameScene extends Phaser.Scene {
   // ---------- delegates: damage ----------
   freshStats() { return damage.freshStats(); }
   addDmg(source, amount, crit = false) { damage.addDmg(this, source, amount, crit); }
+  recentDps() { return damage.recentDps(this); }
   hit(m, weapon, x, y, opts = {}) { return damage.hit(this, m, weapon, x, y, opts); }
   damageRadius(x, y, r, dmg, color, weapon) { damage.damageRadius(this, x, y, r, dmg, color, weapon); }
   damageDrones(x, y, r, dmg, line = null) { damage.damageDrones(this, x, y, r, dmg, line); }

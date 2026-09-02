@@ -71,6 +71,8 @@
       <div class="row"><button id="btn-export" class="buy">Export</button><button id="btn-import" class="buy">Import</button></div>
       <h3>Run</h3>
       <button id="btn-prestige" class="buy">Prestige now</button>
+      <button id="btn-endrun" class="buy">End run and start anew</button>
+      <p class="muted">Ends the current run. From threat 10 you get fragments for it, below that nothing. Skills stay either way.</p>
       <p class="muted">Ends the run for fragments. Available from threat level 10.</p>
       <button id="btn-reset" class="danger">Hard reset</button>
       <p class="muted">Wipes everything. No undo.</p>
@@ -87,6 +89,13 @@
     </div>
   </div>
 
+  <div id="confirm" hidden>
+    <div class="card cyan">
+      <h2 id="confirm-title">Are you sure?</h2>
+      <p id="confirm-text"></p>
+      <div class="row"><button id="confirm-no" class="buy">Cancel</button><button id="confirm-yes" class="buy danger">Confirm</button></div>
+    </div>
+  </div>
   <div id="overlay" hidden>
     <div class="card">
       <h2>Core destroyed</h2>

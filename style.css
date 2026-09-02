@@ -450,3 +450,13 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 #start-weapons .swap-ic { width: 40px; height: 40px; }
 #start-weapons .swap-ic svg { width: 26px; height: 26px; }
 .start-wname { margin-top: 8px; font-size: 12px; color: var(--text); max-width: 360px; margin-left: auto; margin-right: auto; }
+
+/* confirm dialog */
+#confirm { position: fixed; inset: 0; background: rgba(5,6,13,0.7); display: flex; align-items: center; justify-content: center; z-index: 25; backdrop-filter: blur(4px); }
+#confirm[hidden] { display: none; }
+#confirm .card { text-align: center; border: 1px solid var(--cyan); border-radius: 14px; padding: 28px 40px; background: var(--panel); box-shadow: 0 0 60px rgba(79,242,255,0.2); max-width: 440px; }
+#confirm h2 { font-family: var(--font-head); color: var(--cyan); letter-spacing: 3px; margin: 0 0 12px; font-size: 18px; }
+#confirm p { color: var(--muted); margin: 0 0 20px; font-size: 15px; line-height: 1.4; }
+#confirm .row { justify-content: center; gap: 12px; }
+#confirm .row button { flex: none; min-width: 130px; padding: 10px 16px; }
+#confirm .row button.danger { border-color: var(--red); color: var(--red); background: rgba(255,77,109,0.1); }

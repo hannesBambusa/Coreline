@@ -1,5 +1,5 @@
 // The scene talks to `scene.ui`; this class wires the DOM once and delegates the work to src/ui/*.js.
-import { hex, $, $$, swapHtml, bindBuy } from './ui/dom.js';
+import { hex, $, $$, swapHtml, bindBuy, askConfirm } from './ui/dom.js';
 import { WEAPONS } from './config.js';
 import { ICONS } from './icons.js';
 import * as hud from './ui/hud.js';
@@ -43,6 +43,7 @@ export class UI {
     window.addEventListener('keydown', (e) => this.onKey(e));
     $('#btn-rebuild').onclick = () => { $('#overlay').hidden = true; scene.prestige(); this.showTab('skills'); };
     $('#btn-prestige').onclick = () => this.confirmPrestige();
+    $('#btn-endrun').onclick = () => this.confirmEndRun();
     this.render();
     setInterval(() => this.render(), RENDER_MS);
   }
@@ -141,13 +142,19 @@ export class UI {
     this.render();
   }
 
+  // End the run now: prestige when eligible, otherwise a plain reset with no fragments
+  confirmEndRun() {
+    const scene = this.scene;
+    if (scene.canPrestige()) return this.confirmPrestige();
+    askConfirm('End this run?', 'You are below threat 10, so no fragments for it. Scrap, weapons and tower upgrades reset. Skills stay.', { okLabel: 'End run' })
+      .then(ok => { if (ok) { scene.resetRun(); this.showTab('tower'); this.render(); } });
+  }
+
   confirmPrestige() {
     const scene = this.scene, n = scene.fragmentsForRun();
     if (!scene.canPrestige()) return;
-    if (confirm(`Prestige now for ${n} fragment${n === 1 ? '' : 's'}? Scrap, weapons and tower upgrades reset. Skills stay.`)) {
-      scene.prestige();
-      this.render();
-    }
+    askConfirm('End run and prestige?', `You get ${n} fragment${n === 1 ? '' : 's'} for this run. Scrap, weapons and tower upgrades reset. Skills stay.`, { okLabel: 'Prestige', danger: false })
+      .then(ok => { if (ok) { scene.prestige(); this.render(); } });
   }
 
   abilityClick(k) { hud.abilityClick(this, k); }

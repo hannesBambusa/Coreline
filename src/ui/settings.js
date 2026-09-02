@@ -1,5 +1,5 @@
 // Settings tab, volume controls, panel resize grip, export / import.
-import { $ } from './dom.js';
+import { $, askConfirm } from './dom.js';
 
 const DEFAULT_VOLUME = 0.7;
 const PANEL_MIN_W = 260;
@@ -48,10 +48,10 @@ export function initSettings(ui) {
     $('#opt-sound').checked = scene.settings.sound;
     syncMute(ui);
   };
-  $('#btn-reset').onclick = () => { if (confirm('Wipe everything, including fragments and best time?')) { scene.saves.clear(); location.reload(); } };
+  $('#btn-reset').onclick = () => askConfirm('Hard reset?', 'Wipes everything, including fragments, skills and best time. No undo.', { okLabel: 'Wipe everything' }).then(ok => { if (ok) { scene.saves.clear(); location.reload(); } });
   $('#btn-export').onclick = () => { $('#save-text').value = scene.saves.export(); $('#save-text').select(); };
   $('#btn-import').onclick = () => {
-    if (scene.saves.import($('#save-text').value)) location.reload(); else { alert('Could not read that save.'); }
+    if (scene.saves.import($('#save-text').value)) location.reload(); else askConfirm('Import failed', 'Could not read that save code.', { okLabel: null, cancelLabel: 'OK' });
   };
 }
 

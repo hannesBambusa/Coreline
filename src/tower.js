@@ -1,4 +1,4 @@
-import { TOWER, TOWER_UPGRADES, COLORS, SLOT_COSTS, SLOT_GATES, CORE_TIERS } from './config.js';
+import { TOWER, TOWER_UPGRADES, COLORS, SLOT_COSTS, SLOT_GATES, CORE_TIERS, LEVELS } from './config.js';
 import { createWeapon } from './weapons.js';
 import { drawTower } from './tower/draw.js';
 
@@ -28,13 +28,22 @@ export class Tower {
   /** threat-level choice modifiers; null before the scene has set them */
   get lm() { return this.scene.levelMods || null; }
 
+  /** total bonus from `level` upgrade steps: full `add` up to the soft cap, a fraction of it after */
+  static upgradeBonus(key, level) {
+    const add = TOWER_UPGRADES[key].add, full = Math.min(level, LEVELS.towerSoftCap), soft = Math.max(0, level - LEVELS.towerSoftCap);
+    return add * full + add * LEVELS.towerSoftFrac * soft;
+  }
+  upgradeBonus(key, level = this.upgrades[key]) { return Tower.upgradeBonus(key, level); }
+  get maxUpgrade() { return LEVELS.capBase + LEVELS.capPerPrestige * (this.scene.profile ? this.scene.profile.prestige : 0); }
+  atCap(key) { return this.upgrades[key] >= this.maxUpgrade; }
+
   recompute() {
     const m = this.scene.tree ? this.scene.tree.mods : { hull: 1, shieldMax: 1, shieldRegen: 1 };
     const lm = this.lm;
-    this.hullMax = Math.round((TOWER.hullMax + this.upgrades.hull * TOWER_UPGRADES.hull.add) * m.hull);
-    const shieldBase = TOWER.shieldMax + this.upgrades.shieldMax * TOWER_UPGRADES.shieldMax.add;
+    this.hullMax = Math.round((TOWER.hullMax + this.upgradeBonus('hull')) * m.hull);
+    const shieldBase = TOWER.shieldMax + this.upgradeBonus('shieldMax');
     this.shieldMax = Math.round(shieldBase * m.shieldMax * (lm ? lm.shieldMax : 1));
-    this.shieldRegen = (TOWER.shieldRegen + this.upgrades.shieldRegen * TOWER_UPGRADES.shieldRegen.add) * m.shieldRegen;
+    this.shieldRegen = (TOWER.shieldRegen + this.upgradeBonus('shieldRegen')) * m.shieldRegen;
     if (this.hull > this.hullMax) this.hull = this.hullMax;
     if (this.shield > this.shieldMax) this.shield = this.shieldMax;
   }

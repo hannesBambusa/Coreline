@@ -259,3 +259,12 @@ Full review and refactor. Bugs fixed: Dreadnought shield sector now checks the a
 Structure: `src/utils.js` helpers; `scene.js` 772 → 309 lines with `src/scene/*`; `mobs.js` 850 → 9-line shim with `src/mobs/*` and shared `approachAndOrbit` / `fireAt` / `fireBurst` / `tickCooldown` / `spawnChild` / `tierDrain` helpers; `ui.js` 628 → 165 with `src/ui/*`, tab HTML built only for the active tab and skipped when the panel is hidden, per-frame DOM queries cached; `weapons.js` split per weapon with `TUNING` blocks; `config.js` split by domain; `sfx.js` split into engine and a recipe table; CSS sectioned with keyframes at the end.
 
 Also: tesla range 240 → 420 and chain range 140 → 180; start screen lets the player pick the slot-1 weapon from unlocked types.
+
+## Level caps
+
+Two caps, both in `LEVELS` in `src/config/meta.js`.
+
+- **Soft cap.** Weapons grow at their full `dmgMul`/`rateMul` per level up to Lv 25, then ×1.06 damage and ×1.01 rate per level after. Tower upgrades add their full `add` per level up to Lv 20, then half of it. Cost growth is unchanged, so late levels are deliberately poor value.
+- **Hard cap.** Weapon levels and tower upgrade levels stop at 20 + 5 per prestige. Rows show "Max" and a "Level cap N · +5 per prestige" note; purchases, auto-buy and the quick-buy cards skip capped items. Levels already above the cap in an old save are kept, they just cannot be bought further.
+
+Tesla range 420 → 520, chain range 180 → 220.

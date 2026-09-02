@@ -54,13 +54,15 @@ function droneModeRow(w, slot) {
     `<span class="muted" style="font-size:11px">${w.focus ? 'all drones on one target' : 'each drone its own target'}</span></div>`;
 }
 
+const capNote = (max) => `<span class="gate">Level cap ${max} · +5 per prestige</span>`;
+
 function weaponRow(scene, w, slot) {
-  const cost = w.upgradeCost(), c = hex(w.color);
+  const cost = w.upgradeCost(), c = hex(w.color), capped = w.atCap;
   return row({
     cls: 'weapon', style: `border-color:${c}${BORDER_ALPHA}`, icon: ICONS[w.type], iconStyle: `color:${c}`,
     name: w.def.name, sub: `Lv ${w.level}`,
-    desc: `${w.statLine()}<br>${nextLine(`Lv ${w.level + 1}: ${w.nextLine()}`)}<br>${vsLine(w.def)} · ${critLine(w.def)}`,
-    button: buyBtn('weapon:' + slot, cost, scene.state.scrap >= cost),
+    desc: `${w.statLine()}<br>${capped ? capNote(w.maxLevel) : nextLine(`Lv ${w.level + 1}: ${w.nextLine()}`)}<br>${vsLine(w.def)} · ${critLine(w.def)}`,
+    button: capped ? disabledBtn('Max') : buyBtn('weapon:' + slot, cost, scene.state.scrap >= cost),
     extra: droneModeRow(w, slot) + swapStrip(scene, w, slot),
   });
 }
@@ -147,10 +149,11 @@ function towerUpgradeRow(t, key, scrap) {
   const u = TOWER_UPGRADES[key], cost = t.upgradeCost(key), lvl = t.upgrades[key];
   const cur = key === 'shieldMax' ? t.shieldMax : key === 'shieldRegen' ? t.shieldRegen : t.hullMax;
   const fmtU = (v) => key === 'shieldRegen' ? v.toFixed(1) + '/s' : Math.round(v);
+  const step = t.upgradeBonus(key, lvl + 1) - t.upgradeBonus(key, lvl);
   return row({
     icon: ICONS[key], name: u.name, sub: `Lv ${lvl}`,
-    desc: `Now <b>${fmtU(cur)}</b><br>${nextLine(`Lv ${lvl + 1}: <b>${fmtU(cur + u.add)}</b> (+${u.add})`)}`,
-    button: buyBtn('tower:' + key, cost, scrap >= cost),
+    desc: `Now <b>${fmtU(cur)}</b><br>${t.atCap(key) ? capNote(t.maxUpgrade) : nextLine(`Lv ${lvl + 1}: <b>${fmtU(cur + step)}</b> (+${step})`)}`,
+    button: t.atCap(key) ? disabledBtn('Max') : buyBtn('tower:' + key, cost, scrap >= cost),
   });
 }
 
@@ -203,18 +206,22 @@ function prestigeCard(scene) {
   });
 }
 
+const wIdx = (n, order) => { const t = n.unlock || n.weapon; return t ? order.indexOf(t) : order.length; };
+
 function skillRow(tr, id, n, branchColor) {
   const lvl = tr.level(id), maxed = lvl >= n.max, locked = n.requires && !tr.level(n.requires);
   const cost = maxed ? 0 : tr.cost(id);
-  const icon = n.unlock ? ICONS[n.unlock] : (ICONS[id] || ICONS.level);
-  const desc = (lvl ? '<b>' + n.text(lvl) + '</b>' : 'Lv 1: ' + n.text(1)) +
+  const wt = n.unlock || n.weapon, wd = wt && WEAPONS[wt], wc = wd && hex(wd.color);
+  const icon = wt ? ICONS[wt] : (ICONS[id] || ICONS.level);
+  const desc = (wd ? `<span class="wtag" style="color:${wc};border-color:${wc}">${wd.name}</span> ` : '') +
+    (lvl ? '<b>' + n.text(lvl) + '</b>' : 'Lv 1: ' + n.text(1)) +
     (lvl && !maxed ? '<br>' + nextLine('Lv ' + (lvl + 1) + ': ' + n.text(lvl + 1)) : '') +
     (locked ? '<br>' + gateLine('Requires ' + TREE[n.requires].name) : '');
   const button = maxed ? disabledBtn('Max')
     : `<button class="buy" data-buy="skill:${id}" ${tr.canBuy(id) ? '' : 'disabled'}>Buy<span class="cost violet">${cost} frag</span></button>`;
   return row({
     cls: `skill${lvl ? ' owned' : ''}${locked ? ' gated' : ''}`, style: lvl ? `border-color:${branchColor}${OWNED_ALPHA}` : '',
-    icon, iconStyle: `color:${lvl ? branchColor : 'var(--muted)'}`, name: n.name, sub: `${lvl} / ${n.max}`, desc, button,
+    icon, iconStyle: `color:${wc || (lvl ? branchColor : 'var(--muted)')}${wd && !lvl ? ';opacity:.55' : ''}`, name: n.name, sub: `${lvl} / ${n.max}`, desc, button,
   });
 }
 
@@ -224,7 +231,10 @@ export function renderSkillsTab(ui) {
   for (const [bk, b] of Object.entries(BRANCHES)) {
     const col = hex(b.color);
     html += `<h3 style="color:${col}">${b.name}</h3>`;
-    for (const [id, n] of Object.entries(TREE)) if (n.branch === bk) html += skillRow(tr, id, n, col);
+    // weapon branch: keep each weapon's unlock and its mods next to each other, generic nodes last
+    const nodes = Object.entries(TREE).filter(([, n]) => n.branch === bk);
+    if (bk === 'weapons') { const order = Object.keys(WEAPONS); nodes.sort(([, a], [, b]) => wIdx(a, order) - wIdx(b, order)); }
+    for (const [id, n] of nodes) html += skillRow(tr, id, n, col);
   }
   return html;
 }

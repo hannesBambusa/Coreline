@@ -43,7 +43,7 @@ export const WEAPONS = {
   tesla: {
     name: 'Tesla arc', install: 500,
     desc: 'Chain lightning that jumps between nearby ships.',
-    dmg: 14, rate: 1.6, range: 420, chains: 4, chainRange: 180,
+    dmg: 14, rate: 1.6, range: 520, chains: 4, chainRange: 220,
     dmgMul: 1.15, rateMul: 1.04,
     cost: 70, costGrowth: 1.32,
     prefer: ['swarm', 'drone'], bonus: 1.6, crit: 0.09,

@@ -17,7 +17,7 @@ export function purchase(scene, id) {
 
   if (kind === 'weapon') {
     const w = t.slots[+arg], cost = w.upgradeCost();
-    if (s.scrap >= cost) { spend(cost); w.level++; }
+    if (!w.atCap && s.scrap >= cost) { spend(cost); w.level++; }
   } else if (kind === 'slot') {
     const cost = t.nextSlotCost();
     if (cost !== null && s.scrap >= cost) { spend(cost); t.unlockSlot(); }
@@ -41,7 +41,7 @@ export function purchase(scene, id) {
     if (!a.state[arg].unlocked && s.scrap >= d.cost) { spend(d.cost); a.unlock(arg); }
   } else if (kind === 'tower') {
     const cost = t.upgradeCost(arg);
-    if (s.scrap >= cost) { spend(cost); t.buyUpgrade(arg); }
+    if (!t.atCap(arg) && s.scrap >= cost) { spend(cost); t.buyUpgrade(arg); }
   }
   return s.scrap !== before;
 }

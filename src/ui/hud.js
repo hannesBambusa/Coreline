@@ -169,10 +169,11 @@ export function renderQueue(ui) {
 function quickBuyItems(scene) {
   const t = scene.tower, items = [];
   t.slots.forEach((w, i) => {
-    if (w) items.push({ id: 'weapon:' + i, icon: w.type, color: w.color, label: w.def.name, from: w.level, to: w.level + 1, cost: w.upgradeCost() });
+    if (w && !w.atCap) items.push({ id: 'weapon:' + i, icon: w.type, color: w.color, label: w.def.name, from: w.level, to: w.level + 1, cost: w.upgradeCost() });
   });
   for (const key of QUICK_BUY_TOWER_KEYS) {
     const lvl = t.upgrades[key];
+    if (t.atCap(key)) continue;
     items.push({ id: 'tower:' + key, icon: key, color: CORE_COLOR, label: AUTO_ITEMS[key].name, from: lvl, to: lvl + 1, cost: t.upgradeCost(key) });
   }
   const slotCost = t.nextSlotCost();

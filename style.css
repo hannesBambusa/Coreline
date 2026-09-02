@@ -132,6 +132,7 @@ body.resizing #panel { transition: none; }
 .next b { color: #fff; }
 .crit { color: #ffb703; font-size: 12px; }
 .gate { color: var(--violet); font-size: 12px; }
+.wtag { display: inline-block; border: 1px solid; border-radius: 3px; padding: 0 5px; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; vertical-align: 1px; margin-right: 2px; }
 .item.gated { opacity: 0.55; }
 .item.skill .cost.violet { color: var(--violet); }
 .item.prestige { border-color: rgba(192,132,252,0.5); background: rgba(192,132,252,0.06); }

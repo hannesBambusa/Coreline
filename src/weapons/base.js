@@ -1,4 +1,4 @@
-import { WEAPONS, COLORS } from '../config.js';
+import { WEAPONS, COLORS, LEVELS } from '../config.js';
 import { dist, angleTo, minBy } from '../utils.js';
 
 const TUNING = {
@@ -43,20 +43,30 @@ export class Weapon {
   get mods() { return this.scene.tree.mods; }
   get wm() { return this.mods.w[this.type]; }
   get lm() { return this.scene.levelMods; }
+  /** per-level growth: full multiplier up to LEVELS.softCap, a smaller one after */
+  static growth(level, mul, softMul) {
+    const full = Math.min(level, LEVELS.softCap) - 1, soft = Math.max(0, level - LEVELS.softCap);
+    return Math.pow(mul, full) * Math.pow(softMul, soft);
+  }
+  dmgGrowth(level) { return Weapon.growth(level, this.def.dmgMul, LEVELS.softDmgMul); }
+  rateGrowth(level) { return Weapon.growth(level, this.def.rateMul, LEVELS.softRateMul); }
+  /** hard level cap for this run, rising with prestige */
+  get maxLevel() { return LEVELS.capBase + LEVELS.capPerPrestige * (this.scene.profile ? this.scene.profile.prestige : 0); }
+  get atCap() { return this.level >= this.maxLevel; }
   get dmg() {
     const lm = this.lm;
-    return this.def.dmg * Math.pow(this.def.dmgMul, this.level - 1) * this.mods.dmg * this.wm.dmg * lm.dmg
+    return this.def.dmg * this.dmgGrowth(this.level) * this.mods.dmg * this.wm.dmg * lm.dmg
       * (this.type === 'drones' ? lm.droneDmg : lm.otherDmg);
   }
-  get rate() { return this.def.rate * Math.pow(this.def.rateMul, this.level - 1) * this.mods.rate * this.wm.rate * this.lm.rate; }
+  get rate() { return this.def.rate * this.rateGrowth(this.level) * this.mods.rate * this.wm.rate * this.lm.rate; }
   get range() { return this.def.range; }
   get dps() { return this.dmg * this.rate; }
   get color() { return this.def.color; }
   upgradeCost() { return Math.floor(this.def.cost * Math.pow(this.def.costGrowth, this.level - 1)); }
   /** dmg/rate/dps at a given level, without the threat-level modifiers */
   statsAt(level) {
-    const dmg = this.def.dmg * Math.pow(this.def.dmgMul, level - 1) * this.mods.dmg * this.wm.dmg;
-    const rate = this.def.rate * Math.pow(this.def.rateMul, level - 1) * this.mods.rate * this.wm.rate;
+    const dmg = this.def.dmg * this.dmgGrowth(level) * this.mods.dmg * this.wm.dmg;
+    const rate = this.def.rate * this.rateGrowth(level) * this.mods.rate * this.wm.rate;
     return { dmg, rate, dps: dmg * rate };
   }
   statLine() { return formatStats({ dmg: this.dmg, rate: this.rate, dps: this.dps }); }

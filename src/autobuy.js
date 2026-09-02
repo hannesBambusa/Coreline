@@ -29,11 +29,11 @@ export class AutoBuy {
     switch (key) {
       case 'weapons': {
         let best = null;
-        t.slots.forEach((w, i) => { if (w && (!best || w.upgradeCost() < best.cost)) best = { cost: w.upgradeCost(), id: 'weapon:' + i, label: w.def.name + ' Lv ' + (w.level + 1) }; });
+        t.slots.forEach((w, i) => { if (w && !w.atCap && (!best || w.upgradeCost() < best.cost)) best = { cost: w.upgradeCost(), id: 'weapon:' + i, label: w.def.name + ' Lv ' + (w.level + 1) }; });
         return best;
       }
       case 'shieldRegen': case 'shieldMax': case 'hull':
-        return { cost: t.upgradeCost(key), id: 'tower:' + key, label: AUTO_ITEMS[key].name };
+        return t.atCap(key) ? null : { cost: t.upgradeCost(key), id: 'tower:' + key, label: AUTO_ITEMS[key].name };
       case 'slot': {
         const c = t.nextSlotCost();
         return c === null ? null : { cost: c, id: 'slot', label: 'Hardpoint ' + (t.slots.length + 1) };
@@ -83,10 +83,11 @@ export class AutoBuy {
       switch (key) {
         case 'weapons': {
           let best = null;
-          sim.weapons.forEach((w, i) => { if (!w) return; const c = Math.floor(w.def.cost * Math.pow(w.def.costGrowth, w.level - 1)); if (!best || c < best.cost) best = { cost: c, label: w.name, from: w.level, to: w.level + 1, icon: w.type, color: w.def.color, apply: () => w.level++ }; });
+          sim.weapons.forEach((w, i) => { if (!w || w.level >= t.slots[i].maxLevel) return; const c = Math.floor(w.def.cost * Math.pow(w.def.costGrowth, w.level - 1)); if (!best || c < best.cost) best = { cost: c, label: w.name, from: w.level, to: w.level + 1, icon: w.type, color: w.def.color, apply: () => w.level++ }; });
           return best;
         }
         case 'shieldRegen': case 'shieldMax': case 'hull': {
+          if (sim.up[key] >= t.maxUpgrade) return null;
           const c = t.upgradeCostAt(key, sim.up[key]);
           return { cost: c, label: AUTO_ITEMS[key].name, from: sim.up[key], to: sim.up[key] + 1, icon: key, color: 0x4ff2ff, apply: () => sim.up[key]++ };
         }

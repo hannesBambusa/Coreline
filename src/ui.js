@@ -28,9 +28,15 @@ export class UI {
       if (scene.saves.import($('#save-text').value)) location.reload(); else { alert('Could not read that save.'); }
     };
     $('#btn-offline-ok').onclick = () => { $('#offline').hidden = true; };
+    $('#btn-start').onclick = () => scene.beginRun();
     this.buildAbilityBar();
+    this.initResize();
     $('#btn-pause').onclick = () => scene.setPaused(!scene.paused);
-    $('#btn-auto').onclick = () => { scene.autobuy.on = !scene.autobuy.on; this.syncAuto(); scene.sfx.play(scene.autobuy.on ? 'buy' : 'deny'); };
+    $('#btn-auto').onclick = () => {
+      scene.autobuy.on = !scene.autobuy.on;
+      if (scene.autobuy.on && !this.panel.classList.contains('hidden')) this.panel.classList.add('hidden');   // hand the screen to the queue
+      this.syncAuto(); scene.sfx.play(scene.autobuy.on ? 'buy' : 'deny');
+    };
     $('#auto-reserve').oninput = (e) => { scene.autobuy.reserve = Math.max(0, +e.target.value || 0); };
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) { e.preventDefault(); scene.setPaused(!scene.paused); }
@@ -58,6 +64,44 @@ export class UI {
     if (el.dataset.last !== html) { el.dataset.last = html; el.querySelector('ol').innerHTML = html; }
   }
 
+  // Drag the panel's left edge to resize it. Width is clamped and saved in settings.
+  initResize() {
+    const grip = $('#panel-grip'), panel = this.panel, scene = this.scene;
+    const MIN = 260, maxW = () => Math.min(640, Math.floor(window.innerWidth * 0.45));
+    const apply = (w) => { w = Math.max(MIN, Math.min(maxW(), Math.round(w))); panel.style.width = w + 'px'; scene.settings.panelWidth = w; document.documentElement.style.setProperty('--panel-w', w + 'px'); };
+    if (scene.settings.panelWidth) apply(scene.settings.panelWidth);
+    let dragging = false, startX = 0, startW = 0;
+    grip.addEventListener('pointerdown', (e) => { dragging = true; startX = e.clientX; startW = panel.getBoundingClientRect().width; grip.setPointerCapture(e.pointerId); document.body.classList.add('resizing'); e.preventDefault(); });
+    grip.addEventListener('pointermove', (e) => { if (dragging) apply(startW + (startX - e.clientX)); });
+    const stop = () => { if (!dragging) return; dragging = false; document.body.classList.remove('resizing'); scene.saves.save(); };
+    grip.addEventListener('pointerup', stop); grip.addEventListener('pointercancel', stop);
+    grip.addEventListener('dblclick', () => apply(320));
+    window.addEventListener('resize', () => { if (scene.settings.panelWidth) apply(scene.settings.panelWidth); });
+    this.applyPanelWidth = apply;
+  }
+
+  // Panel collapsed and auto-buy off: clickable cards for everything affordable right now.
+  renderQuickBuy() {
+    const el = $('#quick-buy'), s = this.scene, st = s.state, t = s.tower, ab = s.autobuy;
+    el.hidden = ab.on || !this.panel.classList.contains('hidden') || s.gameOver;
+    if (el.hidden) return;
+    const items = [];
+    t.slots.forEach((w, i) => { if (w) items.push({ id: 'weapon:' + i, icon: w.type, color: w.color, label: w.def.name, from: w.level, to: w.level + 1, cost: w.upgradeCost() }); });
+    for (const key of ['shieldRegen', 'shieldMax', 'hull']) items.push({ id: 'tower:' + key, icon: key, color: 0x4ff2ff, label: AUTO_ITEMS[key].name, from: t.upgrades[key], to: t.upgrades[key] + 1, cost: t.upgradeCost(key) });
+    const sc = t.nextSlotCost(); if (sc !== null) items.push({ id: 'slot', icon: 'slot', color: 0x4ff2ff, label: 'Hardpoint', from: t.slots.length, to: t.slots.length + 1, cost: sc });
+    for (const k in s.abilities.state) if (!s.abilities.state[k].unlocked) items.push({ id: 'ability:' + k, icon: 'ab_' + k, color: 0x9be7ff, label: ABILITIES[k].name, from: null, cost: ABILITIES[k].cost });
+    const ready = items.filter(e => e.cost <= st.scrap).sort((a, b) => a.cost - b.cost);
+    const html = ready.length ? ready.map(e => {
+      const hex = '#' + e.color.toString(16).padStart(6, '0');
+      const lv = e.from === null ? 'unlock' : `Lv ${e.from} <b>&rarr; ${e.to}</b>`;
+      return `<li class="now" data-buy="${e.id}" style="--qc:${hex}"><span class="ic">${ICONS[e.icon] || ICONS.level}</span><span class="txt"><span class="l">${e.label}</span><span class="lv">${lv}</span></span><span class="c">${fmt(e.cost)}</span></li>`;
+    }).join('') : '<li class="empty">Nothing affordable yet</li>';
+    if (el.dataset.last !== html) {
+      el.dataset.last = html; el.querySelector('ol').innerHTML = html;
+      el.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => this.buy(b.dataset.buy));
+    }
+  }
+
   syncAuto() {
     const ab = this.scene.autobuy;
     $('#btn-auto').classList.toggle('on', ab.on);
@@ -73,6 +117,7 @@ export class UI {
   }
 
   syncSettings() {
+    if (this.scene.settings.panelWidth && this.applyPanelWidth) this.applyPanelWidth(this.scene.settings.panelWidth);
     $('#opt-shake').checked = this.scene.settings.shake !== false;
     $('#opt-sound').checked = this.scene.settings.sound !== false;
     $('#opt-volume').value = Math.round((this.scene.settings.volume ?? 0.7) * 100);
@@ -113,6 +158,39 @@ export class UI {
     const e = this.effects[id]; e.el.classList.remove('show'); setTimeout(() => e.el.remove(), 250); delete this.effects[id];
   }
 
+  sourceMeta(src) {
+    if (WEAPONS[src]) return { name: WEAPONS[src].name, color: '#' + WEAPONS[src].color.toString(16).padStart(6, '0'), icon: ICONS[src] };
+    if (src === 'nova') return { name: 'Nova', tag: 'ability', color: '#ffffff', icon: ICONS.ab_nuke };
+    return { name: 'Other', color: '#7d8bb0', icon: ICONS.level };
+  }
+
+  statsHtml(compact = false) {
+    const st = this.scene.stats, s = this.scene.state, total = st.total || 1;
+    const sources = Object.entries(st.dmg).sort((a, b) => b[1] - a[1]);
+    let html = '';
+    if (!compact) html += `<h3>Run</h3><div class="item stat-sum"><div class="icon">${ICONS.level}</div><div class="name">Totals</div>
+      <div class="desc">Damage dealt <b>${fmt(st.total)}</b> · taken <b>${fmt(st.taken)}</b><br>Kills <b>${fmt(s.kills)}</b> · dps <b>${fmt(st.total / Math.max(1, s.time))}</b> avg</div></div>`;
+    html += `<h3>Damage by weapon</h3>`;
+    if (!sources.length) html += '<div class="muted">No damage yet.</div>';
+    for (const [src, v] of sources) {
+      const m = this.sourceMeta(src), pct = v / total * 100, kills = st.killsBy[src] || 0, crits = st.crits[src] || 0;
+      html += `<div class="item stat-row" style="--sc:${m.color}"><div class="icon" style="color:${m.color}">${m.icon}</div>
+        <div class="name">${m.name}<small>${pct.toFixed(1)}%</small>${m.tag ? `<span class="tag">${m.tag}</span>` : ''}</div>
+        <div class="desc"><div class="stat-bar"><div style="width:${pct.toFixed(1)}%"></div></div><b>${fmt(v)}</b> dmg · <b>${fmt(kills)}</b> kills${crits ? ' · ' + fmt(crits) + ' crits' : ''}</div></div>`;
+    }
+    const procs = Object.entries(st.procs || {}).sort((a, b) => b[1] - a[1]);
+    html += `<h3>Combo procs</h3>`;
+    if (!procs.length) html += '<div class="muted">No combos yet.</div>';
+    else html += `<div class="kill-grid">` + procs.map(([id, n]) => { const c = COMBOS[id] || { name: id, color: 0x7d8bb0 }; return `<div class="kill-cell" style="--kc:#${c.color.toString(16).padStart(6, '0')}"><span class="dot"></span><span class="kn">${c.name}</span><b>${fmt(n)}</b></div>`; }).join('') + `</div>`;
+    const abs = Object.entries(st.abilities || {}).sort((a, b) => b[1] - a[1]);
+    if (abs.length) html += `<h3>Abilities used</h3><div class="kill-grid">` + abs.map(([k, n]) => `<div class="kill-cell" style="--kc:#9be7ff"><span class="dot"></span><span class="kn">${ABILITIES[k] ? ABILITIES[k].name : k}</span><b>${fmt(n)}</b></div>`).join('') + `</div>`;
+    const kills = Object.entries(st.kills).sort((a, b) => b[1] - a[1]);
+    html += `<h3>Ships destroyed</h3>`;
+    if (!kills.length) html += '<div class="muted">None yet.</div>';
+    else html += `<div class="kill-grid">` + kills.map(([type, n]) => { const d = MOBS[type] || { name: type, color: 0x7d8bb0 }; return `<div class="kill-cell" style="--kc:#${d.color.toString(16).padStart(6, '0')}"><span class="dot"></span><span class="kn">${d.name}</span><b>${fmt(n)}</b></div>`; }).join('') + `</div>`;
+    return html;
+  }
+
   renderThreatTimer() {
     const el = $('#threat-timer'), s = this.scene, T = SPAWN.tierSeconds;
     if (s.siege) { el.classList.add('siege'); $('#threat-timer .tt-num').textContent = 'SIEGE'; $('#threat-timer .tt-fill').style.transform = 'scaleX(1)'; return; }
@@ -133,6 +211,41 @@ export class UI {
     $('#boss-name').textContent = `${t.def.name}${sg.level > 1 ? ' Mk ' + sg.level : ''} · ${Math.ceil(f * 100)}%`;
     $('#boss-sub').textContent = t.dead ? 'destroyed' : (w ? `${w} warden${w > 1 ? 's' : ''} healing it` : 'wardens down · shield sector rotates') + (t.beamState === 'charge' ? ' · CHARGING BEAM' : t.beamState === 'fire' ? ' · FIRING' : t.blinkState === 'charge' ? ' · BLINKING' : '');
     el.classList.toggle('charge', t.beamState !== 'idle' || t.blinkState === 'charge');
+  }
+
+  // Cooldown bars for slow weapons (cooldown of 1 s or more), left side above the effect tray.
+  // Same card design as procs, permanent, one per slow weapon (cooldown of 1 s or more). Ring fills as it recharges.
+  updateCooldowns() {
+    const el = $('#cooldowns'), ws = this.scene.tower.weapons.filter(w => w.type === 'drones' || (w.type !== 'laser' && 1 / w.rate >= 1));
+    const key = ws.map(w => w.type + w.slot).join(',');
+    if (el.dataset.key !== key) {
+      el.dataset.key = key;
+      el.innerHTML = ws.map(w => `<div class="fx-item cd show" data-slot="${w.slot}" style="--fx:#${w.color.toString(16).padStart(6, '0')}">
+        <div class="fx-ring"><svg viewBox="0 0 40 40"><circle class="bg" cx="20" cy="20" r="17"/><circle class="fg" cx="20" cy="20" r="17"/></svg><div class="fx-icon">${ICONS[w.type]}</div></div>
+        <div class="fx-text"><div class="fx-name">${w.def.name}</div><div class="fx-sub">cooldown</div></div><div class="fx-time"></div></div>`).join('');
+    }
+    const C = 2 * Math.PI * 17;
+    for (const w of ws) {
+      const row = el.querySelector(`.fx-item[data-slot="${w.slot}"]`); if (!row) continue;
+      if (w.type === 'drones') {
+        const alive = w.drones.filter(d => d.alive).length, total = w.droneCount;
+        const building = w.drones.filter(d => !d.alive).sort((a, b) => a.respawnT - b.respawnT)[0];
+        const f = building ? 1 - building.respawnT / w.respawn : 1;
+        row.querySelector('.fg').style.strokeDasharray = `${C * Math.min(1, f)} ${C}`;
+        row.querySelector('.fx-name').textContent = `Drones ${alive} / ${total}`;
+        row.querySelector('.fx-sub').textContent = w.jammed > 0 ? 'jammed' : building ? 'building' : 'all deployed';
+        row.querySelector('.fx-time').textContent = building ? building.respawnT.toFixed(1) + 's' : '';
+        row.classList.toggle('ready', !building);
+        row.classList.toggle('jammed', w.jammed > 0);
+        continue;
+      }
+      const total = 1 / w.rate, left = Math.max(0, w.cd), f = Math.min(1, 1 - left / total), ready = left <= 0, jam = w.jammed > 0;
+      row.querySelector('.fg').style.strokeDasharray = `${C * f} ${C}`;
+      row.querySelector('.fx-time').textContent = ready ? '' : left.toFixed(1) + 's';
+      row.querySelector('.fx-sub').textContent = jam ? 'jammed' : ready ? 'ready' : 'recharging';
+      row.classList.toggle('ready', ready);
+      row.classList.toggle('jammed', jam);
+    }
   }
 
   updateEffects(dt) {
@@ -217,6 +330,7 @@ export class UI {
   showGameOver() {
     const n = this.scene.fragmentsForRun();
     $('#overlay-text').innerHTML = `You held the core for <b>${fmtTime(this.scene.state.time)}</b> at threat level <b>${this.scene.state.tier}</b>. ${this.scene.state.kills} ships destroyed.<br><br>Salvaged <b class="violet">${n} core fragment${n === 1 ? '' : 's'}</b> for the skill tree.`;
+    $('#overlay-stats').innerHTML = this.statsHtml(true);
     $('#overlay').hidden = false;
   }
 
@@ -233,6 +347,7 @@ export class UI {
     $('#kills').textContent = fmt(s.kills);
 
     this.renderAbilities();
+    this.renderQuickBuy();
     this.renderBossBar();
     this.renderThreatTimer();
 
@@ -251,33 +366,26 @@ export class UI {
     hb.classList.toggle('crit', hf <= 0.25);
 
     // tower tab: slots
-    let html = '<h3>Hardpoints</h3>';
+    let html = `<h3>Hardpoints <span class="muted" style="float:right;letter-spacing:0">swaps left: <b>${this.scene.swapsLeft()}</b></span></h3>`;
     t.slots.forEach((w, i) => {
       if (w) {
         const cost = w.upgradeCost();
         const hex = '#' + w.color.toString(16).padStart(6, '0');
-        const swapping = this.swapping === i;
-        html += `<div class="item" style="border-color:${hex}55">
+        const swapsLeft = this.scene.swapsLeft();
+        const strip = Object.entries(WEAPONS).filter(([type]) => this.scene.tree.unlocked(type)).map(([type, d]) => {
+          const h2 = '#' + d.color.toString(16).padStart(6, '0'), cur = type === w.type, can = !cur && swapsLeft > 0 && s.scrap >= d.install;
+          return `<button class="swap-ic ${cur ? 'cur' : ''}" data-buy="doswap:${i}:${type}" ${cur || !can ? 'disabled' : ''} style="color:${h2}" title="${cur ? 'mounted' : d.name + ' · starts at Lv 1 · ' + fmt(d.install) + ' scrap'}">${ICONS[type]}</button>`;
+        }).join('');
+        html += `<div class="item weapon" style="border-color:${hex}55">
           <div class="icon" style="color:${hex}">${ICONS[w.type]}</div>
           <div class="name">${w.def.name}<small>Lv ${w.level}</small></div>
-          <div class="desc">${w.statLine()} <button class="link" data-buy="swap:${i}">${swapping ? 'cancel' : 'swap'}</button><br>
+          <div class="desc">${w.statLine()}<br>
             <span class="next">Lv ${w.level + 1}: ${w.nextLine()}</span><br>
             <span class="vs">×${w.def.bonus} vs ${w.def.prefer.map(p => MOBS[p].name).join(', ')}</span> · <span class="crit">${Math.round((w.def.crit ?? CRIT.chance) * 100)}% crit ×${w.def.critMul ?? CRIT.mul}</span></div>
           ${this.buyBtn('weapon:' + i, cost, s.scrap >= cost)}
+          ${w.type === 'drones' ? `<div class="mode-row"><span class="swap-lbl">drones</span><button class="mode ${w.focus ? '' : 'on'}" data-buy="dmode:${i}:spread">Spread</button><button class="mode ${w.focus ? 'on' : ''}" data-buy="dmode:${i}:focus">Focus fire</button><span class="muted" style="font-size:11px">${w.focus ? 'all drones on one target' : 'each drone its own target'}</span></div>` : ''}
+          <div class="swap-strip"><span class="swap-lbl">swap<b class="${swapsLeft ? '' : 'none'}">${swapsLeft} left</b></span>${strip}</div>
         </div>`;
-        if (swapping) {
-          html += `<div class="muted" style="margin:0 0 6px 14px">Swap keeps level ${w.level}. Pay the mount cost of the new weapon.</div>`;
-          for (const [type, d] of Object.entries(WEAPONS)) {
-            if (type === w.type || !this.scene.tree.unlocked(type)) continue;
-            const h2 = '#' + d.color.toString(16).padStart(6, '0');
-            html += `<div class="item pick">
-              <div class="icon" style="color:${h2}">${ICONS[type]}</div>
-              <div class="name" style="color:${h2}">${d.name}</div>
-              <div class="desc">${d.desc}<br><span class="vs">×${d.bonus} vs ${d.prefer.map(p => MOBS[p].name).join(', ')}</span></div>
-              ${this.buyBtn('doswap:' + i + ':' + type, d.install, s.scrap >= d.install, 'Swap')}
-            </div>`;
-          }
-        }
       } else {
         html += `<div class="item slot-empty"><div class="icon">${ICONS.slot}</div><div class="name">Hardpoint ${i + 1}</div><div class="desc">Choose a weapon to mount</div></div>`;
         for (const [type, d] of Object.entries(WEAPONS)) {
@@ -301,8 +409,12 @@ export class UI {
         ${this.buyBtn('slot', slotCost, s.scrap >= slotCost, 'Unlock')}
       </div>`;
     }
-    html += '<h3>Combos</h3><div class="muted" style="margin-bottom:8px">Mount both weapons. Each shot has a small chance to trigger the combo.</div>';
-    for (const c of this.scene.combos.list()) {
+    const combos = this.scene.combos.list(), activeN = combos.filter(c => c.available).length;
+    this.combosOpen = this.combosOpen ?? false;
+    html += `<h3 class="collapsible" data-buy="toggle:combos">Combos <span class="muted" style="letter-spacing:0">${activeN} active</span><span class="chev">${this.combosOpen ? '▾' : '▸'}</span></h3>`;
+    if (this.combosOpen) html += '<div class="muted" style="margin-bottom:8px">Mount both weapons. Each shot has a small chance to trigger the combo.</div>';
+    for (const c of combos) {
+      if (!this.combosOpen && !c.available) continue;
       const names = c.pair.map(p => WEAPONS[p].name).join(' + ');
       const hex = '#' + c.color.toString(16).padStart(6, '0');
       const ic = c.pair.map(p => { const wc = '#' + WEAPONS[p].color.toString(16).padStart(6, '0'); const on = this.scene.combos.mounted(p); return `<span class="pi ${on ? 'on' : ''}" style="color:${wc}" title="${WEAPONS[p].name}">${ICONS[p]}</span>`; }).join('<span class="plus">+</span>');
@@ -382,6 +494,7 @@ export class UI {
       }
     }
     this.setHtml('#tab-skills', html);
+    if ($('#tab-stats').classList.contains('active')) this.setHtml('#tab-stats', this.statsHtml());
     $('#tabs button[data-tab=skills]').hidden = false;
   }
 
@@ -411,17 +524,24 @@ export class UI {
     } else if (kind === 'install') {
       const [, idx, type] = id.split(':'), cost = WEAPONS[type].install;
       if (t.slots[+idx] === null && s.scrap >= cost) { s.scrap -= cost; t.installWeapon(+idx, type); }
+    } else if (kind === 'toggle') {
+      if (arg === 'combos') this.combosOpen = !this.combosOpen;
+      return;
+    } else if (kind === 'dmode') {
+      const [, idx, mode] = id.split(':'), w = t.slots[+idx];
+      if (w && w.type === 'drones') w.focus = mode === 'focus';
+      return;
     } else if (kind === 'swap') {
       this.swapping = this.swapping === +arg ? null : +arg;
     } else if (kind === 'doswap') {
       const [, idx, type] = id.split(':'), cost = WEAPONS[type].install;
-      if (t.slots[+idx] && s.scrap >= cost) { s.scrap -= cost; t.swapWeapon(+idx, type); this.swapping = null; }
+      if (t.slots[+idx] && t.slots[+idx].type !== type && this.scene.swapsLeft() > 0 && s.scrap >= cost) { s.scrap -= cost; s.swapsUsed = (s.swapsUsed || 0) + 1; t.swapWeapon(+idx, type); this.scene.fx.floater(t.x, t.y - 80, 'Refit: ' + WEAPONS[type].name, '#' + WEAPONS[type].color.toString(16).padStart(6, '0'), 16); }
     } else if (kind === 'ability') {
       const a = this.scene.abilities, d = ABILITIES[arg];
       if (!a.state[arg].unlocked && s.scrap >= d.cost) { s.scrap -= d.cost; a.unlock(arg); }
     } else if (kind === 'auto') {
       const ab = this.scene.autobuy, [, what, key] = id.split(':');
-      if (what === 'toggle') ab.on = !ab.on;
+      if (what === 'toggle') { ab.on = !ab.on; if (ab.on) this.panel.classList.add('hidden'); }
       else if (what === 'up') ab.move(key, -1);
       else if (what === 'down') ab.move(key, 1);
       else if (what === 'on') ab.enabled[key] = !ab.enabled[key];

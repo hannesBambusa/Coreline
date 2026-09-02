@@ -165,6 +165,22 @@ export class MissilePod extends Weapon {
       color: this.color, life: 4, target,
     });
     this.scene.fx.flash(m.x, m.y, this.color, 0.5);
+    // Escort strike: every live drone fires a mini-missile at its own target
+    const bay = this.tower.weapons.find(w => w.type === 'drones');
+    if (bay && bay.drones.some(d => d.alive && d.target && !d.target.dead) && this.scene.combos.roll('escort')) {
+      for (const d of bay.drones) {
+        if (!d.alive) continue;
+        const tg = d.target && !d.target.dead ? d.target : target;
+        const ba = Math.atan2(d.vy, d.vx) + (Math.random() - 0.5) * 0.8;
+        this.scene.spawnMissile({
+          x: d.x, y: d.y, vx: Math.cos(ba) * 180, vy: Math.sin(ba) * 180,
+          speed: this.def.speed * 1.3, turn: this.def.turn * 1.6, dmg: this.dmg * 0.6, weapon: this, splash: this.def.splash * 0.6,
+          color: 0x60a5fa, life: 3, target: tg,
+        });
+        this.scene.fx.flash(d.x, d.y, 0x60a5fa, 0.6);
+      }
+      this.scene.sfx.shot('missile', this.tower.x);
+    }
   }
 }
 
@@ -192,7 +208,9 @@ export class LaserBeam extends Weapon {
     this.angle = Phaser.Math.Angle.Between(m.x, m.y, this.target.x, this.target.y);
     const ramp = (1 + (this.def.rampMax + this.wm.rampMax - 1) * Math.min(1, this.held / this.def.rampTime)) * (this.overload > 0 ? 2.5 : 1);
     this.ramp = ramp;
-    this.target.takeDamage(this.dmgVs(this.target) * ramp * dt * this.scene.abilities.rateMul, this.target.x, this.target.y, true);
+    const ld = this.dmgVs(this.target) * ramp * dt * this.scene.abilities.rateMul;
+    this.scene.addDmg('laser', Math.min(ld, Math.max(0, this.target.hp + (this.target.shield || 0)))); this.target.lastHit = 'laser';
+    this.target.takeDamage(ld, this.target.x, this.target.y, true);
     if (Math.random() < dt * 8) this.scene.fx.spark(this.target.x, this.target.y, this.color, 2);
     // crit ticks: twice a second the beam can spike for an extra burst
     this.critTimer = (this.critTimer || 0) + dt;
@@ -265,7 +283,156 @@ export class GravityWell extends Weapon {
   }
 }
 
-const CLASSES = { pulse: PulseCannon, railgun: Railgun, missile: MissilePod, laser: LaserBeam, tesla: TeslaArc, gravity: GravityWell };
+export class ShockEmitter extends Weapon {
+  get push() { return this.def.push + this.def.pushPerLevel * (this.level - 1); }
+  get cooldown() { return 1 / this.rate; }
+  statLine() { return `<b>${this.dmg.toFixed(1)}</b> dmg · push <b>${Math.round(this.push)}</b> px · every <b>${this.cooldown.toFixed(1)}</b> s`; }
+  nextLine() {
+    const n = this.statsAt(this.level + 1), push = this.def.push + this.def.pushPerLevel * this.level;
+    return `<b>${n.dmg.toFixed(1)}</b> dmg · push <b>${Math.round(push)}</b> px · every <b>${(1 / n.rate).toFixed(1)}</b> s`;
+  }
+  update(dt, mobs) {
+    if (this.jammed > 0) { this.jammed -= dt; return; }
+    this.cd -= dt * this.scene.abilities.rateMul * (this.jamSlow ? this.jamSlow : 1);
+    this.angle += dt * 1.5;
+    this.target = null;
+    if (this.cd <= 0 && this.inRange(mobs).length) { this.fire(null, mobs); this.scene.sfx.play('shock', null, this.tower.x); this.cd = this.cooldown; }
+  }
+  fire(_, mobs) {
+    const t = this.tower, R = this.range, push = this.push, sc = this.scene;
+    let hits = 0;
+    for (const m of mobs) {
+      if (m.dead) continue;
+      const d = dist(t, m);
+      if (d > R + m.r) continue;
+      const a = Phaser.Math.Angle.Between(t.x, t.y, m.x, m.y);
+      const k = m.type === 'titan' ? 0.15 : (m.type === 'boss' || m.type === 'warden' || m.type === 'behemoth') ? 0.4 : 1;
+      // knockback velocity decays as 0.02^t, so displacement = v / ln(50). Scale so `push` is real pixels.
+      const f = push * (1 - 0.5 * d / R) * k * Math.log(50);
+      m.dodgeVx += Math.cos(a) * f; m.dodgeVy += Math.sin(a) * f;
+      if (m.attached) { m.attached = false; }     // knocks leeches off
+      sc.hit(m, this, m.x, m.y, { color: '#5eead4' });
+      hits++;
+    }
+    // clears enemy shots caught in the wave
+    sc.enemyBullets = sc.enemyBullets.filter(b => Phaser.Math.Distance.Between(t.x, t.y, b.x, b.y) > R);
+    for (const w of sc.wellShots) { /* untouched */ }
+    this.ring = { r: t.shieldR, r1: R, a: 1 };
+    sc.fx.ripple(t.x, t.y, this.color, t.shieldR, R);
+    sc.fx.ripple(t.x, t.y, 0xffffff, t.shieldR, R * 0.8);
+    sc.fx.flash(t.x, t.y, this.color, 2.5);
+    sc.fx.shake(0.0025, 100);
+  }
+  draw(g) {
+    if (!this.ring) return;
+    const r = this.ring;
+    r.r += (r.r1 - r.r) * 0.25; r.a -= 0.06;
+    if (r.a <= 0) { this.ring = null; return; }
+    g.lineStyle(14 * r.a, this.color, 0.25 * r.a); g.strokeCircle(this.tower.x, this.tower.y, r.r);
+    g.lineStyle(3, 0xffffff, 0.6 * r.a); g.strokeCircle(this.tower.x, this.tower.y, r.r);
+  }
+}
+
+export class DroneBay extends Weapon {
+  constructor(...a) { super(...a); this.drones = []; this.focus = false; this.sync(); }
+  get droneCount() { return Math.min(this.def.maxDrones, this.def.drones + Math.floor((this.level - 1) / this.def.dronePerLevels) + (this.wm.extra || 0)); }
+  get droneHp() { return this.def.droneHp * Math.pow(this.def.droneHpMul, this.level - 1); }
+  get respawn() { return this.def.respawn; }
+  statLine() { return `<b>${this.droneCount}</b> drones · <b>${this.dmg.toFixed(1)}</b> dmg · <b>${this.rate.toFixed(2)}</b>/s each · <b>${Math.round(this.droneHp)}</b> hp`; }
+  nextLine() {
+    const n = this.statsAt(this.level + 1), cnt = Math.min(this.def.maxDrones, this.def.drones + Math.floor(this.level / this.def.dronePerLevels) + (this.wm.extra || 0));
+    return `<b>${cnt}</b> drones · <b>${n.dmg.toFixed(1)}</b> dmg · <b>${n.rate.toFixed(2)}</b>/s · <b>${Math.round(this.droneHp * this.def.droneHpMul)}</b> hp`;
+  }
+  sync() {
+    while (this.drones.length < this.droneCount) {
+      const a = Math.random() * Math.PI * 2;
+      this.drones.push({ x: this.tower.x + Math.cos(a) * 80, y: this.tower.y + Math.sin(a) * 80, vx: 0, vy: 0, hp: this.droneHp, alive: true, respawnT: 0, cd: Math.random(), ang: a, target: null, r: 7 });
+    }
+    if (this.drones.length > this.droneCount) this.drones.length = this.droneCount;
+  }
+  update(dt, mobs) {
+    this.sync();
+    if (this.jammed > 0) { this.jammed -= dt; return; }
+    const t = this.tower, rm = this.scene.abilities.rateMul * (this.jamSlow ? this.jamSlow : 1);
+    for (const d of this.drones) {
+      if (!d.alive) {
+        d.respawnT -= dt;
+        if (d.respawnT <= 0) { d.alive = true; d.hp = this.droneHp; d.x = t.x; d.y = t.y; this.scene.fx.flash(t.x, t.y, this.color, 0.8); }
+        continue;
+      }
+      // pick target: ships outside every other gun's reach come first (farthest out), then nearest to the drone.
+      // focus: all drones share one target. spread: each drone avoids targets other drones already have.
+      const gunRange = Math.max(0, ...t.weapons.filter(w => w !== this).map(w => w.range));
+      const outOfReach = (m) => dist(t, m) > gunRange;
+      const taken = new Set(this.drones.filter(o => o !== d && o.alive && o.target && !o.target.dead).map(o => o.target));
+      const nearest = (from, avoid) => { let best = null, bd = Infinity; for (const m of mobs) { if (m.dead || dist(t, m) > this.range || (avoid && taken.has(m))) continue; const dd = dist(from, m); if (dd < bd) { bd = dd; best = m; } } return best; };
+      const farOut = (avoid) => { let best = null, bd = -1; for (const m of mobs) { if (m.dead || !outOfReach(m) || dist(t, m) > this.range || (avoid && taken.has(m))) continue; const dd = dist(t, m); if (dd > bd) { bd = dd; best = m; } } return best; };
+      // idle drone (no target yet): out-of-reach ships first. engaged drone whose target died: nearest ship to it.
+      const pick = (avoid, wasEngaged) => (wasEngaged ? null : farOut(avoid)) || nearest(d, avoid) || (avoid ? nearest(d, false) : null);
+      if (this.focus) {
+        const engaged = !!this.shared;
+        if (!this.shared || this.shared.dead || dist(t, this.shared) > this.range) this.shared = pick(false, engaged && this.shared && this.shared.dead);
+        d.target = this.shared;
+      } else {
+        const engaged = !!d.target;
+        if (!d.target || d.target.dead || dist(t, d.target) > this.range) d.target = pick(true, engaged && d.target && d.target.dead);
+        else if (!engaged) d.target = pick(true, false);
+      }
+      let tx, ty;
+      if (d.target) {
+        // hold ~70px off the target and circle it
+        d.ang += dt * 2.5;
+        tx = d.target.x + Math.cos(d.ang) * 70; ty = d.target.y + Math.sin(d.ang) * 70;
+      } else {
+        d.ang += dt * 1.2;
+        tx = t.x + Math.cos(d.ang) * (t.shieldR + 40); ty = t.y + Math.sin(d.ang) * (t.shieldR + 40);
+      }
+      const a = Math.atan2(ty - d.y, tx - d.x), sp = this.def.droneSpeed;
+      d.vx += (Math.cos(a) * sp - d.vx) * Math.min(1, dt * 4); d.vy += (Math.sin(a) * sp - d.vy) * Math.min(1, dt * 4);
+      d.x += d.vx * dt; d.y += d.vy * dt;
+      for (const m of mobs) {
+        if (m.dead || (m.type !== 'swarm' && m.type !== 'drone' && m.type !== 'bomber')) continue;
+        if (dist(d, m) < d.r + m.r) { this.hurt(d, m.dmg * (m.type === 'bomber' ? 1 : 0.6)); if (m.type === 'bomber') { this.scene.fx.explode(m.x, m.y, m.def.color, 24); } m.die(false); break; }
+      }
+      if (Math.random() < dt * 20) this.scene.fx.trailAt(d.x - d.vx * 0.03, d.y - d.vy * 0.03, this.color);
+      d.cd -= dt * rm;
+      if (d.target && d.cd <= 0 && dist(d, d.target) < this.def.fireRange) {
+        d.cd = 1 / this.rate;
+        const fa = Phaser.Math.Angle.Between(d.x, d.y, d.target.x, d.target.y);
+        this.scene.spawnBullet({ x: d.x, y: d.y, vx: Math.cos(fa) * this.def.speed, vy: Math.sin(fa) * this.def.speed, dmg: this.dmg, weapon: this, color: this.color, life: 0.4, target: d.target });
+        this.scene.sfx.shot('pulse', d.x);
+      }
+    }
+  }
+  hurt(d, dmg) {
+    if (!d.alive) return;
+    d.hp -= dmg;
+    this.scene.fx.spark(d.x, d.y, this.color, 3);
+    if (d.hp <= 0) { d.alive = false; d.respawnT = this.respawn; this.scene.fx.explode(d.x, d.y, this.color, 14); this.scene.fx.floater(d.x, d.y - 10, 'drone lost', '#60a5fa', 11); this.scene.sfx.play('explode', 6, d.x); }
+  }
+  // enemy bullets can hit drones; scene calls this
+  absorb(b) {
+    for (const d of this.drones) {
+      if (!d.alive) continue;
+      if (Phaser.Math.Distance.Between(b.x, b.y, d.x, d.y) < d.r + 4) { this.hurt(d, b.dmg); return true; }
+    }
+    return false;
+  }
+  draw(g) {
+    for (const d of this.drones) {
+      if (!d.alive) continue;
+      const a = Math.atan2(d.vy, d.vx);
+      g.fillStyle(this.color, 1);
+      g.fillTriangle(d.x + Math.cos(a) * 8, d.y + Math.sin(a) * 8, d.x + Math.cos(a + 2.4) * 6, d.y + Math.sin(a + 2.4) * 6, d.x + Math.cos(a - 2.4) * 6, d.y + Math.sin(a - 2.4) * 6);
+      g.fillStyle(0xffffff, 0.9); g.fillCircle(d.x, d.y, 2);
+      if (d.hp < this.droneHp) { g.fillStyle(0x000000, 0.5); g.fillRect(d.x - 8, d.y - 12, 16, 2); g.fillStyle(this.color, 1); g.fillRect(d.x - 8, d.y - 12, 16 * d.hp / this.droneHp, 2); }
+    }
+    const alive = this.drones.filter(d => d.alive).length;
+    if (alive < this.drones.length) { const m = this.mount(); g.lineStyle(1.5, this.color, 0.5); g.strokeCircle(m.x, m.y, 9); }
+  }
+}
+
+const CLASSES = { pulse: PulseCannon, shock: ShockEmitter, drones: DroneBay, railgun: Railgun, missile: MissilePod, laser: LaserBeam, tesla: TeslaArc, gravity: GravityWell };
 
 export function createWeapon(scene, tower, type, slotIndex) {
   const C = CLASSES[type];

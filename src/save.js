@@ -17,13 +17,19 @@ export class SaveSystem {
       v: VERSION,
       lastTick: Date.now(),
       run: {
-        scrap: s.state.scrap, time: s.state.time, tier: s.state.tier, kills: s.state.kills,
+        scrap: s.state.scrap, time: s.state.time, tier: s.state.tier, kills: s.state.kills, swapsUsed: s.state.swapsUsed || 0,
         hull: t.hull, shield: t.shield, upgrades: { ...t.upgrades },
-        slots: t.slots.map(w => w ? { type: w.type, level: w.level } : null),
+        slots: t.slots.map(w => w ? { type: w.type, level: w.level, focus: w.focus || false } : null),
         abilities: s.abilities.serialize(),
         autobuy: s.autobuy.serialize(),
         siegesCleared: s.siegesCleared,
         surgeType: s.surgeType || null,
+        stats: s.stats,
+        mobs: s.mobs.filter(m => !m.dead && !['titan', 'warden', 'mine'].includes(m.type)).slice(0, 300).map(m => ({
+          t: m.type, x: Math.round(m.x - t.x), y: Math.round(m.y - t.y), hp: Math.round(m.hp), sh: m.shield ? Math.round(m.shield) : undefined,
+          e: m.elite || undefined, g: m.gen || undefined, tier: m.tierAtSpawn,
+        })),
+        drones: t.weapons.filter(w => w.type === 'drones').map(w => ({ slot: w.slot, d: w.drones.map(d => ({ alive: d.alive, hp: Math.round(d.hp), r: +d.respawnT.toFixed(1) })) })),
         scrapRate: this.scrapRate(),
         gameOver: s.gameOver,
       },
@@ -45,7 +51,20 @@ export class SaveSystem {
   }
 
   save() {
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.serialize())); } catch (e) { /* storage full or blocked */ }
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(this.serialize()));
+      this.toast();
+    } catch (e) { /* storage full or blocked */ }
+  }
+
+  toast() {
+    const el = document.getElementById('saved-toast');
+    if (!el) return;
+    const d = new Date();
+    el.innerHTML = '<span class="st-main">Saved</span><span class="st-time">' + d.toTimeString().slice(0, 8) + '</span>';
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => el.classList.remove('flash'), 2500);
   }
 
   load() {
@@ -64,18 +83,38 @@ export class SaveSystem {
     s.tree.restore(data.profile?.tree);
     if (data.settings) { Object.assign(s.settings, data.settings); s.sfx.setEnabled(s.settings.sound !== false); }
     if (r.gameOver) return { offline: null };
-    s.state.scrap = r.scrap || 0; s.state.time = r.time || 0; s.state.tier = r.tier || 1; s.state.kills = r.kills || 0;
+    s.state.scrap = r.scrap || 0; s.state.time = r.time || 0; s.state.tier = r.tier || 1; s.state.kills = r.kills || 0; s.state.swapsUsed = r.swapsUsed || 0;
     if (r.upgrades) { Object.assign(t.upgrades, r.upgrades); t.recompute(); }
     t.hull = Number.isFinite(r.hull) ? Math.min(t.hullMax, r.hull) : t.hullMax;
     t.shield = Number.isFinite(r.shield) ? Math.min(t.shieldMax, r.shield) : t.shieldMax;
     if (r.slots) {
       t.slots = [];
-      r.slots.slice(0, SLOT_COSTS.length).forEach((sl, i) => { t.slots.push(null); if (sl) { t.installWeapon(i, sl.type); t.slots[i].level = sl.level; } });
+      r.slots.slice(0, SLOT_COSTS.length).forEach((sl, i) => { t.slots.push(null); if (sl) { t.installWeapon(i, sl.type); t.slots[i].level = sl.level; if (sl.focus) t.slots[i].focus = true; } });
       if (!t.slots.length) t.slots = [null], t.installWeapon(0, 'pulse');
     }
     s.abilities.restore(r.abilities);
     s.siegesCleared = Number.isInteger(r.siegesCleared) ? r.siegesCleared : Math.floor(s.tier / SIEGE.every);
     s.surgeType = r.surgeType || null;
+    if (r.stats) s.stats = Object.assign(s.freshStats(), r.stats);
+    // ships that were alive: recreate them where they were
+    if (Array.isArray(r.mobs)) {
+      for (const m of r.mobs) {
+        try {
+          const mob = s.spawnMob(m.t, 0, m.tier);
+          mob.x = t.x + m.x; mob.y = t.y + m.y;
+          if (mob.elite) { /* spawnMob may have rolled an elite; keep the saved one instead */ }
+          if (m.e && !mob.elite) mob.makeElite(m.e);
+          if (m.g) { /* hydra generation */ mob.gen = m.g; }
+          mob.hp = Math.min(mob.hpMax, m.hp || mob.hpMax);
+          if (m.sh !== undefined && mob.shieldMax) mob.shield = Math.min(mob.shieldMax, m.sh);
+        } catch (e) { /* unknown type from an older save */ }
+      }
+    }
+    if (Array.isArray(r.drones)) for (const b of r.drones) {
+      const w = t.slots[b.slot]; if (!w || w.type !== 'drones') continue;
+      w.sync();
+      b.d.forEach((d, i) => { if (!w.drones[i]) return; w.drones[i].alive = d.alive; w.drones[i].hp = d.hp; w.drones[i].respawnT = d.r || 0; });
+    }
     s.autobuy.restore(r.autobuy); s.ui.syncAuto();
 
     // offline scrap

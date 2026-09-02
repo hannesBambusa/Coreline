@@ -85,6 +85,27 @@ export const WEAPONS = {
   },
 };
 
+WEAPONS.shock = {
+  name: 'Shock emitter', install: 600,
+  desc: 'Pulses a shockwave that shoves every ship back and clears their shots. Longer push and shorter cooldown per level.',
+  dmg: 14, rate: 0.25, range: 320, push: 130, pushPerLevel: 12,
+  dmgMul: 1.15, rateMul: 1.05,
+  cost: 80, costGrowth: 1.32,
+  prefer: ['swarm', 'drone', 'bomber'], bonus: 1.4,
+  color: 0x5eead4,
+};
+
+WEAPONS.drones = {
+  name: 'Drone bay', install: 600,
+  desc: 'Interceptor drones that hunt ships your guns cannot reach first, then work inward. They soak enemy fire and rebuild when lost.',
+  dmg: 8, rate: 3.2, range: 640, speed: 850, fireRange: 190,
+  drones: 3, dronePerLevels: 3, maxDrones: 8, droneHp: 100, droneHpMul: 1.15, droneSpeed: 260, respawn: 5,
+  dmgMul: 1.12, rateMul: 1.03,
+  cost: 80, costGrowth: 1.3,
+  prefer: ['raider', 'phantom', 'orbiter', 'sniper', 'beacon'], bonus: 1.5,
+  color: 0x60a5fa,
+};
+
 export const MOBS = {
   drone: {
     name: 'Drone', hp: 9, speed: 95, dmg: 6, scrap: 3, r: 9,
@@ -157,8 +178,8 @@ export const MOBS = {
     desc: 'Parks at range and warps in reinforcements next to it. Kill the beacon first.',
   },
   behemoth: {
-    name: 'Behemoth', hp: 520, speed: 28, dmg: 90, scrap: 60, r: 26,
-    armour: 0.5, color: 0x9ca3af, fromWave: 24, chance: 0.03,
+    name: 'Behemoth', hp: 420, speed: 28, dmg: 90, scrap: 60, r: 26,
+    armour: 0.6, color: 0x9ca3af, fromWave: 24, chance: 0.03,
     desc: 'Armoured hulk. Takes half damage from non-critical hits. Rams for massive damage.',
   },
   boss: {
@@ -208,6 +229,9 @@ export const SPAWN = {
   maxRate: 12,
   softCap: 220,          // stop regular spawns while this many ships are alive
   surgeEvery: 5,         // every Nth threat level spawns a single random ship type
+  droneAggro: 0.10,      // chance an enemy shot is aimed at the nearest friendly drone instead of the core
+  // surge spawn-rate multiplier by ship toughness: light ships come in far bigger numbers
+  surgeMul: { light: 2.6, medium: 1.6, heavy: 1.0 }, surgeLightHp: 35, surgeMediumHp: 100,
   burst: [2, 4],         // mobs per spawn tick, min/max
   raiderPerTier: 0.06, raiderMax: 0.45,
 };

@@ -19,10 +19,11 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.makeTextures();
-    this.state = { scrap: 0, fragments: 0, time: 0, tier: 1, kills: 0, bestTime: 0 };
+    this.state = { scrap: 0, fragments: 0, time: 0, tier: 1, kills: 0, bestTime: 0, swapsUsed: 0 };
     this.mobs = []; this.bullets = []; this.enemyBullets = [];
     this.missiles = []; this.wellShots = []; this.wells = [];
     this.scrapLog = [];
+    this.stats = this.freshStats();
     this.gameOver = false;
     this.settings = { shake: true, sound: true, volume: 0.7 };
     this.paused = false;
@@ -59,6 +60,7 @@ export class GameScene extends Phaser.Scene {
       this.ui.syncSettings();
       if (res.offline) this.ui.showOffline(res.offline);
     }
+    if (this.state.time < 1) this.showStart();
   }
 
   makeTextures() {
@@ -168,7 +170,12 @@ export class GameScene extends Phaser.Scene {
 
   // ---------- continuous spawning ----------
   get tier() { return 1 + this.state.time / SPAWN.tierSeconds; }
-  spawnRate() { return Math.min(SPAWN.maxRate, SPAWN.baseRate + SPAWN.ratePerSecond * this.state.time); }
+  surgeMultiplier() {
+    if (!this.surgeType) return 1;
+    const hp = MOBS[this.surgeType].hp;
+    return hp <= SPAWN.surgeLightHp ? SPAWN.surgeMul.light : hp <= SPAWN.surgeMediumHp ? SPAWN.surgeMul.medium : SPAWN.surgeMul.heavy;
+  }
+  spawnRate() { return Math.min(SPAWN.maxRate * 2, (SPAWN.baseRate + SPAWN.ratePerSecond * this.state.time) * this.surgeMultiplier()); }
 
   pickSurge(tierInt) {
     const pool = Object.keys(MOBS).filter(t => MOBS[t].fromWave <= tierInt && !['boss', 'titan', 'warden', 'mine'].includes(t));
@@ -189,25 +196,41 @@ export class GameScene extends Phaser.Scene {
     return MOBS.raider.fromWave <= tier && roll < acc + raiderFrac ? 'raider' : 'drone';
   }
 
-  spawnMob(type, angle) {
+  spawnMob(type, angle, tierOverride) {
     const a = angle ?? Math.random() * Math.PI * 2, R = this.spawnRadius() + Math.random() * 80;
-    const m = createMob(this, type, this.tier, this.tower.x + Math.cos(a) * R, this.tower.y + Math.sin(a) * R);
-    if (type !== 'boss' && type !== 'swarm') {
+    const tier = tierOverride ?? this.tier;
+    const m = createMob(this, type, tier, this.tower.x + Math.cos(a) * R, this.tower.y + Math.sin(a) * R);
+    m.tierAtSpawn = tier;
+    if (tierOverride === undefined && type !== 'boss' && type !== 'swarm') {
       const chance = Math.min(ELITES.chanceMax, ELITES.chanceBase + ELITES.chancePerTier * this.tier);
       if (Math.random() < chance) {
         const mods = Object.keys(ELITES.mods);
         m.makeElite(mods[Math.floor(Math.random() * mods.length)]);
       }
     }
-    if (type === 'boss') this.sfx.play('boss');
+    if (type === 'boss' && tierOverride === undefined) this.sfx.play('boss');
     this.seen = this.seen || {};
-    if (!this.seen[type] && MOBS[type].desc) { this.seen[type] = true; this.ui.banner('New threat: ' + MOBS[type].name, true); this.fx.floater(m.x, m.y - m.r - 20, MOBS[type].desc, '#ff9f43', 12); }
+    if (tierOverride === undefined && !this.seen[type] && MOBS[type].desc) { this.seen[type] = true; this.ui.banner('New threat: ' + MOBS[type].name, true); this.fx.floater(m.x, m.y - m.r - 20, MOBS[type].desc, '#ff9f43', 12); }
     this.mobs.push(m);
     return m;
   }
 
   slowMo(scale = 0.4, seconds = 0.4) {
     this.timeScale = scale; this.slowTimer = seconds;
+  }
+
+  // hurt friendly drones in an area (bomber blasts, mines) or along a line (siege beam)
+  damageDrones(x, y, r, dmg, line = null) {
+    for (const bay of this.tower.weapons) {
+      if (bay.type !== 'drones') continue;
+      for (const d of bay.drones) {
+        if (!d.alive) continue;
+        let hit;
+        if (line) { const p = Phaser.Geom.Line.GetNearestPoint(line, d, new Phaser.Geom.Point()); hit = Phaser.Math.Distance.Between(p.x, p.y, d.x, d.y) <= r; }
+        else hit = Phaser.Math.Distance.Between(x, y, d.x, d.y) <= r + d.r;
+        if (hit) bay.hurt(d, dmg);
+      }
+    }
   }
 
   flashScreen(alpha = 0.6, color = 0xffffff) {
@@ -272,7 +295,8 @@ export class GameScene extends Phaser.Scene {
       if (this.surgeType) {
         const d = MOBS[this.surgeType];
         this.time.delayedCall(1200, () => { if (!this.gameOver) { this.ui.banner(`${d.name} surge`, true); this.fx.floater(this.tower.x, this.tower.y - 120, `Only ${d.name.toLowerCase()}s this level`, '#ff9f43', 14); } });
-        this.ui.addEffect('surge', { name: d.name + ' surge', color: d.color, dur: SPAWN.tierSeconds, sub: 'single ship type', icon: ICONS_SURGE });
+        const mul = this.surgeMultiplier();
+        this.ui.addEffect('surge', { name: d.name + ' surge', color: d.color, dur: SPAWN.tierSeconds, sub: 'only ' + d.name.toLowerCase() + 's' + (mul > 1 ? ' · ×' + mul.toFixed(1) + ' numbers' : ''), icon: ICONS_SURGE });
       } else this.ui.removeEffect('surge');
       if (tierInt % MOBS.boss.every === 0) {
         this.ui.banner('Overseer approaching', true);
@@ -299,9 +323,29 @@ export class GameScene extends Phaser.Scene {
 
   // ---------- projectiles ----------
   spawnBullet(b) { b.age = 0; this.bullets.push(b); }
-  spawnEnemyBullet(b) { b.age = 0; b.life = 3; this.enemyBullets.push(b); }
+  spawnEnemyBullet(b) {
+    b.age = 0; b.life = 3;
+    // some shooters go for your drones instead of the core
+    if (Math.random() < SPAWN.droneAggro) {
+      let best = null, bd = 420;
+      for (const bay of this.tower.weapons) if (bay.type === 'drones') for (const d of bay.drones) { if (!d.alive) continue; const dd = Phaser.Math.Distance.Between(b.x, b.y, d.x, d.y); if (dd < bd) { bd = dd; best = d; } }
+      if (best) {
+        const sp = Math.hypot(b.vx, b.vy), a = Phaser.Math.Angle.Between(b.x, b.y, best.x + best.vx * (bd / sp), best.y + best.vy * (bd / sp));
+        b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; b.atDrone = true;
+      }
+    }
+    this.enemyBullets.push(b);
+  }
   spawnMissile(m) { m.age = 0; this.missiles.push(m); }
   spawnWellShot(w) { w.age = 0; this.wellShots.push(w); }
+
+  freshStats() { return { dmg: {}, crits: {}, killsBy: {}, kills: {}, procs: {}, abilities: {}, taken: 0, total: 0 }; }
+  addDmg(source, amount, crit = false) {
+    const st = this.stats;
+    st.dmg[source] = (st.dmg[source] || 0) + amount;
+    st.total += amount;
+    if (crit) st.crits[source] = (st.crits[source] || 0) + 1;
+  }
 
   // Resolve one hit: type bonus, crit roll, damage, floating number. Returns damage dealt.
   // opts: { dmg (override base), mul, color, size, quiet, tag }
@@ -321,6 +365,10 @@ export class GameScene extends Phaser.Scene {
       this.fx.flash(m.x, m.y, 0xffb703, 1.4);
       this.sfx.play('crit', null, m.x);
     }
+    const src = weapon ? weapon.type : (opts.source || 'other');
+    const dealt = Math.min(d, Math.max(0, m.hp + (m.shield || 0)));
+    this.addDmg(src, dealt, crit);
+    m.lastHit = src;
     m.takeDamage(d, x, y, opts.quiet, crit);
     if (crit) this.fx.critFloater(m.x, m.y - m.r - 10, 'CRIT ' + text, color, size);
     else if (!opts.quiet) this.fx.floater(m.x, m.y - m.r - 6, (opts.tag ? opts.tag + ' ' : '') + text, color, size);
@@ -395,7 +443,9 @@ export class GameScene extends Phaser.Scene {
         const a = Phaser.Math.Angle.Between(m.x, m.y, w.x, w.y);
         const pull = w.pull * (1 - d / w.r) + 20;
         m.x += Math.cos(a) * pull * dt; m.y += Math.sin(a) * pull * dt;
-        m.takeDamage((w.weapon ? w.weapon.dmgVs(m) : w.dps) * dt, m.x, m.y, true);
+        const wd = (w.weapon ? w.weapon.dmgVs(m) : w.dps) * dt;
+        this.addDmg('gravity', Math.min(wd, Math.max(0, m.hp))); m.lastHit = 'gravity';
+        m.takeDamage(wd, m.x, m.y, true);
       }
       if (Math.random() < dt * 20) {
         const a = Math.random() * Math.PI * 2, rr = w.r * (0.6 + Math.random() * 0.4);
@@ -444,8 +494,10 @@ export class GameScene extends Phaser.Scene {
     }
     this.bullets = this.bullets.filter(b => b.age < b.life);
 
+    const bays = t.weapons.filter(w => w.type === 'drones');
     for (const b of this.enemyBullets) {
       b.x += b.vx * dt; b.y += b.vy * dt; b.age += dt;
+      if (bays.length && bays.some(w => w.absorb(b))) { b.age = 99; continue; }
       const d = Phaser.Math.Distance.Between(b.x, b.y, t.x, t.y);
       const hitR = t.shield > 0 ? t.shieldR : t.r + 4;
       if (d < hitR) { t.takeDamage(b.dmg, b.x, b.y); b.age = 99; }
@@ -501,6 +553,9 @@ export class GameScene extends Phaser.Scene {
   onKill(m) {
     this.state.kills++;
     this.profile.totalKills++;
+    this.stats.kills[m.type] = (this.stats.kills[m.type] || 0) + 1;
+    const src = m.lastHit || 'other';
+    this.stats.killsBy[src] = (this.stats.killsBy[src] || 0) + 1;
     const scrap = Math.round(m.scrap * this.tree.mods.scrap);
     this.state.scrap += scrap;
     this.scrapLog.push([this.state.time, scrap]);
@@ -509,6 +564,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   abilityCost(k) { return ABILITIES[k].cost; }
+  swapsLeft() { return Math.max(0, 1 + this.tree.mods.swaps - (this.state.swapsUsed || 0)); }
 
   fragmentsForRun() {
     return Math.floor(Math.pow(this.tier / PRESTIGE.divisor, PRESTIGE.power));
@@ -543,15 +599,35 @@ export class GameScene extends Phaser.Scene {
     this.missiles = []; this.wellShots = []; this.wells = [];
     this.tower.gfx.destroy(); this.tower.glow.destroy();
     this.tower = new Tower(this, this.scale.width / 2, this.scale.height / 2);
-    this.state.scrap = this.tree.mods.startScrap; this.state.time = 0; this.state.tier = 1; this.state.kills = 0;
+    this.state.scrap = this.tree.mods.startScrap; this.state.time = 0; this.state.tier = 1; this.state.kills = 0; this.state.swapsUsed = 0;
+    this.showStart();
     this.spawnTimer = 2; this.scrapLog = []; this.siege = null; this.siegesCleared = 0; this.surgeType = null; this.ui.removeEffect('surge');
+    this.stats = this.freshStats();
     this.ui.removeEffect('siege');
     for (const k in this.abilities.state) this.abilities.state[k] = { unlocked: false, cd: 0, active: 0 };
+    this.autobuy.on = false; this.ui.syncAuto();
     this.saves.save();
     this.gameOver = false;
   }
 
+  // Fresh run: hold everything until the player presses start, so skills and weapons can be set up first.
+  showStart() {
+    this.starting = true;
+    this.paused = true;
+    document.getElementById('start').hidden = false;
+    document.getElementById('paused').hidden = true;
+    document.getElementById('btn-pause').classList.add('on');
+  }
+  beginRun() {
+    if (!this.starting) return;
+    this.starting = false;
+    document.getElementById('start').hidden = true;
+    this.setPaused(false);
+    this.ui.banner('Hold the line', false);
+  }
+
   setPaused(v) {
+    if (this.starting) { if (!v) this.beginRun(); return; }
     this.paused = v;
     this.sfx.play(v ? 'pause' : 'unpause');
     if (v) this.sfx.laserHum(false);
@@ -562,7 +638,7 @@ export class GameScene extends Phaser.Scene {
 
   update(time, delta) {
     let dt = Math.min(delta / 1000, 0.05);
-    if (!this.paused && !this.gameOver) this.ui.updateEffects(dt);
+    if (!this.paused && !this.gameOver) { this.ui.updateEffects(dt); this.ui.updateCooldowns(); }
     if (this.slowTimer > 0) {
       this.slowTimer -= dt;
       dt *= this.slowTimer > 0 ? this.timeScale : 1;

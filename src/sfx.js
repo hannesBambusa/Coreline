@@ -283,6 +283,11 @@ export class SFX {
         this.tone({ type: 'square', f0: 900, f1: 1800, dur: 0.1, peak: 0.05, pan, wet: 0.5 });
         this.tone({ type: 'sine', f0: 1800, f1: 2400, dur: 0.15, peak: 0.03, pan, wet: 0.6, delay: 0.05 });
         break;
+      case 'shock':
+        this.sample('forceField', { peak: 0.18, pan, rate: 0.7, wet: 0.7 });
+        this.tone({ type: 'sine', f0: 220, f1: 40, dur: 0.5, peak: 0.18, pan, wet: 0.5 });
+        this.burst({ dur: 0.35, peak: 0.1, f0: 2000, f1: 200, type: 'lowpass', pan, wet: 0.6 });
+        break;
       case 'buy':
         if (this.sample('computer', { peak: 0.12, rate: 1.6, wet: 0.3, dur: 0.25 })) break;
         this.tone({ type: 'triangle', f0: 700, f1: 1400, dur: 0.12, peak: 0.1, wet: 0.4 });

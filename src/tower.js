@@ -50,9 +50,10 @@ export class Tower {
   nextSlotCost() { return SLOT_COSTS[this.slots.length] ?? null; }
   unlockSlot() { this.slots.push(null); }
   installWeapon(i, type) { this.slots[i] = createWeapon(this.scene, this, type, i); }
+  // Swap keeps the slot but the new weapon starts at level 1.
   swapWeapon(i, type) {
     const old = this.slots[i], w = createWeapon(this.scene, this, type, i);
-    if (old) { w.level = old.level; w.angle = old.angle; }
+    if (old) w.angle = old.angle;
     this.slots[i] = w;
   }
   get weapons() { return this.slots.filter(Boolean); }
@@ -63,6 +64,7 @@ export class Tower {
 
   takeDamage(amount, hx, hy) {
     if (!Number.isFinite(amount) || amount <= 0) return;
+    if (this.scene.stats) this.scene.stats.taken += amount;
     const fx = this.scene.fx;
     if (this.shield > 0) {
       this.shield -= amount;

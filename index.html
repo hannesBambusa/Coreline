@@ -28,24 +28,30 @@
   </div>
 
   <div id="banner"></div>
+  <div id="start" hidden><div class="start-card"><div class="start-title">CORELINE</div><div class="start-sub">The fleet is inbound. Spend fragments in Skills, mount your weapons, then hold the line.</div><button id="btn-start">Start the defence</button><div class="start-hint">Space also starts</div></div></div>
   <div id="paused" hidden><div>PAUSED</div><span>Space or ❚❚ to resume</span><small>Upgrades, mounts and skills can be bought while paused</small></div>
   <div id="abilities"></div>
-  <div id="effects"></div>
+  <div id="left-hud"><div id="cooldowns"></div><div id="effects"></div></div>
+  <div id="saved-toast"><span class="st-main">Not saved yet</span><span class="st-time"></span></div>
   <div id="threat-timer"><div class="tt-fill"></div><div class="tt-num">40</div></div>
   <div id="boss-bar" hidden><div id="boss-name"></div><div class="bbar"><div id="boss-fill"></div></div><div id="boss-sub"></div></div>
+  <div id="quick-buy" hidden><div class="aq-title">Ready to upgrade</div><ol></ol></div>
   <div id="auto-queue" hidden><div class="aq-title">Auto-buy queue</div><ol></ol></div>
   <div id="combo-banner" hidden><div class="cb-icons"></div><div class="cb-text"><div class="cb-name"></div><div class="cb-pair"></div></div></div>
 
   <aside id="panel">
+    <div id="panel-grip" title="Drag to resize"></div>
     <nav id="tabs">
       <button data-tab="tower" class="active">Tower</button>
       <button data-tab="upgrades">Upgrades</button>
       <button data-tab="skills" hidden>Skills</button>
+      <button data-tab="stats">Stats</button>
       <button data-tab="settings">Settings</button>
     </nav>
     <section id="tab-tower" class="tab active"></section>
     <section id="tab-upgrades" class="tab"></section>
     <section id="tab-skills" class="tab"></section>
+    <section id="tab-stats" class="tab"></section>
     <section id="tab-settings" class="tab">
       <h3>Display</h3>
       <label class="toggle"><input type="checkbox" id="opt-shake" checked> Screen shake</label>
@@ -80,6 +86,7 @@
     <div class="card">
       <h2>Core destroyed</h2>
       <p id="overlay-text"></p>
+      <div id="overlay-stats"></div>
       <button id="btn-rebuild">Rebuild core (prestige)</button>
     </div>
   </div>

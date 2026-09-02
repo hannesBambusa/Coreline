@@ -15,6 +15,8 @@ export const COMBOS = {
                  desc: 'Tesla arcs to every ship trapped in a gravity well.' },
   barrage:     { name: 'Barrage',          pair: ['pulse', 'missile'],   chance: 0.06, cd: 7,  color: 0xff9f43,
                  desc: 'Pulse cannon launches a volley of micro-missiles.' },
+  escort:      { name: 'Escort strike',    pair: ['missile', 'drones'],  chance: 0.18, cd: 9,  color: 0x60a5fa,
+                 desc: 'A missile launch makes every live drone fire a mini-missile at its own target.' },
   overload:    { name: 'Overload beam',    pair: ['railgun', 'laser'],   chance: 0.20, cd: 12, color: 0xffffff, effectDur: 3,
                  desc: 'Railgun hit on the laser target supercharges the beam for 3 s.' },
 };
@@ -37,6 +39,7 @@ export class Combos {
     if (Math.random() > c.chance * this.scene.tree.mods.comboChance) return false;
     this.cd[id] = c.cd;
     this.count++;
+    const st = this.scene.stats; if (st) st.procs[id] = (st.procs[id] || 0) + 1;
     this.announce({ id, ...c });
     return true;
   }

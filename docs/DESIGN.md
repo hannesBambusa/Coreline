@@ -220,3 +220,14 @@ Spawn table is generic: every `MOBS` entry with `chance` and `fromWave` joins th
 | 24 | Behemoth | 520 HP hulk, half damage from non-crits, 90 ram damage |
 
 `SPAWN.softCap` (220 live ships) pauses regular spawning so carriers and beacons cannot snowball.
+- **Weapon swaps are rationed** (2026-09-02): 1 swap per run by default, "Refit bays" tree node adds up to 9 more (10 total). Swap resets the slot to level 1, costs the new weapon's mount price, and is done from an icon strip under each mounted weapon. Counter in the Hardpoints header.
+- **Shock emitter** weapon: pulse knockback, push and cooldown scale with level.
+- **Cooldown cards**: weapons with a cooldown of 1 s or more show a permanent proc-style card top left.
+
+## Weapon backlog (ideas, not built)
+
+- **Flak battery**: shells burst at a set distance into a shrapnel cone, strongest at the burst point. Anti mid-range. Level raises burst radius and shell count.
+- **Cryo lance**: slow piercing beam, low damage, freezes 1.5 s. Frozen ships stop, take +50 % damage, shatter for bonus scrap. Level extends freeze and adds chain-freeze. Combo with Railgun: frozen targets shatter for area damage.
+- **Mortar**: arcing shell to where a cluster will be, red landing marker, big crater, ignores the Dreadnought's shield sector. Level shortens flight and widens crater. Combo with Gravity well: double crater.
+- **Salvage harpoon**: hooks one ship and reels it into the shield ring, damage per second, double scrap on death, no bosses. Level adds reel speed and a second and third hook. Combo with Shock emitter: hooked ships launched back out as projectiles.
+- **Drone bay**: built 2026-09-02. Combo **Escort strike** (Missile pod + Drone bay, 18 %, 9 s cd): every live drone fires a mini-missile (60 % damage and splash) at its own target.

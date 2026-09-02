@@ -344,6 +344,7 @@ export class Mine extends Mob {
   detonate() {
     if (this.dead) return;
     if (this.distToTower() < this.tower.shieldR + 60) this.tower.takeDamage(this.dmg, this.x, this.y);
+    this.scene.damageDrones(this.x, this.y, 70, this.dmg);
     this.scene.fx.explode(this.x, this.y, this.def.color, 30);
     this.scene.fx.ripple(this.x, this.y, this.def.color, 8, 70);
     this.scene.fx.shake(0.004, 120);
@@ -367,6 +368,7 @@ export class Bomber extends Mob {
     if (sprint > 1) { this.fuse += dt; this.sprite.setTint(Math.sin(this.fuse * 25) > 0 ? 0xffffff : this.def.color); if (Math.random() < dt * 20) this.scene.fx.trailAt(this.x - Math.cos(a) * this.r, this.y - Math.sin(a) * this.r, this.def.color); }
     if (d < this.tower.shieldR * (this.tower.shield > 0 ? 1 : 0) + this.tower.r + this.r) {
       this.tower.takeDamage(this.dmg, this.x, this.y);
+      this.scene.damageDrones(this.x, this.y, this.def.blast, this.dmg);
       this.scene.fx.explode(this.x, this.y, this.def.color, 40);
       this.scene.fx.ripple(this.x, this.y, this.def.color, 10, this.def.blast);
       this.scene.fx.shake(0.006, 200);
@@ -727,7 +729,9 @@ export class Titan extends Mob {
       if (this.beamT <= 0) { this.beamState = 'fire'; this.beamT = this.def.beamDur; this.scene.fx.shake(0.01, 300); }
     } else if (this.beamState === 'fire') {
       this.beamT -= dt;
-      this.tower.takeDamage(this.def.beamDps * Math.pow(SPAWN.dmgGrowth, this.scene.tier - 1) * dt * (1 + 0.3 * (this.level - 1)), this.tower.x + Math.cos(a + Math.PI) * this.tower.shieldR, this.tower.y + Math.sin(a + Math.PI) * this.tower.shieldR, true);
+      const beamDmg = this.def.beamDps * Math.pow(SPAWN.dmgGrowth, this.scene.tier - 1) * dt * (1 + 0.3 * (this.level - 1));
+      this.tower.takeDamage(beamDmg, this.tower.x + Math.cos(a + Math.PI) * this.tower.shieldR, this.tower.y + Math.sin(a + Math.PI) * this.tower.shieldR, true);
+      this.scene.damageDrones(0, 0, 22, beamDmg * 2, new Phaser.Geom.Line(this.x, this.y, this.tower.x, this.tower.y));
       if (Math.random() < dt * 30) this.scene.fx.spark(this.tower.x + Math.cos(a + Math.PI) * this.tower.shieldR, this.tower.y + Math.sin(a + Math.PI) * this.tower.shieldR, 0xff4d6d, 2);
       if (this.beamT <= 0) { this.beamState = 'idle'; this.beamCd = this.def.beamEvery; }
     }

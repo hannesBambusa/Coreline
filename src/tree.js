@@ -39,23 +39,28 @@ export const TREE = {
   u_tesla:  { branch: 'weapons', name: 'Unlock Tesla arc', max: 1, cost: () => 1, unlock: 'tesla', effect: () => {}, text: () => 'tesla arc can be mounted' },
   u_laser:  { branch: 'weapons', name: 'Unlock Laser beam', max: 1, cost: () => 2, unlock: 'laser', effect: () => {}, text: () => 'laser beam can be mounted' },
   u_gravity:{ branch: 'weapons', name: 'Unlock Gravity well', max: 1, cost: () => 2, unlock: 'gravity', effect: () => {}, text: () => 'gravity well can be mounted' },
+  u_drones: { branch: 'weapons', name: 'Unlock Drone bay', max: 1, cost: () => 2, unlock: 'drones', effect: () => {}, text: () => 'drone bay can be mounted' },
+  m_drones: { branch: 'weapons', name: 'Extra hangar',     max: 2, cost: lin(3, 2), requires: 'u_drones', effect: (m, l) => { m.w.drones.extra = (m.w.drones.extra || 0) + l; }, text: (l) => `+${l} interceptor drone${l > 1 ? 's' : ''}` },
+  u_shock:  { branch: 'weapons', name: 'Unlock Shock emitter', max: 1, cost: () => 2, unlock: 'shock', effect: () => {}, text: () => 'shock emitter can be mounted' },
+  m_shock:  { branch: 'weapons', name: 'Resonance coils', max: 4, cost: lin(2, 2), requires: 'u_shock', effect: (m, l) => { m.w.shock.rate *= 1 + 0.12 * l; }, text: (l) => `shock emitter cooldown -${Math.round(100 - 100 / (1 + 0.12 * l))}%` },
   m_pulse:  { branch: 'weapons', name: 'Twin pulse coils', max: 5, cost: lin(2, 1), effect: (m, l) => { m.w.pulse.rate *= 1 + 0.10 * l; }, text: (l) => `pulse cannon +${pct(0.10 * l)} fire rate` },
   m_rail:   { branch: 'weapons', name: 'Tungsten sabots', max: 5, cost: lin(2, 1), requires: 'u_railgun', effect: (m, l) => { m.w.railgun.dmg *= 1 + 0.20 * l; }, text: (l) => `railgun +${pct(0.20 * l)} damage` },
   m_missile:{ branch: 'weapons', name: 'Cluster warheads', max: 5, cost: lin(2, 1), requires: 'u_missile', effect: (m, l) => { m.w.missile.splash *= 1 + 0.20 * l; }, text: (l) => `missile splash +${pct(0.20 * l)}` },
   m_tesla:  { branch: 'weapons', name: 'Arc relays',      max: 4, cost: lin(2, 2), requires: 'u_tesla', effect: (m, l) => { m.w.tesla.chains += l; }, text: (l) => `tesla +${l} chain jumps` },
   m_laser:  { branch: 'weapons', name: 'Focusing crystal', max: 3, cost: lin(3, 2), requires: 'u_laser', effect: (m, l) => { m.w.laser.rampMax += l; }, text: (l) => `laser ramps to +${l}× more` },
   m_gravity:{ branch: 'weapons', name: 'Event horizon',   max: 3, cost: lin(3, 2), requires: 'u_gravity', effect: (m, l) => { m.w.gravity.radius *= 1 + 0.20 * l; m.w.gravity.life += 1 * l; }, text: (l) => `wells +${pct(0.20 * l)} radius, +${l} s` },
+  swaps:    { branch: 'weapons', name: 'Refit bays',      max: 9, cost: lin(1, 1), effect: (m, l) => { m.swaps += l; }, text: (l) => `${1 + l} weapon swaps per run` },
   combo:    { branch: 'weapons', name: 'Synergy matrix',  max: 5, cost: lin(2, 2), effect: (m, l) => { m.comboChance *= 1 + 0.20 * l; }, text: (l) => `combo chance +${pct(0.20 * l)}` },
 };
 
 export function baseMods() {
   const w = {};
-  for (const k of ['pulse', 'railgun', 'missile', 'laser', 'tesla', 'gravity']) w[k] = { dmg: 1, rate: 1, splash: 1, chains: 0, rampMax: 0, radius: 1, life: 0 };
+  for (const k of ['pulse', 'railgun', 'missile', 'laser', 'tesla', 'gravity', 'shock', 'drones']) w[k] = { dmg: 1, rate: 1, splash: 1, chains: 0, rampMax: 0, radius: 1, life: 0 };
   return {
     dmg: 1, rate: 1, crit: 0, critMul: 0, abilityCd: 1,
     shieldMax: 1, shieldRegen: 1, hull: 1, hullRegen: 0, calmMul: 0,
     scrap: 1, startScrap: 0, offlineRate: 0, offlineCap: 0, bossFrag: 0,
-    comboChance: 1, w,
+    comboChance: 1, swaps: 0, w,
   };
 }
 

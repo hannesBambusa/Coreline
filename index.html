@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Coreline</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="game"></div>
+
+  <div id="topbar">
+    <div class="stat gold"><span class="lbl">Scrap</span><span id="scrap">0</span></div>
+    <div class="stat violet"><span class="lbl">Fragments</span><span id="fragments">0</span></div>
+    <div class="stat cyan"><span class="lbl">Survived</span><span id="time">00:00</span></div>
+    <div class="stat red"><span class="lbl">Threat</span><span id="tier">1</span></div>
+    <div class="stat"><span class="lbl">Kills</span><span id="kills">0</span></div>
+    <div id="core-status">
+      <div class="bar shield"><div class="fill" id="shield-fill"></div><span id="shield-txt">120 / 120</span><span class="regen" id="shield-regen">+10/s</span></div>
+      <div class="bar hull"><div class="fill" id="hull-fill"></div><span id="hull-txt">300 / 300</span></div>
+    </div>
+    <div id="vol"><button id="btn-mute" title="Mute">🔊</button><input type="range" id="vol-slider" min="0" max="100" value="70" title="Volume"></div>
+    <button id="btn-auto" title="Auto-buy upgrades (order in Upgrades tab)">AUTO</button>
+    <button id="btn-pause" title="Pause (Space)">❚❚</button>
+    <button id="panel-toggle" title="Toggle panel">☰</button>
+  </div>
+
+  <div id="banner"></div>
+  <div id="paused" hidden><div>PAUSED</div><span>Space or ❚❚ to resume</span><small>Upgrades, mounts and skills can be bought while paused</small></div>
+  <div id="abilities"></div>
+  <div id="effects"></div>
+  <div id="threat-timer"><div class="tt-fill"></div><div class="tt-num">40</div></div>
+  <div id="boss-bar" hidden><div id="boss-name"></div><div class="bbar"><div id="boss-fill"></div></div><div id="boss-sub"></div></div>
+  <div id="auto-queue" hidden><div class="aq-title">Auto-buy queue</div><ol></ol></div>
+  <div id="combo-banner" hidden><div class="cb-icons"></div><div class="cb-text"><div class="cb-name"></div><div class="cb-pair"></div></div></div>
+
+  <aside id="panel">
+    <nav id="tabs">
+      <button data-tab="tower" class="active">Tower</button>
+      <button data-tab="upgrades">Upgrades</button>
+      <button data-tab="skills" hidden>Skills</button>
+      <button data-tab="settings">Settings</button>
+    </nav>
+    <section id="tab-tower" class="tab active"></section>
+    <section id="tab-upgrades" class="tab"></section>
+    <section id="tab-skills" class="tab"></section>
+    <section id="tab-settings" class="tab">
+      <h3>Display</h3>
+      <label class="toggle"><input type="checkbox" id="opt-shake" checked> Screen shake</label>
+      <label class="toggle"><input type="checkbox" id="opt-sound" checked> Sound</label>
+      <label class="toggle">Volume <input type="range" id="opt-volume" min="0" max="100" value="70"></label>
+      <h3>Auto-buy</h3>
+      <label class="toggle">Keep reserve <input type="number" id="auto-reserve" min="0" step="50" value="0" style="width:90px"> scrap</label>
+      <p class="muted">Auto-buy never spends below this amount. Order and toggles are in the Upgrades tab.</p>
+      <h3>Save</h3>
+      <p class="muted">Autosaves every 10 s. Offline: 50 % of your recent scrap rate, up to 8 h.</p>
+      <textarea id="save-text" rows="3" placeholder="Save code"></textarea>
+      <div class="row"><button id="btn-export" class="buy">Export</button><button id="btn-import" class="buy">Import</button></div>
+      <h3>Run</h3>
+      <button id="btn-prestige" class="buy">Prestige now</button>
+      <p class="muted">Ends the run for fragments. Available from threat level 10.</p>
+      <button id="btn-reset" class="danger">Hard reset</button>
+      <p class="muted">Wipes everything. No undo.</p>
+      <h3>Credits</h3>
+      <p class="muted">Sound samples: Sci-fi Sounds by Kenney (kenney.nl), CC0.</p>
+    </section>
+  </aside>
+
+  <div id="offline" hidden>
+    <div class="card cyan">
+      <h2>Welcome back</h2>
+      <p id="offline-text"></p>
+      <button id="btn-offline-ok">Resume</button>
+    </div>
+  </div>
+
+  <div id="overlay" hidden>
+    <div class="card">
+      <h2>Core destroyed</h2>
+      <p id="overlay-text"></p>
+      <button id="btn-rebuild">Rebuild core (prestige)</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

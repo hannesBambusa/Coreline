@@ -93,7 +93,7 @@ export class UI {
     const dk = scene.state.difficulty, d = scene.diff, x = (v) => '×' + v;
     $('#start-diff').innerHTML = Object.entries(DIFFICULTY).map(([k, o]) =>
       `<button class="diff-btn ${k === dk ? 'cur' : ''}" data-diff="${k}" style="color:${o.color}">${o.name}</button>`).join('');
-    $('#start-diff-desc').innerHTML = `Ship HP ${x(d.hp)} · damage ${x(d.dmg)} · spawns ${x(d.spawn)} · <span style="color:${d.color}">scrap ${x(d.scrap)}, fragments ${x(d.frag)}</span>`;
+    $('#start-diff-desc').innerHTML = `Ship HP ${x(d.hp)} · damage ${x(d.dmg)} · spawns ${x(d.spawn)} · ship cap ${x(d.cap)} · speed ${x(d.speed)} · elites ${x(d.elite)}<br><span style="color:${d.color}">scrap ${x(d.scrap)}, fragments ${x(d.frag)}</span>`;
   }
 
   showTab(name) {

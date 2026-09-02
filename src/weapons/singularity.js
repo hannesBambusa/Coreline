@@ -8,7 +8,8 @@ import { dist } from '../utils.js';
 const TUNING = {
   bossTypes: ['boss', 'warlord', 'titan', 'warden'],
   orbSpin: 3,
-  ringEase: 0.2, ringFade: 0.05,
+  ringEase: 0.12, ringFade: 0.035,
+  collapseT: 0.35,        // seconds for the dark disc to fall inward before the ring rolls out
   eventHorizon: { life: 4, pull: 140, slow: 0.4 },   // Event horizon combo: a tower-sized well after the blast
   supernovaMul: 3,                                    // Supernova combo: tesla-coloured arcs to every ship for tesla dmg × this
 };
@@ -18,7 +19,7 @@ export class SingularityCore extends Weapon {
     super(...a);
     this.charge = 0;      // 0..1
     this.orb = 0;
-    this.ring = null;
+    this.ring = null; this.collapse = null;
     this.afterglowT = 0;
   }
   /** percent of max hp removed by a blast */
@@ -60,13 +61,12 @@ export class SingularityCore extends Weapon {
     }
     sc.enemyBullets = sc.enemyBullets.filter(b => dist(t, b) > R);
     if (this.hasAfterglow) { this.afterglowT = this.def.afterglowDur; sc.afterglow = this.def.afterglowDur; }
-    this.ring = { r: t.shieldR, r1: R, a: 1 };
-    sc.fx.ripple(t.x, t.y, this.color, t.shieldR, R);
-    sc.fx.ripple(t.x, t.y, COLORS.white, t.shieldR, R * 0.7);
-    sc.fx.explode(t.x, t.y, this.color, 50);
-    sc.fx.flash(t.x, t.y, COLORS.white, 4);
-    sc.flashScreen(0.3, this.color);
-    sc.fx.shake(0.012, 400);
+    // implosion, not a flash: a dark disc collapses inward, then a thin ring rolls out (no full-screen light)
+    this.collapse = { r: R, t: 0 };
+    this.ring = null;
+    sc.fx.ripple(t.x, t.y, this.color, R, t.shieldR);
+    for (let i = 0; i < 40; i++) { const a = Math.random() * Math.PI * 2, rr = t.shieldR + Math.random() * (R - t.shieldR); sc.fx.trailAt(t.x + Math.cos(a) * rr, t.y + Math.sin(a) * rr, this.color); }
+    sc.fx.shake(0.006, 300);
     sc.sfx.play('singularity', null, t.x);
     this.eventHorizon(); this.supernova(mobs);
   }
@@ -105,11 +105,18 @@ export class SingularityCore extends Weapon {
       g.fillStyle(this.color, 0.05 * f); g.fillCircle(t.x, t.y, this.range);
       g.lineStyle(2, COLORS.white, 0.3 * f); g.strokeCircle(t.x, t.y, this.range);
     }
+    if (this.collapse) {
+      const c2 = this.collapse; c2.t += 1 / 60;
+      const k = Math.min(1, c2.t / TUNING.collapseT), r = c2.r * (1 - k) + t.shieldR * k;
+      g.fillStyle(0x05060d, 0.55 * (1 - k * 0.5)); g.fillCircle(t.x, t.y, r);
+      g.lineStyle(2, this.color, 0.8); g.strokeCircle(t.x, t.y, r);
+      if (k >= 1) { this.collapse = null; this.ring = { r: t.shieldR, r1: this.range, a: 1 }; }
+    }
     if (this.ring) {
       const rg = this.ring;
       rg.r += (rg.r1 - rg.r) * TUNING.ringEase; rg.a -= TUNING.ringFade;
       if (rg.a <= 0) this.ring = null;
-      else { g.lineStyle(16 * rg.a, this.color, 0.3 * rg.a); g.strokeCircle(t.x, t.y, rg.r); g.lineStyle(3, COLORS.white, 0.7 * rg.a); g.strokeCircle(t.x, t.y, rg.r); }
+      else { g.lineStyle(8 * rg.a, this.color, 0.25 * rg.a); g.strokeCircle(t.x, t.y, rg.r); g.lineStyle(2, this.color, 0.7 * rg.a); g.strokeCircle(t.x, t.y, rg.r); }
     }
   }
 }

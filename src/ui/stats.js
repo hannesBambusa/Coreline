@@ -26,7 +26,7 @@ function liveRows(scene) {
   const spawn = scene.spawnRate(), scrapRate = scene.saves.scrapRate();
   const hpMul = Math.pow(SPAWN.hpGrowth, tier - 1) * d.hp * lm.mobHp, dmgMul = Math.pow(SPAWN.dmgGrowth, tier - 1) * d.dmg;
   const scrapMul = Math.pow(SPAWN.scrapGrowth, tier - 1) * scene.tree.mods.scrap * lm.scrap * d.scrap;
-  const elite = lm.allElite ? 1 : Math.min(ELITES.chanceMax * 2, (ELITES.chanceBase + ELITES.chancePerTier * tier) * lm.elite);
+  const elite = lm.allElite ? 1 : Math.min(ELITES.chanceMax * 3, (ELITES.chanceBase + ELITES.chancePerTier * tier) * lm.elite * d.elite);
   const crit = CRIT.chance + scene.tree.mods.crit + lm.crit;
   const nominal = t.weapons.reduce((a, w) => a + (w.dps || 0), 0);
   const nextChoice = SPAWN.choiceEvery * (Math.floor(tierInt / SPAWN.choiceEvery) + 1);
@@ -36,7 +36,7 @@ function liveRows(scene) {
   const mod = scene.levelChoice ? CHOICES[scene.levelChoice] : null;
   const regen = t.shieldRegen * (t.calm ? 2 + scene.tree.mods.calmMul : 1);
   const cells = [
-    cell('Spawn rate', `${spawn.toFixed(2)} ships/s`), cell('Ships alive', `${scene.mobs.filter(m => !m.dead).length} / ${SPAWN.softCap}`),
+    cell('Spawn rate', `${spawn.toFixed(2)} ships/s`), cell('Ships alive', `${scene.mobs.filter(m => !m.dead).length} / ${Math.round(SPAWN.softCap * d.cap)}`),
     cell('Scrap rate', `${fmt(scrapRate)} /s`), cell('Scrap per kill', `×${scrapMul.toFixed(2)}`),
     cell('Ship HP', `×${hpMul.toFixed(2)}`), cell('Ship damage', `×${dmgMul.toFixed(2)}`),
     cell('Your DPS (20 s)', fmt(scene.recentDps())), cell('Nominal DPS', fmt(nominal)),
@@ -62,7 +62,7 @@ function totalsRows(st, s) {
     cls: 'stat-sum', icon: ICONS.critMul || ICONS.level, iconStyle: `color:${CRIT_ICON_COLOR}`, name: 'Crits',
     desc: `<span class="crit">${pct(allCrits, allHits, 1)}%</span> of ${fmt(allHits)} hits crit · ` +
       `<span class="crit">+${fmt(allCe)}</span> dmg (${pct(allCe, st.total, 0)}% of total)<br>` +
-      `${superSpan(pct(allSup, allHits, 2) + '%')} super crit (${fmt(allSup)}) · ` +
+      `${superSpan(pct(allSup, allHits, 2) + '%')} triple crit (${fmt(allSup)}) · ` +
       `${superSpan('+' + fmt(allSe))} dmg (${pct(allSe, st.total, 1)}% of total)`,
   });
   return `<h3>Run</h3>${totals}${crits}`;
@@ -76,7 +76,7 @@ function sourceRow(st, src, v, total, compact) {
     ? `<br><span class="crit">crit ${pct(crits, hits, 1)}%</span> (${fmt(crits)} of ${fmt(hits)} hits) · <span class="crit">+${fmt(ce)}</span> dmg from crits`
     : '';
   const superLine = sup
-    ? `<br>${superSpan('super ' + pct(sup, hits, 2) + '%')} (${fmt(sup)}) · ${superSpan('+' + fmt(se))} dmg from supers`
+    ? `<br>${superSpan('triple ' + pct(sup, hits, 2) + '%')} (${fmt(sup)}) · ${superSpan('+' + fmt(se))} dmg from triples`
     : '';
   const compactCrits = crits ? ' · ' + fmt(crits) + ' crits' : '';
   return row({
@@ -94,7 +94,7 @@ export function statsHtml(scene, compact = false) {
   const st = scene.stats, s = scene.state, total = st.total || 1;
   const sources = Object.entries(st.dmg).sort((a, b) => b[1] - a[1]);
   const d = scene.diff;
-  let html = `<div class="muted" style="margin-bottom:6px">Difficulty <b style="color:${d.color}">${d.name}</b> · ship HP ×${d.hp}, damage ×${d.dmg}, spawns ×${d.spawn}</div>` + (compact ? '' : liveRows(scene) + totalsRows(st, s));
+  let html = `<div class="muted" style="margin-bottom:6px">Difficulty <b style="color:${d.color}">${d.name}</b> · ship HP ×${d.hp}, damage ×${d.dmg}, spawns ×${d.spawn}, cap ×${d.cap}, speed ×${d.speed}</div>` + (compact ? '' : liveRows(scene) + totalsRows(st, s));
 
   html += '<h3>Damage by weapon</h3>';
   if (!sources.length) html += '<div class="muted">No damage yet.</div>';

@@ -158,7 +158,9 @@ export class GameScene extends Phaser.Scene {
     this.timeScale = scale; this.slowTimer = seconds;
   }
 
+  /** full-screen tint that fades out; skipped entirely when the player turned flashes off */
   flashScreen(alpha = 0.6, color = 0xffffff) {
+    if (this.settings.flash === false) return;
     this.screenFlash.setFillStyle(color);
     this.screenFlash.setAlpha(alpha);
     this.tweens.add({ targets: this.screenFlash, alpha: 0, duration: 500, ease: 'Quad.easeOut' });

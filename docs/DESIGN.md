@@ -310,3 +310,7 @@ Hooks added: `bullet.onHit`, `bullet.chronoT` (damage multiplier in `bulletHit`)
 ## Threat-level choices, auto mode
 
 The two cards are still rolled but one is picked at random and applied immediately. The game no longer pauses; the picked card shows top centre for 4.5 s. The HUD top bar shows the run's difficulty ("Mode").
+
+Insane rebalanced to be insane: HP ×5, damage ×4, spawns ×4, alive-ship cap ×2 (440), ship speed ×1.25, elite chance ×3, scrap ×0.6, fragments ×2.5. The other levels got small cap/speed/elite multipliers too (`DIFFICULTY.cap/speed/elite`).
+
+Singularity blast no longer flashes the screen: a dark disc collapses inward, then a thin ring rolls out. Settings got a "Screen flashes" toggle (`settings.flash`) that disables every full-screen flash (combo procs, siege start, Dreadnought death) for photosensitive players.

@@ -23,6 +23,7 @@ export function syncSettings(ui) {
   $('#opt-sound').checked = st.sound !== false;
   $('#opt-music').checked = st.music !== false; scene.music.setEnabled(st.music !== false);
   $('#opt-transmissions').checked = st.transmissions !== false; scene.tx.enabled = st.transmissions !== false;
+  $('#opt-flash').checked = st.flash !== false;
   $('#opt-volume').value = toSlider(volume(st));
   $('#vol-slider').value = toSlider(volume(st));
   syncMute(ui);
@@ -41,6 +42,7 @@ export function initSettings(ui) {
   $('#opt-volume').oninput = (e) => setVol(+e.target.value / 100);
   $('#opt-music').onchange = (e) => { scene.settings.music = e.target.checked; scene.music.setEnabled(e.target.checked); };
   $('#opt-transmissions').onchange = (e) => { scene.settings.transmissions = e.target.checked; scene.tx.enabled = e.target.checked; };
+  $('#opt-flash').onchange = (e) => { scene.settings.flash = e.target.checked; };
   $('#vol-slider').oninput = (e) => setVol(+e.target.value / 100);
   $('#btn-mute').onclick = () => {
     scene.settings.sound = !scene.settings.sound;

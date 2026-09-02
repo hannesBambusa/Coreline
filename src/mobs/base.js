@@ -180,7 +180,7 @@ export class Mob {
   // ---- movement / per-frame ----
 
   move(dt, ax, ay) {
-    const k = this.slow * this.speedMul * (this.scene.levelMods ? this.scene.levelMods.mobSpeed : 1);
+    const k = this.slow * this.speedMul * (this.scene.levelMods ? this.scene.levelMods.mobSpeed : 1) * this.scene.diff.speed;
     this.vx = ax * k + this.dodgeVx; this.vy = ay * k + this.dodgeVy;
     this.slow = 1;
     this.dodgeVx *= Math.pow(DRIFT_DECAY, dt); this.dodgeVy *= Math.pow(DRIFT_DECAY, dt);

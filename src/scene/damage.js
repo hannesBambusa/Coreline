@@ -58,13 +58,13 @@ function applyCrit(scene, m, weapon, d, srcKey, x, y, label) {
   return d;
 }
 
-/** Super crit on top of a crit: bigger multiplier, bigger show. Returns the new damage. */
+/** Triple crit (shown as TRIPLE) on top of a crit: bigger multiplier, bigger show. Returns the new damage. */
 function applySuperCrit(scene, m, d, srcKey, label) {
   const st = scene.stats, dCrit = d;
   d *= CRIT.superMul;
   st.supers[srcKey] = (st.supers[srcKey] || 0) + 1;
   st.superExtra[srcKey] = (st.superExtra[srcKey] || 0) + (d - dCrit);
-  label.text = 'SUPER ' + Math.round(d) + '!!'; label.color = SUPER_COLOR; label.size = SUPER_SIZE;
+  label.text = 'TRIPLE ' + Math.round(d) + '!!'; label.color = SUPER_COLOR; label.size = SUPER_SIZE;
   scene.fx.explode(m.x, m.y, SUPER_TINT, 22); scene.fx.explode(m.x, m.y, 0xffffff, 10);
   scene.fx.ripple(m.x, m.y, SUPER_TINT, m.r, m.r + 70); scene.fx.ripple(m.x, m.y, 0xffffff, m.r, m.r + 40);
   scene.fx.flash(m.x, m.y, SUPER_TINT, 2.5);

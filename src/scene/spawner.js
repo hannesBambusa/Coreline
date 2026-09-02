@@ -53,7 +53,7 @@ export function pickType(scene) {
 /** Elite roll for a natural spawn. Bosses and swarm never go elite. */
 function maybeMakeElite(scene, m, type) {
   if (type === 'boss' || type === 'swarm' || type === 'warlord' || type === 'pylon') return;
-  const chance = scene.levelMods.allElite ? 1 : Math.min(ELITES.chanceMax * 2, (ELITES.chanceBase + ELITES.chancePerTier * scene.tier) * scene.levelMods.elite);
+  const chance = scene.levelMods.allElite ? 1 : Math.min(ELITES.chanceMax * 3, (ELITES.chanceBase + ELITES.chancePerTier * scene.tier) * scene.levelMods.elite * scene.diff.elite);
   if (Math.random() < chance) {
     m.makeElite(pick(Object.keys(ELITES.mods)));
     scene.tx.say('elite', 90);
@@ -160,5 +160,5 @@ export function updateSpawning(scene, dt) {
   const tierInt = Math.floor(scene.tier);
   if (tierInt !== scene.state.tier) onNewTier(scene, tierInt);
   scene.spawnTimer -= dt;
-  if (scene.spawnTimer <= 0 && scene.mobs.length < SPAWN.softCap) spawnBurst(scene);
+  if (scene.spawnTimer <= 0 && scene.mobs.length < SPAWN.softCap * scene.diff.cap) spawnBurst(scene);
 }

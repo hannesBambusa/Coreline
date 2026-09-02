@@ -18,10 +18,6 @@
     <div class="stat red"><span class="lbl">Threat</span><span id="tier">1</span></div>
     <div class="stat"><span class="lbl">Kills</span><span id="kills">0</span></div>
     <div class="stat diff"><span class="lbl">Mode</span><span id="hud-diff">Normal</span></div>
-    <div id="core-status">
-      <div class="bar shield"><div class="fill" id="shield-fill"></div><span id="shield-txt">120 / 120</span><span class="regen" id="shield-regen">+10/s</span></div>
-      <div class="bar hull"><div class="fill" id="hull-fill"></div><span id="hull-txt">300 / 300</span></div>
-    </div>
     <div id="vol"><button id="btn-mute" title="Mute">🔊</button><input type="range" id="vol-slider" min="0" max="100" value="70" title="Volume"></div>
     <button id="btn-auto" title="Auto-buy upgrades (order in Upgrades tab)">AUTO</button>
     <button id="btn-pause" title="Pause (Space)">❚❚</button>
@@ -60,6 +56,8 @@
       <h3>Display</h3>
       <label class="toggle"><input type="checkbox" id="opt-shake" checked> Screen shake</label>
       <label class="toggle"><input type="checkbox" id="opt-flash" checked> Screen flashes (off for photosensitivity)</label>
+      <label class="toggle">Effects <select id="opt-perf"><option value="auto">Auto</option><option value="full">Full</option><option value="reduced">Reduced</option><option value="minimal">Minimal</option></select> <span id="perf-now" class="muted"></span></label>
+      <p class="muted">Auto starts at full and steps down when the frame rate drops. Reduced turns off bloom, plain damage numbers and small-ship glows.</p>
       <label class="toggle"><input type="checkbox" id="opt-sound" checked> Sound</label>
       <label class="toggle"><input type="checkbox" id="opt-music" checked> Music</label>
       <label class="toggle"><input type="checkbox" id="opt-transmissions" checked> Overseer transmissions</label>

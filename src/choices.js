@@ -12,9 +12,10 @@ export const CHOICES = {
   scrapFast:   { name: 'Salvage rush',     good: '+80% scrap',                    bad: 'ships 35% faster',                 fromTier: 1 },
   scrapCalm:   { name: 'Quiet sector',     good: '-40% spawn rate',               bad: '-50% scrap',                       fromTier: 1 },
   bloodMoney:  { name: 'Blood money',      good: '+150% scrap',                   bad: 'ships 60% tougher, +40% spawns',   fromTier: 4 },
-  fragRun:     { name: 'Fragment lure',    good: 'double fragments',              bad: 'ships 50% tougher',                fromTier: 4 },
-  fragFever:   { name: 'Fragment fever',   good: 'triple fragments',              bad: 'spawn rate ×2, ships 30% faster',  fromTier: 10 },
+  fragRun:     { name: 'Fragment lure',    good: '+50% fragments',                bad: 'ships 50% tougher',                fromTier: 4 },
+  fragFever:   { name: 'Fragment fever',   good: 'double fragments',              bad: 'spawn rate ×2, ships 30% faster',  fromTier: 10 },
   bounty:      { name: 'Bounty board',     good: 'elites drop 6× scrap',          bad: 'elite chance ×4',                  fromTier: 5 },
+  swarmStorm:  { name: 'Swarm storm',      good: 'swarm drops ×5 scrap',          bad: '200+ swarm arrive now, then swarm only, ×5 numbers', fromTier: 4 },
   parade:      { name: 'Elite parade',     good: 'elites drop 3× scrap',          bad: 'every ship is an elite',           fromTier: 8 },
   // ---- offense and defense ----
   critHigh:    { name: 'Overtuned optics', good: '+25% crit chance',              bad: 'no shield regen',                  fromTier: 2 },
@@ -59,10 +60,11 @@ export function applyChoice(id, m) {
     case 'scrapFast':  m.scrap *= 1.8; m.mobSpeed *= 1.35; break;
     case 'scrapCalm':  m.spawn *= 0.6; m.scrap *= 0.5; break;
     case 'bloodMoney': m.scrap *= 2.5; m.mobHp *= 1.6; m.spawn *= 1.4; break;
-    case 'fragRun':    m.fragments *= 2; m.mobHp *= 1.5; break;
-    case 'fragFever':  m.fragments *= 3; m.spawn *= 2; m.mobSpeed *= 1.3; break;
+    case 'fragRun':    m.fragments *= 1.5; m.mobHp *= 1.5; break;
+    case 'fragFever':  m.fragments *= 2; m.spawn *= 2; m.mobSpeed *= 1.3; break;
     case 'bounty':     m.eliteScrap *= 6; m.elite *= 4; break;
     case 'parade':     m.eliteScrap *= 3; m.allElite = true; break;
+    case 'swarmStorm': m.swarmScrap *= 5; m.force = 'swarm'; m.spawn *= 5; m.cap *= 2.5; break;
     case 'critHigh':   m.crit += 0.25; m.shieldRegen = 0; break;
     case 'glass':      m.dmg *= 1.6; m.shieldMax *= 0.4; break;
     case 'allIn':      m.dmg *= 2; m.scrap *= 1.5; m.shieldMax *= 0.25; m.shieldRegen = 0; break;
@@ -87,7 +89,7 @@ export function baseLevelMods() {
   for (const k of Object.keys(WEAPONS)) w[k] = { dmg: 1, rate: 1 };
   return { scrap: 1, swarmScrap: 1, eliteScrap: 1, typeScrap: {}, spawn: 1, mobSpeed: 1, mobHp: 1, crit: 0, shieldRegen: 1, shieldMax: 1,
     fragments: 1, dmg: 1, droneDmg: 1, otherDmg: 1, rate: 1, abilityCd: 1, elite: 1, allElite: false, force: null, noPhase: false, sniperRate: 1,
-    w, teslaChains: 0, laserRamp: 1, missileSplash: 1, gravityPull: 1 };
+    w, teslaChains: 0, laserRamp: 1, missileSplash: 1, gravityPull: 1, cap: 1 };
 }
 
 /** Cards that fit the tier and the current loadout. */

@@ -114,7 +114,7 @@ export class Boss extends Mob {
       this.scene.fx.explode(this.x, this.y, 0xffffff, 40);
       const frag = Math.round((this.def.fragments + this.scene.tree.mods.bossFrag) * this.scene.levelMods.fragments);
       this.scene.state.fragments += frag;
-      this.scene.fx.floater(this.x, this.y - 40, `+${frag} fragment${frag > 1 ? 's' : ''}`, '#c084fc', 18);
+      if (frag > 0) this.scene.fx.floater(this.x, this.y - 40, `+${frag} fragment${frag > 1 ? 's' : ''}`, '#c084fc', 18);
       this.scene.ui.banner('Overseer destroyed', true);
       this.scene.tx.say('bossDead');
     }
@@ -225,7 +225,7 @@ export class Warlord extends Mob {
       this.scene.fx.explode(this.x, this.y, this.def.color, 60);
       const frag = Math.round((this.def.fragments + this.scene.tree.mods.bossFrag) * this.scene.levelMods.fragments);
       this.scene.state.fragments += frag;
-      this.scene.fx.floater(this.x, this.y - 50, `+${frag} fragments`, '#c084fc', 20);
+      if (frag > 0) this.scene.fx.floater(this.x, this.y - 50, `+${frag} fragment${frag > 1 ? 's' : ''}`, '#c084fc', 20);
       this.scene.ui.banner('Warlord destroyed', true);
       this.scene.tx.say('bossDead');
       this.scene.sfx.play('bigExplode', null, this.x);

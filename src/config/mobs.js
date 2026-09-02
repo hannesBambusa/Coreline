@@ -87,7 +87,7 @@ export const MOBS = {
   boss: {
     name: 'Overseer', hp: BOSS_HP, speed: 55, dmg: 7, scrap: BOSS_SCRAP, r: 34,
     fireRate: 1.0, burst: 3, range: 300, bulletSpeed: 260, spawnEvery: 4, spawnCount: 3,
-    fragments: 1, color: COLORS.magenta, every: 5,
+    fragments: 0, color: COLORS.magenta, every: 5,      // fragments only via Core harvester
   },
   // Warlord: every 10th threat level (sieges take the 30s and 60s). Built to test the loadout: adapts to the weapon
   // hurting it most, hides behind relay pylons twice, flaks player drones, and its armour caps how fast it can die.
@@ -99,7 +99,7 @@ export const MOBS = {
     flakEvery: 7, flakRadius: 220, flakMul: 4,     // burst that hurts player drones in range (dmg * flakMul)
     escortEvery: 8, escortCount: 3,
     minKillSec: 12, dpsSeconds: 12,                // armour: at most hpMax/minKillSec per second; hp at least recent dps * dpsSeconds
-    fragments: 3, color: COLORS.gold, every: 10,
+    fragments: 2, color: COLORS.gold, every: 10,
   },
   pylon: {
     name: 'Relay pylon', hp: 150, speed: 0, dmg: 0, scrap: 25, r: 12,
@@ -135,13 +135,14 @@ export const SIEGE = {
   every: 30,                 // threat levels between sieges
   wardens: 3, wardensPerLevel: 2,
   hpMul: 1.0, hpMulPerLevel: 1.2,
-  fragments: 5, fragmentsPerLevel: 5,
+  fragments: 3, fragmentsPerLevel: 3,
   arcPerLevel: Math.PI / 6,
 };
 
 export const SPAWN = {
   tierSeconds: 40,       // one threat level per this many seconds survived
-  hpGrowth: 1.12,        // mob hp multiplier per threat level
+  hpGrowth: 1.15,        // mob hp multiplier per threat level
+  hpBase: 1.3,           // flat multiplier on every ship's hp
   dmgGrowth: 1.045,      // mob damage multiplier per threat level
   scrapGrowth: 1.08,     // scrap multiplier per threat level
   baseRate: 1.2,         // mobs per second at t=0

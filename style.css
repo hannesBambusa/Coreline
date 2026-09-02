@@ -50,19 +50,6 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 #btn-pause.on { background: rgba(79,242,255,0.2); box-shadow: 0 0 12px rgba(79,242,255,0.4); }
 #panel-toggle { margin-left: 10px; pointer-events: auto; background: none; border: 1px solid var(--line); color: var(--cyan); border-radius: 6px; width: 34px; height: 30px; cursor: pointer; }
 
-#core-status { display: flex; flex-direction: column; gap: 5px; width: 260px; margin-left: 12px; }
-.bar { position: relative; height: 16px; border-radius: 4px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); overflow: hidden; font-size: 11px; line-height: 16px; }
-.bar .fill { position: absolute; inset: 0; width: 100%; transform-origin: left; transition: transform 0.12s linear; }
-.bar.shield .fill { background: linear-gradient(90deg, rgba(79,242,255,0.35), rgba(79,242,255,0.75)); box-shadow: 0 0 10px rgba(79,242,255,0.5); }
-.bar.hull .fill { background: linear-gradient(90deg, rgba(94,234,212,0.35), rgba(94,234,212,0.7)); }
-.bar.hull.warn .fill { background: linear-gradient(90deg, rgba(255,159,67,0.4), rgba(255,159,67,0.8)); }
-.bar.hull.crit .fill { background: linear-gradient(90deg, rgba(255,77,109,0.4), rgba(255,77,109,0.85)); }
-.bar span { position: relative; padding-left: 6px; font-weight: 600; color: #fff; text-shadow: 0 0 4px #000; font-variant-numeric: tabular-nums; }
-.bar .regen { position: absolute; right: 6px; top: 0; color: var(--cyan); }
-.bar.shield.calm .regen { color: #fff; text-shadow: 0 0 8px var(--cyan); }
-.bar.shield.calm .fill { animation: calmpulse 0.8s ease-in-out infinite alternate; }
-.bar.shield.down { border-color: var(--red); }
-.bar.shield.down span:first-of-type { color: var(--red); }
 
 /* ==========================================================================
    Panel: container, tabs, resize grip, settings controls
@@ -443,7 +430,6 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 /* ==========================================================================
    Animations
    ========================================================================== */
-@keyframes calmpulse { from { filter: brightness(1); } to { filter: brightness(1.6); } }
 @keyframes cbpulse { 0% { box-shadow: 0 0 60px var(--cb), 0 0 120px var(--cb); } 100% { box-shadow: 0 0 30px var(--cb); } }
 @keyframes fxpop { 0% { transform: scale(1.12); } 100% { transform: scale(1); } }
 @keyframes fxblink { from { opacity: 1; } to { opacity: 0.55; } }
@@ -472,3 +458,4 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 #confirm .row { justify-content: center; gap: 12px; }
 #confirm .row button { flex: none; min-width: 130px; padding: 10px 16px; }
 #confirm .row button.danger { border-color: var(--red); color: var(--red); background: rgba(255,77,109,0.1); }
+#opt-perf { background: rgba(255,255,255,0.05); color: var(--text); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 3px 6px; font-family: var(--font-body); margin-left: 6px; }

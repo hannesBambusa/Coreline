@@ -1,6 +1,6 @@
 // Always-visible HUD: top bar numbers and core bars, threat timer, boss bar, banners,
 // the ability bar, the auto-buy queue and the quick-buy list.
-import { TOWER, WEAPONS, ABILITIES, SPAWN } from '../config.js';
+import { WEAPONS, ABILITIES, SPAWN } from '../config.js';
 import { ICONS } from '../icons.js';
 import { AUTO_ITEMS } from '../autobuy.js';
 import { $, $$, fmt, fmtTime, hex, swapHtml, restartAnimation, bindBuy } from './dom.js';
@@ -11,7 +11,6 @@ const BANNER_MS = 1800;
 const COMBO_BANNER_MS = 1600;
 const COMBO_BANNER_FADE_MS = 300;
 const THREAT_SOON_S = 5;           // timer blinks red below this
-const HULL_WARN = 0.5, HULL_CRIT = 0.25;
 const CORE_COLOR = 0x4ff2ff;       // quick-buy colour for tower upgrades and slots
 const ABILITY_COLOR = 0x9be7ff;
 const QUICK_BUY_TOWER_KEYS = ['shieldRegen', 'shieldMax', 'hull'];
@@ -20,8 +19,6 @@ const QUICK_BUY_TOWER_KEYS = ['shieldRegen', 'shieldMax', 'hull'];
 let els = null;
 const topEls = () => els || (els = {
   scrap: $('#scrap'), fragments: $('#fragments'), time: $('#time'), tier: $('#tier'), kills: $('#kills'), diff: $('#hud-diff'),
-  shieldBar: $('.bar.shield'), hullBar: $('.bar.hull'), shieldFill: $('#shield-fill'), hullFill: $('#hull-fill'),
-  shieldTxt: $('#shield-txt'), hullTxt: $('#hull-txt'), shieldRegen: $('#shield-regen'),
   threat: $('#threat-timer'), threatFill: $('#threat-timer .tt-fill'), threatNum: $('#threat-timer .tt-num'),
   boss: $('#boss-bar'), bossFill: $('#boss-fill'), bossName: $('#boss-name'), bossSub: $('#boss-sub'),
 });
@@ -38,24 +35,6 @@ export function renderTopBar(scene) {
   const d = scene.diff; if (e.diff.textContent !== d.name) { e.diff.textContent = d.name; e.diff.style.color = d.color; }
 }
 
-function regenPerSecond(scene, t) {
-  const mul = t.regenDelay > 0 ? TOWER.underFireRegen : t.calm ? TOWER.calmRegenMul + scene.tree.mods.calmMul : 1;
-  return t.shieldRegen * mul;
-}
-
-export function renderCoreBars(scene) {
-  const t = scene.tower, e = topEls(), sf = t.shield / t.shieldMax, hf = t.hull / t.hullMax;
-  e.shieldFill.style.transform = `scaleX(${sf})`;
-  e.hullFill.style.transform = `scaleX(${hf})`;
-  e.shieldTxt.textContent = `Shield ${Math.ceil(t.shield)} / ${t.shieldMax}`;
-  e.hullTxt.textContent = `Hull ${Math.ceil(t.hull)} / ${t.hullMax}`;
-  const state = t.regenDelay > 0 ? ' under fire' : t.calm ? ' calm' : '';
-  e.shieldRegen.textContent = `+${regenPerSecond(scene, t).toFixed(0)}/s${state}`;
-  e.shieldBar.classList.toggle('calm', t.calm && sf < 1);
-  e.shieldBar.classList.toggle('down', t.shield <= 0);
-  e.hullBar.classList.toggle('warn', hf <= HULL_WARN && hf > HULL_CRIT);
-  e.hullBar.classList.toggle('crit', hf <= HULL_CRIT);
-}
 
 // ---- Threat timer and boss bar -------------------------------------------
 

@@ -2,7 +2,7 @@
 // range loses a share of its max HP (bosses capped), every enemy shot in range is erased. From `afterglowAt` the
 // blast leaves a zone where all your hits crit. Build-around: the other slots feed it.
 import { Weapon, formatStats } from './base.js';
-import { COLORS } from '../config.js';
+import { COLORS, SPAWN } from '../config.js';
 import { dist } from '../utils.js';
 
 const TUNING = {
@@ -26,8 +26,10 @@ export class SingularityCore extends Weapon {
   get pct() { return Math.min(this.def.pctMax, this.def.dmg * this.dmgGrowth(this.level) * this.mods.dmg * this.wm.dmg * this.lm.dmg * this.lw.dmg); }
   pctAt(level) { return Math.min(this.def.pctMax, this.def.dmg * this.dmgGrowth(level) * this.mods.dmg * this.wm.dmg); }
   /** scrap needed for a full charge; falls with level via rate */
-  get need() { return this.def.need / (this.rateGrowth(this.level) * this.mods.rate * this.wm.rate * this.lm.rate * this.lw.rate); }
-  needAt(level) { return this.def.need / (this.rateGrowth(level) * this.mods.rate * this.wm.rate); }
+  /** scrap per kill grows with threat, so the charge cost grows the same way (and with the difficulty's scrap multiplier) */
+  get needBase() { return this.def.need * Math.pow(SPAWN.scrapGrowth, this.scene.tier - 1) * this.scene.diff.scrap * this.scene.tree.mods.scrap; }
+  get need() { return this.needBase / (this.rateGrowth(this.level) * this.mods.rate * this.wm.rate * this.lm.rate * this.lw.rate); }
+  needAt(level) { return this.needBase / (this.rateGrowth(level) * this.mods.rate * this.wm.rate); }
   get hasAfterglow() { return this.level >= this.def.afterglowAt; }
   get dps() { return 0; }
   text(level, pct, need) {

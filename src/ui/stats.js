@@ -24,7 +24,7 @@ function liveRows(scene) {
   const s = scene.state, t = scene.tower, lm = scene.levelMods, d = scene.diff, tier = scene.tier, tierInt = Math.floor(tier);
   const cell = (label, value) => `<div class="live-cell"><span class="lbl">${label}</span><b>${value}</b></div>`;
   const spawn = scene.spawnRate(), scrapRate = scene.saves.scrapRate();
-  const hpMul = Math.pow(SPAWN.hpGrowth, tier - 1) * d.hp * lm.mobHp, dmgMul = Math.pow(SPAWN.dmgGrowth, tier - 1) * d.dmg;
+  const hpMul = SPAWN.hpBase * Math.pow(SPAWN.hpGrowth, tier - 1) * d.hp * lm.mobHp, dmgMul = Math.pow(SPAWN.dmgGrowth, tier - 1) * d.dmg;
   const scrapMul = Math.pow(SPAWN.scrapGrowth, tier - 1) * scene.tree.mods.scrap * lm.scrap * d.scrap;
   const elite = lm.allElite ? 1 : Math.min(ELITES.chanceMax * 3, (ELITES.chanceBase + ELITES.chancePerTier * tier) * lm.elite * d.elite);
   const crit = CRIT.chance + scene.tree.mods.crit + lm.crit;
@@ -36,7 +36,8 @@ function liveRows(scene) {
   const mod = scene.levelChoice ? CHOICES[scene.levelChoice] : null;
   const regen = t.shieldRegen * (t.calm ? 2 + scene.tree.mods.calmMul : 1);
   const cells = [
-    cell('Spawn rate', `${spawn.toFixed(2)} ships/s`), cell('Ships alive', `${scene.mobs.filter(m => !m.dead).length} / ${Math.round(SPAWN.softCap * d.cap)}`),
+    cell('Shield', `${Math.ceil(t.shield)} / ${t.shieldMax}`), cell('Hull', `${Math.ceil(t.hull)} / ${t.hullMax}`),
+    cell('Spawn rate', `${spawn.toFixed(2)} ships/s`), cell('Ships alive', `${scene.mobs.filter(m => !m.dead).length} / ${Math.round(SPAWN.softCap * d.cap * (lm.cap || 1))}`),
     cell('Scrap rate', `${fmt(scrapRate)} /s`), cell('Scrap per kill', `×${scrapMul.toFixed(2)}`),
     cell('Ship HP', `×${hpMul.toFixed(2)}`), cell('Ship damage', `×${dmgMul.toFixed(2)}`),
     cell('Your DPS (20 s)', fmt(scene.recentDps())), cell('Nominal DPS', fmt(nominal)),

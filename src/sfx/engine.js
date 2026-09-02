@@ -38,7 +38,7 @@ export class SFXEngine {
     this.samplesReady = false;
     this.last = {};
     this.loops = {};
-    const resume = () => { this.ensure(); if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); this.ambient(true); };
+    const resume = () => { this.ensure(); if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); };
     window.addEventListener('pointerdown', resume);
     window.addEventListener('keydown', resume);
     this.width = DEFAULT_WIDTH;
@@ -220,32 +220,7 @@ export class SFXEngine {
     this.tone({ type: 'sawtooth', f0: 60, f1: 30, dur: 1.2, peak: 0.15, pan, wet: 0.6, delay: 0.05 });
   }
 
-  // ---------- loops ----------
-  ambient(on) {
-    if (!this.ctx) return;
-    const c = this.ctx;
-    if (on && !this.loops.amb) {
-      const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = 55;
-      const o2 = c.createOscillator(); o2.type = 'sawtooth'; o2.frequency.value = 55.4;
-      const o3 = c.createOscillator(); o3.type = 'sine'; o3.frequency.value = 27.5;
-      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 160; f.Q.value = 2;
-      const lfo = c.createOscillator(); lfo.type = 'sine'; lfo.frequency.value = 0.05;
-      const lfoG = c.createGain(); lfoG.gain.value = 60; lfo.connect(lfoG); lfoG.connect(f.frequency);
-      const g = c.createGain(); g.gain.value = 0; g.gain.linearRampToValueAtTime(0.022, c.currentTime + 4);
-      o.connect(f); o2.connect(f); o3.connect(g); f.connect(g); g.connect(this.master);
-      const w = c.createGain(); w.gain.value = 0.5; g.connect(w); w.connect(this.verb);
-      // faint wind
-      const src = c.createBufferSource(); src.buffer = this.noise; src.loop = true;
-      const nf = c.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 900; nf.Q.value = 0.4;
-      const lfo2 = c.createOscillator(); lfo2.frequency.value = 0.08;
-      const l2g = c.createGain(); l2g.gain.value = 500; lfo2.connect(l2g); l2g.connect(nf.frequency);
-      const ng = c.createGain(); ng.gain.value = 0.006;
-      src.connect(nf); nf.connect(ng); ng.connect(this.master);
-      o.start(); o2.start(); o3.start(); lfo.start(); lfo2.start(); src.start();
-      this.loops.amb = { g, ng };
-    }
-  }
-
+  // ---------- loops (laser hum above, boss hum below; no idle ambient drone) ----------
   bossHum(on) {
     if (!this.ctx) return;
     const c = this.ctx;

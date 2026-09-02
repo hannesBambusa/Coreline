@@ -63,12 +63,12 @@ export class UI {
   render() {
     const scene = this.scene;
     hud.renderTopBar(scene);
-    hud.renderCoreBars(scene);
     hud.renderAbilities(this);
     hud.renderQuickBuy(this);
     hud.renderBossBar(scene);
     hud.renderThreatTimer(scene);
     hud.renderQueue(this);
+    if (this.activeTab === 'settings') { const el = $('#perf-now'); if (el.textContent !== scene.perf.label) el.textContent = scene.perf.label; }
     if (!this.panelHidden()) this.renderTab(this.activeTab);
   }
 

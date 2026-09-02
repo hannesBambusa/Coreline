@@ -46,16 +46,20 @@ export class FX {
   }
 
   spark(x, y, color, n = 5) {
+    n = this.scene.perf.sparkCount(n);
+    if (!n) return;
     this.sparks.setParticleTint(color);
     this.sparks.explode(n, x, y);
   }
 
   trailAt(x, y, color) {
+    if (!this.scene.perf.trailOk()) return;
     this.trail.setParticleTint(color);
     this.trail.emitParticleAt(x, y);
   }
 
   flash(x, y, color, scale = 1) {
+    if (!this.scene.perf.flashes) return;
     const img = this.scene.add.image(x, y, 'glow').setTint(color)
       .setBlendMode(Phaser.BlendModes.ADD).setScale(scale * 0.4).setDepth(6);
     this.scene.tweens.add({

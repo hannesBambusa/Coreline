@@ -314,3 +314,34 @@ The two cards are still rolled but one is picked at random and applied immediate
 Insane rebalanced to be insane: HP ×5, damage ×4, spawns ×4, alive-ship cap ×2 (440), ship speed ×1.25, elite chance ×3, scrap ×0.6, fragments ×2.5. The other levels got small cap/speed/elite multipliers too (`DIFFICULTY.cap/speed/elite`).
 
 Singularity blast no longer flashes the screen: a dark disc collapses inward, then a thin ring rolls out. Settings got a "Screen flashes" toggle (`settings.flash`) that disables every full-screen flash (combo procs, siege start, Dreadnought death) for photosensitive players.
+
+Singularity nerfed after play: blast 25 % → 18 % (max 80 % → 55 %), bosses 8 % → 6 %, range 420 → 400, trickle halved, afterglow 5 s → 4 s, and the charge cost now scales with threat (`scrapGrowth^(tier-1)`, difficulty and Salvage drones), so a blast always costs roughly the same number of kills instead of firing every few seconds late in a run.
+
+## Performance knobs (`src/perf.js`)
+
+Profiling with 500 ships showed game logic at under 1 ms per frame; the load is rendering. Changes:
+
+- **Stroked circles use 79 segments instead of 628.** Phaser's `strokeCircle` defaults to 0.01 rad per segment; every ship ring, elite ring, well and ripple went through it. Overridden once in `perf.js`.
+- **Bloom** dropped from 4 to 2 blur steps at full quality, off at reduced and minimal.
+- **Effects levels** (Settings → Effects): Full, Reduced (no bloom, no plain damage numbers, glows only on ships larger than r 12, trails every other frame, half the sparks), Minimal (no bloom, numbers, trails, sparks, flashes or ship glows). **Auto** (default) starts at Full, drops a level after 3 s under 45 fps (straight to Minimal under 30), climbs back after 15 s above 58. Saved in `settings.perf`.
+- Hooks: `scene.perf.numbers / flashes / trailOk() / sparkCount(n) / glowFor(r)`; `Mob` glows are created with the current visibility and `apply()` re-toggles existing ones.
+
+Chrono field nerfed after play (it held threat 7 alone): shear dps 6 → 2, growth ×1.14 → ×1.10, slow ×0.6 → ×0.65 (floor ×0.25 → ×0.35), radius +6 → +5 per level, bullet boost +60 % → +50 % per second.
+
+## Fragments made scarce
+
+Prestige payout `floor((threat / 8) ^ 1.4)` (was `/ 4 ^ 1.5`): threat 20 → 3, 40 → 9, 60 → 16 (was 11 / 31 / 58). Overseer pays 0 base fragments (Core harvester still adds +1..3), Warlord 3 → 2, siege 5 + 5/level → 3 + 3/level. Difficulty fragment multipliers 0.5 / 1 / 1.2 / 1.4 / 1.75. Fragment lure ×2 → ×1.5, Fragment fever ×3 → ×2.
+
+## Harder curve
+
+Ship HP: flat ×1.3 (`SPAWN.hpBase`) and growth ×1.12 → ×1.15 per threat (threat 20 ≈ ×2.2 tougher, threat 40 ≈ ×3.7). Upgrade prices: every weapon's base cost ×1.5 and cost growth +0.10 per level (1.32 → 1.42); tower upgrades base 25/40/60 → 40/60/90 and growth 1.28/1.32/1.35 → 1.38/1.42/1.45.
+
+The idle ambient drone (55 Hz sawtooth pad plus wind noise, started on first interaction) was removed; only the music, the laser hum and the boss hum remain as continuous sounds.
+
+## Tower redesign (`src/tower/draw.js`)
+
+- **Shield** is 24 arc segments on the shield radius. Lit segments = capacity; the next segment fills like a progress bar while regenerating and motes chase around an inner track (8 when calm, 4 under fire, speed follows regen). Broken shield = red dashed ring. A hit flares white on the impact side (`tower.hitAngle`).
+- **Hull** is six armour plates between the body and the hardpoints, filling in order with hull fraction, green → orange → red, red pulse ring under 25 %.
+- **Body**: hexagon with an inner hex, vents at the corners and a ticking inner ring.
+- **Hardpoints** sit on the plate ring: a mount pad, a turret ring in the weapon colour, and a per-type turret drawn in the mount's local frame (twin barrels, rail with side rails and brake, four-tube launcher, laser lens, tesla prongs, gravity ring, shock dish, hangar pad, chrono disc, nanite spines, singularity cradle). Barrel recoil for 0.12 s after a shot. Jammed = red X.
+- **Core**: prestige-coloured with a slow three-arc reticle and one orbiting mote per prestige.

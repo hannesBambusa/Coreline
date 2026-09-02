@@ -14,9 +14,9 @@ export const TOWER = {
 
 // Scrap upgrades on the tower itself. cost = base * growth^level
 export const TOWER_UPGRADES = {
-  shieldMax:   { name: 'Shield capacity', base: 25, growth: 1.28, add: 40,  unit: 'shield' },
-  shieldRegen: { name: 'Shield regen',    base: 40, growth: 1.32, add: 3,   unit: '/s' },
-  hull:        { name: 'Hull plating',    base: 60, growth: 1.35, add: 100, unit: 'hull' },
+  shieldMax:   { name: 'Shield capacity', base: 40, growth: 1.38, add: 40,  unit: 'shield' },
+  shieldRegen: { name: 'Shield regen',    base: 60, growth: 1.42, add: 3,   unit: '/s' },
+  hull:        { name: 'Hull plating',    base: 90, growth: 1.45, add: 100, unit: 'hull' },
 };
 
 export const SLOT_COSTS = [0, 150, 800, 3000, 12000];   // 4 hardpoints normally; the 5th opens at threat 30

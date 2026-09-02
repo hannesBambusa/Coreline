@@ -47,10 +47,11 @@ export class SaveSystem {
   // scrap per second over the last 5 minutes of play
   scrapRate() {
     const s = this.scene, now = s.state.time, windowSec = 300;
-    const log = s.scrapLog.filter(([t]) => now - t <= windowSec);
-    s.scrapLog = log;
+    const log = s.scrapLog;
+    while (log.length && now - log[0][0] > windowSec) log.shift();
     const span = Math.min(windowSec, Math.max(30, now));
-    return log.reduce((a, [, v]) => a + v, 0) / span;
+    let sum = 0; for (const e of log) sum += e[1];
+    return sum / span;
   }
 
   save() {

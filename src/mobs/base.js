@@ -29,7 +29,7 @@ export class Mob {
     this.x = x; this.y = y; this.vx = 0; this.vy = 0;
     this.r = this.def.r;
     const diff = scene.diff;
-    this.hpMax = this.def.hp * Math.pow(SPAWN.hpGrowth, tier - 1) * diff.hp; this.hp = this.hpMax;
+    this.hpMax = this.def.hp * SPAWN.hpBase * Math.pow(SPAWN.hpGrowth, tier - 1) * diff.hp; this.hp = this.hpMax;
     this.dmg = this.def.dmg * Math.pow(SPAWN.dmgGrowth, tier - 1) * diff.dmg;
     this.scrap = Math.max(1, Math.round(this.def.scrap * Math.pow(SPAWN.scrapGrowth, tier - 1)));
     this.dead = false;
@@ -43,7 +43,7 @@ export class Mob {
     if (opts.orbitDir !== undefined) this.orbitDir = opts.orbitDir;
     this.sprite = scene.add.image(x, y, 'ship_' + type).setTint(this.def.color).setDepth(5);
     this.glow = scene.add.image(x, y, 'glow').setTint(this.def.color)
-      .setBlendMode(Phaser.BlendModes.ADD).setScale(this.r / 22).setAlpha(0.5).setDepth(2);
+      .setBlendMode(Phaser.BlendModes.ADD).setScale(this.r / 22).setAlpha(0.5).setDepth(2).setVisible(scene.perf.glowFor(this.r));
   }
 
   // ---- elite affixes (see elite.js) ----

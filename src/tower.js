@@ -105,7 +105,7 @@ export class Tower {
       fx.shake(0.004, 120);
       this.scene.sfx.play('hullHit', null, hx);
     }
-    this.hitTimer = 0.25;
+    this.hitTimer = 0.25; this.hitAngle = Phaser.Math.Angle.Between(this.x, this.y, hx, hy);
     this.regenDelay = TOWER.regenDelay;
     this.sinceHit = 0;
     if (this.hull <= 0) { this.hull = 0; this.scene.onTowerDestroyed(); }

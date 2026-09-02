@@ -17,6 +17,7 @@ import { UI } from './ui.js';
 import { makeTextures, makeStarfield } from './scene/textures.js';
 import * as spawner from './scene/spawner.js';
 import * as siege from './scene/siege.js';
+import { Perf } from './perf.js';
 import * as choices from './scene/choices.js';
 import * as damage from './scene/damage.js';
 import * as projectiles from './scene/projectiles.js';
@@ -75,15 +76,14 @@ export class GameScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.bg = this.add.rectangle(0, 0, width, height, BG_COLOR).setOrigin(0).setDepth(-1);
     makeStarfield(this, width, height);
+    this.perf = new Perf(this);
     this.fx = new FX(this);
     this.tower = new Tower(this, width / 2, height / 2);
     this.tree.recompute();
     this.mobGfx = this.add.graphics().setDepth(5);
     this.screenFlash = this.add.rectangle(0, 0, width, height, 0xffffff).setOrigin(0).setDepth(20).setAlpha(0);
     this.bulletGfx = this.add.graphics().setDepth(4);
-    if (this.renderer.type === Phaser.WEBGL) {
-      this.cameras.main.postFX.addBloom(0xffffff, 1, 1, 1, 1.15, 4);
-    }
+    this.perf.apply('full');   // bloom lives here; the effects level can change it later
     this.scale.on('resize', this.onResize, this);
 
     // ui + saves last: they read everything above
@@ -196,7 +196,7 @@ export class GameScene extends Phaser.Scene {
     const lm = this.levelMods;
     const scrap = Math.round(m.scrap * this.tree.mods.scrap * lm.scrap * this.diff.scrap * (m.type === 'swarm' ? lm.swarmScrap : 1) * (lm.typeScrap[m.type] || 1) * (m.elite ? lm.eliteScrap : 1));
     this.state.scrap += scrap;
-    this.scrapLog.push([this.state.time, scrap]);
+    { const log = this.scrapLog, sec = Math.floor(this.state.time), last = log[log.length - 1]; if (last && last[0] === sec) last[1] += scrap; else log.push([sec, scrap]); }   // per-second buckets
     for (const w of this.tower.weapons) if (w.onScrap) w.onScrap(scrap);
     this.sfx.play(m.type === 'boss' ? 'bigExplode' : 'explode', m.r, m.x);
     this.fx.floater(m.x, m.y + 6, `+${scrap}`, '#ffd166', 13);
@@ -246,6 +246,7 @@ export class GameScene extends Phaser.Scene {
     if (this.gameOver) { this.fx.update(dt); return; }
     if (this.paused) { this.saves.update(dt); this.tower.draw(0); this.music.setState(this.musicState(true)); return; }
     this.driftStars(dt);
+    this.perf.update(dt);
     this.abilities.update(dt);
     this.autobuy.update(dt);
     this.updateMusic(dt);

@@ -160,5 +160,5 @@ export function updateSpawning(scene, dt) {
   const tierInt = Math.floor(scene.tier);
   if (tierInt !== scene.state.tier) onNewTier(scene, tierInt);
   scene.spawnTimer -= dt;
-  if (scene.spawnTimer <= 0 && scene.mobs.length < SPAWN.softCap * scene.diff.cap) spawnBurst(scene);
+  if (scene.spawnTimer <= 0 && scene.mobs.length < SPAWN.softCap * scene.diff.cap * (scene.levelMods.cap || 1)) spawnBurst(scene);
 }

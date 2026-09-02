@@ -14,17 +14,25 @@ export function freshStats() {
 
 const DPS_WINDOW = 20;   // seconds of damage history kept for recentDps
 
-/** Sustained damage per second over the last DPS_WINDOW seconds of run time. Bosses scale their hp from it. */
+/**
+ * Sustained damage per second over the last DPS_WINDOW seconds of run time. Bosses scale their hp from it.
+ * dmgLog holds one [second, total] bucket per second of run time (beams and auras add damage every frame,
+ * so per-hit entries would run into the hundreds of thousands).
+ */
 export function recentDps(scene) {
   const now = scene.state.time, log = scene.dmgLog;
   while (log.length && log[0][0] < now - DPS_WINDOW) log.shift();
   const span = Math.min(DPS_WINDOW, Math.max(1, now));
-  return log.reduce((a, e) => a + e[1], 0) / span;
+  let sum = 0; for (const e of log) sum += e[1];
+  return sum / span;
 }
 
 export function addDmg(scene, source, amount, crit = false) {
   const st = scene.stats;
-  if (amount > 0) scene.dmgLog.push([scene.state.time, amount]);
+  if (amount > 0) {
+    const log = scene.dmgLog, sec = Math.floor(scene.state.time), last = log[log.length - 1];
+    if (last && last[0] === sec) last[1] += amount; else log.push([sec, amount]);
+  }
   st.dmg[source] = (st.dmg[source] || 0) + amount;
   st.total += amount;
   if (crit) st.crits[source] = (st.crits[source] || 0) + 1;
@@ -78,7 +86,7 @@ function applySuperCrit(scene, m, d, srcKey, label) {
 function showNumber(scene, m, label, crit, superCrit, opts) {
   if (superCrit) scene.fx.critFloater(m.x, m.y - m.r - 14, label.text, label.color, label.size, true);
   else if (crit) scene.fx.critFloater(m.x, m.y - m.r - 10, label.text, label.color, label.size);
-  else if (!opts.quiet) scene.fx.floater(m.x, m.y - m.r - 6, (opts.tag ? opts.tag + ' ' : '') + label.text, label.color, label.size);
+  else if (!opts.quiet && scene.perf.numbers) scene.fx.floater(m.x, m.y - m.r - 6, (opts.tag ? opts.tag + ' ' : '') + label.text, label.color, label.size);
 }
 
 /**

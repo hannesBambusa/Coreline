@@ -17,6 +17,8 @@ const STEP = 50, MAX_CATCHUP = 60000;
 function bgTick() {
   const game = window.game, now = performance.now();
   if (!game || !game.isRunning) { lastBg = now; return; }
+  // if the browser is still servicing requestAnimationFrame in the background, Phaser is stepping already
+  if (game.loop.actualFps > 5) { lastBg = now; return; }
   let elapsed = Math.min(now - lastBg, MAX_CATCHUP);
   lastBg = now;
   let t = now - elapsed;

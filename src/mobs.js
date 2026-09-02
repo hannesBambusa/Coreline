@@ -14,6 +14,7 @@ class Mob {
     this.slow = 1;
     this.stun = 0;
     this.elite = null;
+    this.baseAlpha = 1;
     this.sprite = scene.add.image(x, y, 'ship_' + type).setTint(this.def.color).setDepth(5);
     this.glow = scene.add.image(x, y, 'glow').setTint(this.def.color)
       .setBlendMode(Phaser.BlendModes.ADD).setScale(this.r / 22).setAlpha(0.5).setDepth(2);
@@ -23,7 +24,7 @@ class Mob {
     this.elite = mod; this.eliteDef = d;
     if (d.hp) { this.hpMax *= d.hp; this.hp = this.hpMax; }
     if (d.speed) this.speedMul = d.speed;
-    if (d.alpha) { this.sprite.setAlpha(d.alpha); this.glow.setAlpha(0.2); }
+    if (d.alpha) { this.baseAlpha = d.alpha; this.sprite.setAlpha(d.alpha); this.glow.setAlpha(0.2); }
     this.scrap *= ELITES.scrapMul;
     this.glow.setScale(this.glow.scaleX * 1.8);
     this.scene.fx.floater(this.x, this.y - this.r - 14, d.name + ' ' + this.def.name, '#' + d.color.toString(16).padStart(6, '0'), 12);
@@ -35,7 +36,8 @@ class Mob {
   angleToTower() { return Phaser.Math.Angle.Between(this.x, this.y, this.tower.x, this.tower.y); }
 
   takeDamage(amount, hx, hy, quiet = false) {
-    if (this.dead) return false;
+    if (this.dead) { this.lastDealt = 0; return false; }
+    this.lastDealt = Math.min(amount, Math.max(0, this.hp));   // what actually came off the hp bar
     this.hp -= amount;
     if (!quiet) { this.hitFlash = 0.08; this.scene.fx.spark(hx, hy, this.def.color, 3); }
     if (this.hp <= 0) { this.die(true); return true; }
@@ -74,7 +76,7 @@ class Mob {
           o.hp = Math.min(o.hpMax, o.hp + o.hpMax * this.eliteDef.heal * dt);
         }
       }
-      if (Math.random() < dt * 6) { const a = Math.random() * 6.28, rr = Math.random() * this.eliteDef.radius; this.scene.fx.trailAt(this.x + Math.cos(a) * rr, this.y + Math.sin(a) * rr, this.eliteDef.color); }
+      if (Math.random() < dt * 6) { const a = Math.random() * Math.PI * 2, rr = Math.random() * this.eliteDef.radius; this.scene.fx.trailAt(this.x + Math.cos(a) * rr, this.y + Math.sin(a) * rr, this.eliteDef.color); }
     }
   }
 
@@ -87,7 +89,7 @@ class Mob {
   }
 
   move(dt, ax, ay) {
-    const k = this.slow * this.speedMul;
+    const k = this.slow * this.speedMul * (this.scene.levelMods ? this.scene.levelMods.mobSpeed : 1);
     this.vx = ax * k + this.dodgeVx; this.vy = ay * k + this.dodgeVy;
     this.slow = 1;
     this.dodgeVx *= Math.pow(0.02, dt); this.dodgeVy *= Math.pow(0.02, dt);
@@ -221,6 +223,7 @@ export class Shielder extends Mob {
   takeDamage(amount, hx, hy, quiet) {
     if (this.dead) return false;
     if (this.shield > 0) {
+      this.lastDealt = Math.min(amount, this.shield);
       this.shield -= amount;
       this.shieldHit = 0.12;
       if (!quiet) this.scene.fx.spark(hx, hy, this.def.color, 2);
@@ -311,10 +314,11 @@ export class Boss extends Mob {
     if (killed) {
       this.scene.fx.shake(0.02, 700);
       this.scene.fx.explode(this.x, this.y, 0xffffff, 40);
-      const frag = this.def.fragments + this.scene.tree.mods.bossFrag;
+      const frag = Math.round((this.def.fragments + this.scene.tree.mods.bossFrag) * this.scene.levelMods.fragments);
       this.scene.state.fragments += frag;
       this.scene.fx.floater(this.x, this.y - 40, `+${frag} fragment${frag > 1 ? 's' : ''}`, '#c084fc', 18);
       this.scene.ui.banner('Overseer destroyed', true);
+      this.scene.tx.say('bossDead');
     }
     super.die(killed);
   }
@@ -336,7 +340,7 @@ export class Mine extends Mob {
     this.fuse -= dt; this.blink += dt * (this.fuse < 3 ? 12 : 4);
     const a = this.angleToTower(), s = this.def.speed;
     this.move(dt, Math.cos(a) * s, Math.sin(a) * s);
-    this.sprite.setRotation(this.blink * 0.3).setAlpha(0.6 + 0.4 * Math.abs(Math.sin(this.blink)));
+    this.sprite.setRotation(this.blink * 0.3).setAlpha(this.baseAlpha * (0.6 + 0.4 * Math.abs(Math.sin(this.blink))));
     const reach = this.tower.shieldR * (this.tower.shield > 0 ? 1 : 0) + this.tower.r + this.r;
     if (this.distToTower() < reach || this.fuse <= 0) this.detonate();
     super.update(dt);
@@ -391,8 +395,9 @@ export class Leech extends Mob {
       if (d <= t.shieldR + this.r + 2) { this.attached = true; this.ang = Phaser.Math.Angle.Between(t.x, t.y, this.x, this.y); this.scene.fx.ripple(this.x, this.y, this.def.color, 4, 30); }
     } else {
       this.ang += dt * 0.15;
-      const rr = (t.shield > 0 ? t.shieldR : t.r) + this.r;
-      this.x = t.x + Math.cos(this.ang) * rr; this.y = t.y + Math.sin(this.ang) * rr; this.vx = 0; this.vy = 0;
+      const want = (t.shield > 0 ? t.shieldR : t.r) + this.r;
+      this.orbitR = this.orbitR === undefined ? want : this.orbitR + (want - this.orbitR) * Math.min(1, dt * 3);   // ease instead of snapping
+      this.x = t.x + Math.cos(this.ang) * this.orbitR; this.y = t.y + Math.sin(this.ang) * this.orbitR; this.vx = 0; this.vy = 0;
       this.sprite.setRotation(this.ang + Math.PI);
       this.pulse += dt;
       const drain = this.def.drain * Math.pow(SPAWN.dmgGrowth, this.scene.tier - 1) * dt;
@@ -407,13 +412,14 @@ export class Leech extends Mob {
 export class Phantom extends Mob {
   constructor(scene, tier, x, y) { super(scene, 'phantom', tier, x, y); this.phased = false; this.pt = Math.random() * this.def.phaseOff; this.cd = 1; this.orbitDir = Math.random() < 0.5 ? 1 : -1; this.preferred = this.def.range * 0.85; }
   takeDamage(amount, hx, hy, quiet) {
-    if (this.phased) { if (!quiet && Math.random() < 0.3) this.scene.fx.floater(hx, hy - 8, 'phased', '#c084fc', 10); return false; }
+    if (this.phased) { this.lastDealt = 0; if (!quiet && Math.random() < 0.3) this.scene.fx.floater(hx, hy - 8, 'phased', '#c084fc', 10); return false; }
     return super.takeDamage(amount, hx, hy, quiet);
   }
   update(dt) {
     this.pt -= dt;
-    if (this.pt <= 0) { this.phased = !this.phased; this.pt = this.phased ? this.def.phaseOn : this.def.phaseOff; this.scene.fx.ripple(this.x, this.y, this.def.color, this.r, this.r + 16); }
-    this.sprite.setAlpha(this.phased ? 0.25 : 1); this.glow.setAlpha(this.phased ? 0.1 : 0.5);
+    if (this.scene.levelMods.noPhase) { this.phased = false; this.pt = 1; }
+    else if (this.pt <= 0) { this.phased = !this.phased; this.pt = this.phased ? this.def.phaseOn : this.def.phaseOff; this.scene.fx.ripple(this.x, this.y, this.def.color, this.r, this.r + 16); }
+    this.sprite.setAlpha(this.phased ? 0.25 : this.baseAlpha); this.glow.setAlpha(this.phased ? 0.1 : 0.5);
     const d = this.distToTower(), a = this.angleToTower(), s = this.def.speed;
     let ax = 0, ay = 0;
     if (d > this.preferred + 10) { ax = Math.cos(a) * s; ay = Math.sin(a) * s; }
@@ -469,7 +475,7 @@ export class Sniper extends Mob {
           this.scene.spawnEnemyBullet({ x: this.x, y: this.y, vx: Math.cos(a) * this.def.bulletSpeed, vy: Math.sin(a) * this.def.bulletSpeed, dmg: this.dmg, color: this.def.color });
           this.scene.fx.line(this.x, this.y, this.tower.x, this.tower.y, 0xffffff, 3, 0.15);
           this.scene.sfx.shot('railgun', this.x);
-          this.cd = this.def.cooldown;
+          this.cd = this.def.cooldown / this.scene.levelMods.sniperRate;
         }
       } else { this.cd -= dt; if (this.cd <= 0) this.aim = this.def.aim; }
     }
@@ -508,7 +514,10 @@ export class Jammer extends Mob {
     if (d > this.preferred + 10) { ax = Math.cos(a) * s; ay = Math.sin(a) * s; }
     else { const t = a + Math.PI / 2 * this.orbitDir; ax = Math.cos(t) * s * 0.6; ay = Math.sin(t) * s * 0.6; }
     this.move(dt, ax, ay); this.sprite.setRotation(this.spin);
-    if (d <= this.def.range + 30) {
+    const inRange = d <= this.def.range + 30;
+    // the lock only holds while in range and while the weapon is still mounted
+    if (this.slot && (!inRange || !this.tower.weapons.includes(this.slot))) { this.slot.jamSlow = 0; this.slot = null; }
+    if (inRange) {
       if (!this.slot) { const ws = this.tower.weapons.filter(w => !w.jamSlow); if (ws.length) { this.slot = ws[Math.floor(Math.random() * ws.length)]; this.scene.fx.bolt(this.x, this.y, this.slot.mount().x, this.slot.mount().y, this.def.color); this.scene.ui.banner(this.slot.def.name + ' being jammed', true); } }
       if (this.slot) this.slot.jamSlow = this.def.slow;
       this.cd -= dt; if (this.cd <= 0) { this.cd = 1 / this.def.fireRate; this.scene.spawnEnemyBullet({ x: this.x, y: this.y, vx: Math.cos(a) * this.def.bulletSpeed, vy: Math.sin(a) * this.def.bulletSpeed, dmg: this.dmg, color: this.def.color }); }
@@ -617,11 +626,14 @@ export class Titan extends Mob {
     this.scene.fx.shake(0.015, 800);
   }
   // hits that land on the shielded sector are absorbed
-  takeDamage(amount, hx, hy, quiet) {
+  // the rotating sector blocks hits arriving from the direction of `from` (default: the core)
+  takeDamage(amount, hx, hy, quiet, crit, from) {
     if (this.dead) return false;
-    const a = Phaser.Math.Angle.Between(this.x, this.y, hx, hy);
+    const src = from || this.tower;
+    const a = Phaser.Math.Angle.Between(this.x, this.y, src.x, src.y);
     const d = Math.abs(Phaser.Math.Angle.Wrap(a - this.arcAngle));
     if (d < this.arc / 2) {
+      this.lastDealt = 0;
       this.arcHit = 0.15;
       if (!quiet) { this.scene.fx.spark(hx, hy, 0x9be7ff, 4); this.scene.fx.floater(hx, hy - 10, 'blocked', '#9be7ff', 11); }
       return false;
@@ -636,6 +648,7 @@ export class Titan extends Mob {
     if (this.phase === 1 && this.hp < this.hpMax * 0.3) {
       this.phase = 2;
       this.scene.ui.banner('Dreadnought enraged', true);
+      this.scene.tx.say('siegeEnrage', 0);
       this.scene.fx.explode(this.x, this.y, this.def.color, 60);
       this.scene.fx.shake(0.015, 500);
     }
@@ -657,7 +670,7 @@ export class Titan extends Mob {
     } else if (this.blinkState === 'charge') {
       this.blinkT -= dt;
       this.sprite.setAlpha(0.4 + 0.6 * Math.abs(Math.sin(this.blinkT * 40)));
-      if (Math.random() < dt * 40) { const aa = Math.random() * 6.28, rr = this.r + Math.random() * 30; this.scene.fx.trailAt(this.x + Math.cos(aa) * rr, this.y + Math.sin(aa) * rr, 0x9be7ff); }
+      if (Math.random() < dt * 40) { const aa = Math.random() * Math.PI * 2, rr = this.r + Math.random() * 30; this.scene.fx.trailAt(this.x + Math.cos(aa) * rr, this.y + Math.sin(aa) * rr, 0x9be7ff); }
       if (this.blinkT <= 0) {
         this.scene.fx.ripple(this.x, this.y, 0x9be7ff, this.r + 20, 10);
         this.scene.fx.explode(this.x, this.y, 0x9be7ff, 30);
@@ -821,7 +834,7 @@ export class Warden extends Mob {
   }
 }
 
-export function createMob(scene, type, tier, x, y) {
+export function createMob(scene, type, tier, x, y, gen) {
   switch (type) {
     case 'drone': return new Drone(scene, tier, x, y);
     case 'raider': return new Raider(scene, tier, x, y);
@@ -832,7 +845,7 @@ export function createMob(scene, type, tier, x, y) {
     case 'bomber': return new Bomber(scene, tier, x, y);
     case 'leech': return new Leech(scene, tier, x, y);
     case 'phantom': return new Phantom(scene, tier, x, y);
-    case 'hydra': return new Hydra(scene, tier, x, y);
+    case 'hydra': return new Hydra(scene, tier, x, y, gen || 0);
     case 'sniper': return new Sniper(scene, tier, x, y);
     case 'carrier': return new Carrier(scene, tier, x, y);
     case 'jammer': return new Jammer(scene, tier, x, y);

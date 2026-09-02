@@ -17,9 +17,24 @@ export const COMBOS = {
                  desc: 'Pulse cannon launches a volley of micro-missiles.' },
   escort:      { name: 'Escort strike',    pair: ['missile', 'drones'],  chance: 0.18, cd: 9,  color: 0x60a5fa,
                  desc: 'A missile launch makes every live drone fire a mini-missile at its own target.' },
+  collapse:    { name: 'Collapse',         pair: ['shock', 'gravity'],   chance: 0.30, cd: 10, color: 0xc084fc,
+                 desc: 'A shockwave through an active gravity well collapses it: everything inside is yanked to the centre and blasted.' },
+  scramble:    { name: 'Scramble',         pair: ['shock', 'drones'],    chance: 0.25, cd: 9,  color: 0x60a5fa, effectDur: 3,
+                 desc: 'The shockwave launches your drones: double speed and fire rate for 3 s.' },
+  paint:       { name: 'Target paint',     pair: ['laser', 'drones'],    chance: 0.12, cd: 8,  color: 0xff3df2, effectDur: 3,
+                 desc: 'Drones swarm the laser target. It takes +50% damage from everything for 3 s.' },
+  buster:      { name: 'Bunker buster',    pair: ['railgun', 'missile'], chance: 0.18, cd: 8,  color: 0xff9f43,
+                 desc: 'A railgun hit calls three missiles down on the same target.' },
+  lance:       { name: 'Kinetic lance',    pair: ['railgun', 'shock'],   chance: 0.20, cd: 8,  color: 0x5eead4,
+                 desc: 'The railgun shot hits 50% harder and hurls every ship on its line backwards.' },
+  charged:     { name: 'Charged rounds',   pair: ['pulse', 'tesla'],     chance: 0.08, cd: 7,  color: 0x9be7ff, effectDur: 3,
+                 desc: 'For 3 s every pulse bolt arcs lightning to the nearest other ship.' },
   overload:    { name: 'Overload beam',    pair: ['railgun', 'laser'],   chance: 0.20, cd: 12, color: 0xffffff, effectDur: 3,
                  desc: 'Railgun hit on the laser target supercharges the beam for 3 s.' },
 };
+
+// intrinsic procs that show up in stats alongside combos
+COMBOS.sweep = { name: 'Ring sweep', pair: ['laser', 'laser'], chance: 0, cd: 0, color: 0xff3df2, intrinsic: true, desc: 'Laser at full ramp sweeps the whole ring every 6 s.' };
 
 export class Combos {
   constructor(scene) {
@@ -65,6 +80,6 @@ export class Combos {
 
   // list for the UI: [{id, name, desc, ready, available}]
   list() {
-    return Object.entries(COMBOS).map(([id, c]) => ({ id, ...c, available: this.available(id), cd: this.cd[id] || 0 }));
+    return Object.entries(COMBOS).filter(([, c]) => !c.intrinsic).map(([id, c]) => ({ id, ...c, available: this.available(id), cd: this.cd[id] || 0 }));
   }
 }

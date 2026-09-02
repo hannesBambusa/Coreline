@@ -9,7 +9,7 @@ export const ICONS = {
   tesla: wrap(`<path d="M13 2L6 13h5l-1 9 8-12h-5z"/><path d="M4 6l2 1M20 18l-2-1" opacity=".5"/>`),
   gravity: wrap(`<path d="M12 12a1 1 0 0 1 1-1 2 2 0 0 1 2 2 3 3 0 0 1-3 3 4.5 4.5 0 0 1-4.5-4.5A6 6 0 0 1 13.5 5.5 7.5 7.5 0 0 1 21 13"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="9" opacity=".25"/>`),
   shock: wrap(`<circle cx="12" cy="12" r="2"/><path d="M12 6a6 6 0 0 1 6 6M12 6a6 6 0 0 0-6 6" opacity=".8"/><path d="M12 2a10 10 0 0 1 10 10M12 2A10 10 0 0 0 2 12" opacity=".45"/><path d="M6 18l-2 2M18 18l2 2" opacity=".6"/>`),
-  drones: wrap(`<path d="M12 4l8 5-8 5-8-5z" opacity=".9"/><path d="M4 15l8 5 8-5" opacity=".5"/><circle cx="12" cy="9" r="1.5" fill="currentColor"/>`),
+  drones: wrap(`<circle cx="12" cy="12" r="2.2" fill="currentColor"/><path d="M9.8 9.8L6 6M14.2 9.8L18 6M9.8 14.2L6 18M14.2 14.2L18 18"/><circle cx="5" cy="5" r="2.4"/><circle cx="19" cy="5" r="2.4"/><circle cx="5" cy="19" r="2.4"/><circle cx="19" cy="19" r="2.4"/><path d="M3 5h4M17 5h4M3 19h4M17 19h4" opacity=".7"/>`),
   slot: wrap(`<circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/><path d="M12 8v8M8 12h8"/>`),
   shieldMax: wrap(`<path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M12 7v10" opacity=".5"/>`),
   shieldRegen: wrap(`<path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z" opacity=".5"/><path d="M9 12a3 3 0 0 1 5.2-2"/><path d="M15 12a3 3 0 0 1-5.2 2"/><path d="M14 8v2.5h-2.5M10 16v-2.5h2.5"/>`),

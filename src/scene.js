@@ -1,4 +1,4 @@
-import { COLORS, SPAWN, MOBS, ELITES, CRIT, PRESTIGE, ABILITIES, SIEGE } from './config.js';
+import { COLORS, SPAWN, MOBS, ELITES, CRIT, PRESTIGE, ABILITIES, SIEGE, SLOT_GATES } from './config.js';
 import { Titan, Warden } from './mobs.js';
 import { Tree } from './tree.js';
 import { Abilities } from './abilities.js';
@@ -6,12 +6,16 @@ import { SFX } from './sfx.js';
 import { SaveSystem } from './save.js';
 import { Combos } from './combos.js';
 import { AutoBuy } from './autobuy.js';
+import { CHOICES, applyChoice, baseLevelMods, rollChoices } from './choices.js';
+import { Transmissions } from './transmissions.js';
+import { Music } from './music.js';
 import { Tower } from './tower.js';
 import { createMob } from './mobs.js';
 import { FX } from './fx.js';
 import { UI } from './ui.js';
 
 const ICONS_SURGE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 17l5-5 4 4 7-8"/><path d="M14 8h6v6"/></svg>`;
+const ICONS_CHOICE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5"/></svg>`;
 const ICONS_SIEGE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 2l3 6 6 1-4.5 4 1.5 6-6-3-6 3 1.5-6L3 9l6-1z"/></svg>`;
 
 export class GameScene extends Phaser.Scene {
@@ -25,7 +29,7 @@ export class GameScene extends Phaser.Scene {
     this.scrapLog = [];
     this.stats = this.freshStats();
     this.gameOver = false;
-    this.settings = { shake: true, sound: true, volume: 0.7 };
+    this.settings = { shake: true, sound: true, volume: 0.7, music: true, transmissions: true };
     this.paused = false;
     this.profile = { totalKills: 0, prestige: 0 };
     this.sfx = new SFX();
@@ -34,6 +38,10 @@ export class GameScene extends Phaser.Scene {
     this.abilities = new Abilities(this);
     this.combos = new Combos(this);
     this.autobuy = new AutoBuy(this);
+    this.levelMods = baseLevelMods();
+    this.choice = null;
+    this.tx = new Transmissions(this);
+    this.music = new Music(this.sfx);
 
     const { width, height } = this.scale;
     this.bg = this.add.rectangle(0, 0, width, height, 0x05060d).setOrigin(0).setDepth(-1);
@@ -175,7 +183,33 @@ export class GameScene extends Phaser.Scene {
     const hp = MOBS[this.surgeType].hp;
     return hp <= SPAWN.surgeLightHp ? SPAWN.surgeMul.light : hp <= SPAWN.surgeMediumHp ? SPAWN.surgeMul.medium : SPAWN.surgeMul.heavy;
   }
-  spawnRate() { return Math.min(SPAWN.maxRate * 2, (SPAWN.baseRate + SPAWN.ratePerSecond * this.state.time) * this.surgeMultiplier()); }
+  spawnRate() { return Math.min(SPAWN.maxRate * 2, (SPAWN.baseRate + SPAWN.ratePerSecond * this.state.time) * this.surgeMultiplier() * this.levelMods.spawn); }
+
+  // ---------- threat-level choices ----------
+  offerChoice(tierInt) {
+    const opts = rollChoices(tierInt);
+    this.choice = { tier: tierInt, opts };
+    this.choosing = true;
+    this.paused = true;
+    document.getElementById('btn-pause').classList.add('on');
+    this.ui.showChoice(this.choice);
+    this.tx.say('choice', 120);
+  }
+  pickChoice(id) {
+    if (!this.choice) return;
+    this.levelMods = applyChoice(id, baseLevelMods());
+    this.levelChoice = id === 'nothing' ? null : id;
+    this.tower.recompute();
+    this.ui.hideChoice(id);
+    this.choice = null;
+    this.choosing = false;
+    this.paused = false;
+    document.getElementById('btn-pause').classList.remove('on');
+    const c = CHOICES[id];
+    const untilNext = SPAWN.tierSeconds * SPAWN.choiceEvery - (this.state.time % (SPAWN.tierSeconds * SPAWN.choiceEvery));
+    if (id !== 'nothing') this.ui.addEffect('choice', { name: c.name, color: 0xffd166, dur: untilNext, sub: c.good, icon: ICONS_CHOICE, tip: c.name + '\n+ ' + c.good + (c.bad ? '\n- ' + c.bad : '') + '\nlasts ' + SPAWN.choiceEvery + ' threat levels' });
+    this.sfx.play('buy');
+  }
 
   pickSurge(tierInt) {
     const pool = Object.keys(MOBS).filter(t => MOBS[t].fromWave <= tierInt && !['boss', 'titan', 'warden', 'mine'].includes(t));
@@ -183,6 +217,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   pickType() {
+    if (this.levelMods.force) return this.levelMods.force;
     if (this.surgeType) return this.surgeType;
     const tier = this.tier, roll = Math.random();
     let acc = 0;
@@ -196,16 +231,18 @@ export class GameScene extends Phaser.Scene {
     return MOBS.raider.fromWave <= tier && roll < acc + raiderFrac ? 'raider' : 'drone';
   }
 
-  spawnMob(type, angle, tierOverride) {
+  spawnMob(type, angle, tierOverride, gen) {
     const a = angle ?? Math.random() * Math.PI * 2, R = this.spawnRadius() + Math.random() * 80;
     const tier = tierOverride ?? this.tier;
-    const m = createMob(this, type, tier, this.tower.x + Math.cos(a) * R, this.tower.y + Math.sin(a) * R);
+    const m = createMob(this, type, tier, this.tower.x + Math.cos(a) * R, this.tower.y + Math.sin(a) * R, gen);
     m.tierAtSpawn = tier;
+    if (tierOverride === undefined && this.levelMods.mobHp !== 1) { m.hpMax *= this.levelMods.mobHp; m.hp = m.hpMax; }
     if (tierOverride === undefined && type !== 'boss' && type !== 'swarm') {
-      const chance = Math.min(ELITES.chanceMax, ELITES.chanceBase + ELITES.chancePerTier * this.tier);
+      const chance = Math.min(ELITES.chanceMax * 2, (ELITES.chanceBase + ELITES.chancePerTier * this.tier) * this.levelMods.elite);
       if (Math.random() < chance) {
         const mods = Object.keys(ELITES.mods);
         m.makeElite(mods[Math.floor(Math.random() * mods.length)]);
+        this.tx.say('elite', 90);
       }
     }
     if (type === 'boss' && tierOverride === undefined) this.sfx.play('boss');
@@ -254,6 +291,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.siege = { level, titan, wardens, t: 0 };
     this.ui.banner(`SIEGE · ${titan.def.name} ${level > 1 ? 'Mk ' + level : ''}`, true);
+    this.tx.say('siege');
     this.sfx.play('boss'); this.flashScreen(0.35, 0xff4d6d); this.slowMo(0.3, 0.8);
     this.ui.addEffect('siege', { name: 'Siege', color: 0xff4d6d, dur: 9999, sub: 'kill wardens first', icon: ICONS_SIEGE });
   }
@@ -265,10 +303,11 @@ export class GameScene extends Phaser.Scene {
     // cleared
     this.siegesCleared++;
     this.siege = null;
-    const frag = SIEGE.fragments + SIEGE.fragmentsPerLevel * (sg.level - 1);
+    const frag = Math.round((SIEGE.fragments + SIEGE.fragmentsPerLevel * (sg.level - 1)) * this.levelMods.fragments);
     this.state.fragments += frag;
     this.state.time = SIEGE.every * sg.level * SPAWN.tierSeconds + 0.01;   // jump to next threat level
     this.ui.banner('Siege broken', false);
+    this.tx.say('siegeDead');
     this.fx.floater(this.tower.x, this.tower.y - 110, `+${frag} fragments`, '#c084fc', 22);
     this.sfx.play('tier');
     this.ui.removeEffect('siege');
@@ -291,7 +330,11 @@ export class GameScene extends Phaser.Scene {
     if (tierInt !== this.state.tier) {
       this.state.tier = tierInt;
       this.sfx.play('tier');
+      if (SLOT_GATES[this.tower.slots.length] === tierInt) { this.ui.banner('Hardpoint ' + (this.tower.slots.length + 1) + ' unsealed', false); this.fx.floater(this.tower.x, this.tower.y - 120, 'A fifth hardpoint can be unlocked', '#4ff2ff', 14); }
+      if (tierInt % SPAWN.choiceEvery === 0) { this.levelMods = baseLevelMods(); this.levelChoice = null; this.ui.removeEffect('choice'); this.offerChoice(tierInt); }
+      if (tierInt === 5) this.tx.say('tier5'); else if (tierInt === 10) this.tx.say('tier10'); else if (tierInt === 20) this.tx.say('tier20');
       this.surgeType = tierInt % SPAWN.surgeEvery === 0 ? this.pickSurge(tierInt) : null;
+      if (this.surgeType) this.tx.say('surge');
       if (this.surgeType) {
         const d = MOBS[this.surgeType];
         this.time.delayedCall(1200, () => { if (!this.gameOver) { this.ui.banner(`${d.name} surge`, true); this.fx.floater(this.tower.x, this.tower.y - 120, `Only ${d.name.toLowerCase()}s this level`, '#ff9f43', 14); } });
@@ -300,6 +343,7 @@ export class GameScene extends Phaser.Scene {
       } else this.ui.removeEffect('surge');
       if (tierInt % MOBS.boss.every === 0) {
         this.ui.banner('Overseer approaching', true);
+        this.tx.say('boss');
         this.time.delayedCall(1500, () => { if (!this.gameOver) this.spawnMob('boss'); });
       } else this.ui.banner(`Threat level ${tierInt}`);
       const bonus = Math.round(20 * Math.pow(SPAWN.scrapGrowth, tierInt));
@@ -339,7 +383,7 @@ export class GameScene extends Phaser.Scene {
   spawnMissile(m) { m.age = 0; this.missiles.push(m); }
   spawnWellShot(w) { w.age = 0; this.wellShots.push(w); }
 
-  freshStats() { return { dmg: {}, crits: {}, killsBy: {}, kills: {}, procs: {}, abilities: {}, taken: 0, total: 0 }; }
+  freshStats() { return { dmg: {}, crits: {}, killsBy: {}, kills: {}, procs: {}, abilities: {}, hits: {}, critExtra: {}, supers: {}, superExtra: {}, taken: 0, total: 0 }; }
   addDmg(source, amount, crit = false) {
     const st = this.stats;
     st.dmg[source] = (st.dmg[source] || 0) + amount;
@@ -354,23 +398,40 @@ export class GameScene extends Phaser.Scene {
     const bonus = weapon && weapon.prefers(m);
     let d = opts.dmg ?? (bonus ? weapon.dmgVs(m) : (weapon ? weapon.dmg : 0));
     if (opts.mul) d *= opts.mul;
-    const chance = weapon ? (weapon.def.crit ?? CRIT.chance) + this.tree.mods.crit : 0;
+    if (m.marked > 0) d *= 1.5;
+    const chance = weapon ? (weapon.def.crit ?? CRIT.chance) + this.tree.mods.crit + this.levelMods.crit : 0;
     const crit = !opts.noCrit && Math.random() < chance;
+    const superCrit = crit && Math.random() < CRIT.superChance;
     let color = opts.color || (bonus ? '#ffe66d' : '#dbe7ff'), size = opts.size || 12, text = Math.round(d);
+    const st = this.stats, srcKey = weapon ? weapon.type : (opts.source || 'other');
+    st.hits[srcKey] = (st.hits[srcKey] || 0) + 1;
+    const dBase = d;
     if (crit) {
       d *= (weapon.def.critMul ?? CRIT.mul) + this.tree.mods.critMul;
-      text = Math.round(d) + '!'; color = '#ffb703'; size = Math.max(size, 30);
-      this.fx.spark(x, y, 0xffb703, 10);
-      this.fx.ripple(m.x, m.y, 0xffb703, m.r, m.r + 30);
-      this.fx.flash(m.x, m.y, 0xffb703, 1.4);
+      st.critExtra[srcKey] = (st.critExtra[srcKey] || 0) + (d - dBase);
+      text = Math.round(d) + '!'; color = '#ffb703'; size = Math.max(size, 18);
+      this.fx.spark(x, y, 0xffb703, 6);
+      this.fx.ripple(m.x, m.y, 0xffb703, m.r, m.r + 18);
       this.sfx.play('crit', null, m.x);
     }
-    const src = weapon ? weapon.type : (opts.source || 'other');
-    const dealt = Math.min(d, Math.max(0, m.hp + (m.shield || 0)));
-    this.addDmg(src, dealt, crit);
-    m.lastHit = src;
-    m.takeDamage(d, x, y, opts.quiet, crit);
-    if (crit) this.fx.critFloater(m.x, m.y - m.r - 10, 'CRIT ' + text, color, size);
+    if (superCrit) {
+      const dCrit = d;
+      d *= CRIT.superMul;
+      st.supers[srcKey] = (st.supers[srcKey] || 0) + 1;
+      st.superExtra[srcKey] = (st.superExtra[srcKey] || 0) + (d - dCrit);
+      text = 'SUPER ' + Math.round(d) + '!!'; color = '#ff5e5b'; size = 34;
+      this.fx.explode(m.x, m.y, 0xff5e5b, 22); this.fx.explode(m.x, m.y, 0xffffff, 10);
+      this.fx.ripple(m.x, m.y, 0xff5e5b, m.r, m.r + 70); this.fx.ripple(m.x, m.y, 0xffffff, m.r, m.r + 40);
+      this.fx.flash(m.x, m.y, 0xff5e5b, 2.5);
+      this.fx.shake(0.004, 150);
+      this.sfx.play('superCrit', null, m.x);
+      this.stats.superCrits = (this.stats.superCrits || 0) + 1;
+    }
+    m.lastHit = srcKey;
+    m.takeDamage(d, x, y, opts.quiet, crit, opts.from || this.tower);
+    this.addDmg(srcKey, m.lastDealt ?? 0, crit);
+    if (superCrit) this.fx.critFloater(m.x, m.y - m.r - 14, text, color, size, true);
+    else if (crit) this.fx.critFloater(m.x, m.y - m.r - 10, text, color, size);
     else if (!opts.quiet) this.fx.floater(m.x, m.y - m.r - 6, (opts.tag ? opts.tag + ' ' : '') + text, color, size);
     return d;
   }
@@ -379,7 +440,7 @@ export class GameScene extends Phaser.Scene {
     for (const m of this.mobs) {
       if (m.dead) continue;
       if (Phaser.Math.Distance.Between(x, y, m.x, m.y) <= r + m.r) {
-        this.hit(m, weapon, m.x, m.y, { dmg: weapon && weapon.prefers(m) ? undefined : dmg, color: '#ffb86b' });
+        this.hit(m, weapon, m.x, m.y, { dmg: weapon && weapon.prefers(m) ? dmg * weapon.def.bonus : dmg, color: '#ffb86b', from: { x, y } });
       }
     }
     this.fx.explode(x, y, color, 18);
@@ -426,8 +487,10 @@ export class GameScene extends Phaser.Scene {
       w.age += dt; w.x += w.vx * dt; w.y += w.vy * dt;
       this.fx.trailAt(w.x, w.y, w.color);
       if (Phaser.Math.Distance.Between(w.x, w.y, w.tx, w.ty) < 12 || w.age > 3) {
-        this.wells.push({ x: w.x, y: w.y, age: 0, spin: 0, ...w.well });
-        this.fx.ripple(w.x, w.y, w.color, 10, w.well.r);
+        // landing on top of an existing well refreshes it instead of stacking a second one
+        const near = this.wells.find(o => Phaser.Math.Distance.Between(o.x, o.y, w.x, w.y) < o.r * 0.9);
+        if (near) { near.age = 0; near.life = Math.max(near.life, w.well.life); this.fx.ripple(near.x, near.y, w.color, near.r * 0.5, near.r); }
+        else { this.wells.push({ x: w.x, y: w.y, age: 0, spin: 0, ...w.well }); this.fx.ripple(w.x, w.y, w.color, 10, w.well.r); }
         w.age = 99;
       }
     }
@@ -444,8 +507,9 @@ export class GameScene extends Phaser.Scene {
         const pull = w.pull * (1 - d / w.r) + 20;
         m.x += Math.cos(a) * pull * dt; m.y += Math.sin(a) * pull * dt;
         const wd = (w.weapon ? w.weapon.dmgVs(m) : w.dps) * dt;
-        this.addDmg('gravity', Math.min(wd, Math.max(0, m.hp))); m.lastHit = 'gravity';
+        m.lastHit = 'gravity';
         m.takeDamage(wd, m.x, m.y, true);
+        this.addDmg('gravity', m.lastDealt ?? 0);
       }
       if (Math.random() < dt * 20) {
         const a = Math.random() * Math.PI * 2, rr = w.r * (0.6 + Math.random() * 0.4);
@@ -467,6 +531,7 @@ export class GameScene extends Phaser.Scene {
       }
       for (const m of this.mobs) {
         if (m.dead) continue;
+        if (b.hitSet && b.hitSet.has(m)) continue;
         if (Phaser.Math.Distance.Between(b.x, b.y, m.x, m.y) < m.r + 4) {
           const opts = {};
           if (b.weapon && b.weapon.type === 'pulse') {
@@ -486,8 +551,29 @@ export class GameScene extends Phaser.Scene {
               this.fx.shake(0.003, 120);
             }
           }
+          if (b.ricochet) opts.dmg = b.dmg;
+          const hpBefore = m.hp;
           if (b.weapon) this.hit(m, b.weapon, b.x, b.y, opts);
           else { m.takeDamage(b.dmg, b.x, b.y); this.fx.floater(m.x, m.y - m.r - 6, Math.round(b.dmg), '#dbe7ff', 12); }
+          if (b.ricochet) this.fx.floater(m.x, m.y - m.r - 18, 'ricochet', '#4ff2ff', 10);
+          // charged rounds: arc to the nearest other ship
+          if (b.weapon && b.weapon.type === 'pulse' && b.weapon.charged > 0) {
+            let near = null, nd = 140;
+            for (const o of this.mobs) { if (o.dead || o === m) continue; const dd = Phaser.Math.Distance.Between(m.x, m.y, o.x, o.y); if (dd < nd) { nd = dd; near = o; } }
+            if (near) { this.fx.bolt(m.x, m.y, near.x, near.y, 0x9be7ff); this.hit(near, b.weapon, near.x, near.y, { mul: 0.6, color: '#9be7ff' }); }
+          }
+          // pulse ricochet: a killing bolt bounces to the nearest other ship
+          if (b.weapon && b.weapon.type === 'pulse' && m.dead && hpBefore > 0 && !b.bounced) {
+            let near = null, nd = b.weapon.def.ricochetRange;
+            for (const o of this.mobs) { if (o.dead || o === m || (b.hitSet && b.hitSet.has(o))) continue; const dd = Phaser.Math.Distance.Between(m.x, m.y, o.x, o.y); if (dd < nd) { nd = dd; near = o; } }
+            if (near) {
+              const ra = Phaser.Math.Angle.Between(m.x, m.y, near.x, near.y), sp = Math.hypot(b.vx, b.vy);
+              this.spawnBullet({ x: m.x, y: m.y, vx: Math.cos(ra) * sp, vy: Math.sin(ra) * sp, dmg: b.dmg * b.weapon.def.ricochetDmg, weapon: b.weapon, color: b.color, life: 0.5, target: near, bounced: true, ricochet: true });
+              this.fx.spark(m.x, m.y, 0x4ff2ff, 4);
+            }
+          }
+          // pierce: keep flying through up to N ships
+          if (b.pierce && b.hitSet) { b.hitSet.add(m); if (b.hitSet.size < b.pierce + 1) continue; }   // pierce N = passes through N ships, hits N+1
           b.age = 99; break;
         }
       }
@@ -526,9 +612,10 @@ export class GameScene extends Phaser.Scene {
     }
     for (const w of this.wellShots) { g.fillStyle(w.color, 1); g.fillCircle(w.x, w.y, 5); g.fillStyle(0xffffff, 1); g.fillCircle(w.x, w.y, 2); }
     for (const w of this.wells) {
-      const f = Math.min(1, w.age * 4) * Math.min(1, (w.life - w.age) * 2);
-      g.fillStyle(w.color, 0.06 * f); g.fillCircle(w.x, w.y, w.r);
-      g.lineStyle(1, w.color, 0.35 * f); g.strokeCircle(w.x, w.y, w.r);
+      // aura strength = remaining life: strong at spawn, fading to nothing as the well collapses
+      const left = Math.max(0, 1 - w.age / w.life), f = Math.min(1, w.age * 4) * left;
+      g.fillStyle(w.color, 0.03 + 0.11 * f); g.fillCircle(w.x, w.y, w.r);
+      g.lineStyle(1 + 2 * f, w.color, 0.15 + 0.5 * f); g.strokeCircle(w.x, w.y, w.r);
       for (let i = 0; i < 3; i++) {
         g.lineStyle(2, w.color, 0.7 * f);
         g.beginPath(); g.arc(w.x, w.y, 10 + i * 9, w.spin + i * 2.1, w.spin + i * 2.1 + 2.2, false); g.strokePath();
@@ -542,6 +629,7 @@ export class GameScene extends Phaser.Scene {
     for (const m of this.mobs) {
       if (m.drawExtra) m.drawExtra(g);
       m.drawElite(g);
+      if (m.marked > 0) { g.lineStyle(2, 0xff3df2, 0.6); g.strokeCircle(m.x, m.y, m.r + 8); g.lineStyle(1, 0xff3df2, 0.8); g.lineBetween(m.x - m.r - 14, m.y, m.x - m.r - 6, m.y); g.lineBetween(m.x + m.r + 6, m.y, m.x + m.r + 14, m.y); g.lineBetween(m.x, m.y - m.r - 14, m.x, m.y - m.r - 6); g.lineBetween(m.x, m.y + m.r + 6, m.x, m.y + m.r + 14); }
       if (m.hp >= m.hpMax) continue;
       const w = m.r * 2 + 6, f = m.hp / m.hpMax;
       g.fillStyle(0x000000, 0.6); g.fillRect(m.x - w / 2, m.y - m.r - 10, w, 3);
@@ -556,7 +644,8 @@ export class GameScene extends Phaser.Scene {
     this.stats.kills[m.type] = (this.stats.kills[m.type] || 0) + 1;
     const src = m.lastHit || 'other';
     this.stats.killsBy[src] = (this.stats.killsBy[src] || 0) + 1;
-    const scrap = Math.round(m.scrap * this.tree.mods.scrap);
+    const lm = this.levelMods;
+    const scrap = Math.round(m.scrap * this.tree.mods.scrap * lm.scrap * (m.type === 'swarm' ? lm.swarmScrap : 1) * (m.elite ? lm.eliteScrap : 1));
     this.state.scrap += scrap;
     this.scrapLog.push([this.state.time, scrap]);
     this.sfx.play(m.type === 'boss' ? 'bigExplode' : 'explode', m.r, m.x);
@@ -579,6 +668,7 @@ export class GameScene extends Phaser.Scene {
     this.resetRun();
     this.ui.render();
     this.fx.floater(this.tower.x, this.tower.y - 90, `+${earned} fragments`, '#c084fc', 20);
+    this.tx.say('prestige', 0);
     this.saves.save();
     return earned;
   }
@@ -589,6 +679,7 @@ export class GameScene extends Phaser.Scene {
     this.fx.explode(this.tower.x, this.tower.y, COLORS.cyan, 60);
     this.fx.shake(0.02, 600);
     this.sfx.play('death'); this.sfx.bossHum(false);
+    this.tx.say('death', 0);
     this.saves.save();
     this.time.delayedCall(700, () => this.ui.showGameOver());
   }
@@ -603,11 +694,16 @@ export class GameScene extends Phaser.Scene {
     this.showStart();
     this.spawnTimer = 2; this.scrapLog = []; this.siege = null; this.siegesCleared = 0; this.surgeType = null; this.ui.removeEffect('surge');
     this.stats = this.freshStats();
+    this.levelMods = baseLevelMods(); this.levelChoice = null; this.choice = null; this.choosing = false; this.ui.hideChoice();
+    this.combos.cd = {}; this.combos.count = 0;
+    this.slowTimer = 0; this.timeScale = 1;
+    this.autobuy.lastBuy = null;
+    this.ui.clearEffects();
     this.ui.removeEffect('siege');
     for (const k in this.abilities.state) this.abilities.state[k] = { unlocked: false, cd: 0, active: 0 };
     this.autobuy.on = false; this.ui.syncAuto();
-    this.saves.save();
     this.gameOver = false;
+    this.saves.save();
   }
 
   // Fresh run: hold everything until the player presses start, so skills and weapons can be set up first.
@@ -624,9 +720,11 @@ export class GameScene extends Phaser.Scene {
     document.getElementById('start').hidden = true;
     this.setPaused(false);
     this.ui.banner('Hold the line', false);
+    this.tx.say('start', 0);
   }
 
   setPaused(v) {
+    if (this.choosing) return;   // a choice is open: pick a card to continue
     if (this.starting) { if (!v) this.beginRun(); return; }
     this.paused = v;
     this.sfx.play(v ? 'pause' : 'unpause');
@@ -644,7 +742,7 @@ export class GameScene extends Phaser.Scene {
       dt *= this.slowTimer > 0 ? this.timeScale : 1;
     }
     if (this.gameOver) { this.fx.update(dt); return; }
-    if (this.paused) { this.saves.update(dt); this.tower.draw(0); return; }
+    if (this.paused) { this.saves.update(dt); this.tower.draw(0); this.music.setState({ tier: this.tier, hullFrac: this.tower.hull / this.tower.hullMax, siege: !!this.siege, paused: true }); return; }
     // slow parallax drift
     const w = this.scale.width * 1.4;
     for (const s of this.starLayers) {
@@ -652,10 +750,13 @@ export class GameScene extends Phaser.Scene {
     }
     this.abilities.update(dt);
     this.autobuy.update(dt);
+    if (this.sfx.ctx && !this.music.started) { this.music.start(); this.music.setEnabled(this.settings.music !== false); }
+    this.musicTimer = (this.musicTimer || 0) + dt;
+    if (this.musicTimer > 0.5) { this.musicTimer = 0; this.music.setState({ tier: this.tier, hullFrac: this.tower.hull / this.tower.hullMax, siege: !!this.siege, paused: this.paused }); if (this.tower.hull / this.tower.hullMax < 0.3) this.tx.say('hullLow', 120); }
     this.combos.update(dt);
     this.saves.update(dt);
     this.tower.update(dt, this.mobs);
-    for (const m of this.mobs) if (!m.dead) { if (m.stun > 0) m.stunned(dt); else m.update(dt); }
+    for (const m of this.mobs) if (!m.dead) { if (m.marked > 0) m.marked -= dt; if (m.stun > 0) m.stunned(dt); else m.update(dt); }
     this.sfx.bossHum(this.mobs.some(m => m.type === 'boss'));
     let lr = 0; for (const w of this.tower.weapons) if (w.type === 'laser' && w.target && !w.target.dead) lr = Math.max(lr, w.ramp || 1);
     this.sfx.laserHum(lr > 0, lr);

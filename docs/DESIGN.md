@@ -62,7 +62,7 @@ Mob AI is not "walk straight and hit". Mobs shoot at the tower, some dodge, some
 
 ## Weapons
 
-Tower has hardpoint slots. Start with 1, unlock up to 4 with scrap. Four of six weapons means every loadout leaves something out. Each slot holds one weapon with its own level. Weapons pick targets automatically by their own rule.
+Tower has hardpoint slots. Start with 1, unlock up to 4 with scrap. A 5th hardpoint (12 000 scrap) opens at threat 30 (`SLOT_GATES`). With eight weapon types every loadout still leaves some out. Each slot holds one weapon with its own level. Weapons pick targets automatically by their own rule.
 
 | Weapon | Behaviour | Target rule | Counters |
 |---|---|---|---|
@@ -231,3 +231,23 @@ Spawn table is generic: every `MOBS` entry with `chance` and `fromWave` joins th
 - **Mortar**: arcing shell to where a cluster will be, red landing marker, big crater, ignores the Dreadnought's shield sector. Level shortens flight and widens crater. Combo with Gravity well: double crater.
 - **Salvage harpoon**: hooks one ship and reels it into the shield ring, damage per second, double scrap on death, no bosses. Level adds reel speed and a second and third hook. Combo with Shock emitter: hooked ships launched back out as projectiles.
 - **Drone bay**: built 2026-09-02. Combo **Escort strike** (Missile pod + Drone bay, 18 %, 9 s cd): every live drone fires a mini-missile (60 % damage and splash) at its own target.
+
+## Immersion pass (2026-09-02)
+
+- **Threat-level choices** (`src/choices.js`): every third threat level (`SPAWN.choiceEvery`) two random modifier cards appear top centre and the game pauses until one is picked. The modifier lasts three levels and shows as a gold card in the effect tray. Examples: Salvage rush (+50 % scrap, ships 25 % faster), Glass cannon (+40 % damage, shield halved), Fragment lure (double fragments, ships 30 % tougher), Swarm storm, Bunker mode, Bounty board, Hive protocol, Overclock, Eclipse. Cards unlock by tier. Level mods are not saved; a reload starts the level clean.
+- **Transmissions** (`src/transmissions.js`): typed-out Overseer lines at the top on run start, threat 5/10/20, boss arrival and death, siege start, enrage and end, shield break, low hull, drone loss, elite spawn, surge, choice, death, prestige. Rate-limited per event. Toggle in Settings.
+- **Music** (`src/music.js`): procedural. Pad and bass pulse always, arpeggio from threat ~8, hats from ~14, chord stabs from ~19, brighter filter as threat rises, extra intensity in sieges. Under 30 % hull it drops to a heartbeat. Follows the volume slider. Toggle in Settings.
+
+## More combos (2026-09-02)
+
+| Combo | Pair | Chance | Effect |
+|---|---|---|---|
+| Collapse | Shock + Gravity | 30 % | shockwave through a well: everything inside is dragged to the centre and blasted for 6× shock damage, well ends |
+| Scramble | Shock + Drones | 25 % | drones flung outward, double speed and fire rate for 3 s |
+| Target paint | Laser + Drones | 12 % | drones all take the laser target, it takes +50 % damage from everything for 3 s (magenta bracket) |
+| Bunker buster | Railgun + Missile | 18 % | a railgun hit launches three fast missiles at the same target |
+| Kinetic lance | Railgun + Shock | 20 % | the railgun shot does +50 % and hurls every ship on its line backwards |
+| Charged rounds | Pulse + Tesla | 8 % | for 3 s each pulse bolt arcs to the nearest other ship for 60 % |
+
+Plus Escort strike (Missile + Drones) and the laser's intrinsic Ring sweep. Total: 13 pair combos.
+- **Pulse cannon late-game** (2026-09-02): extra barrels at Lv 10/20/30 (2/3/4 bolts in a fan), bolts pierce one extra ship from Lv 15 and two from Lv 30, and a bolt that kills its target ricochets to the nearest ship within 220 px for 70 %. Panel shows barrels, pierce and the next milestone. Also fixed a bug where uncharged weapon bolts applied damage twice (introduced with Charged rounds).

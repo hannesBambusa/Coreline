@@ -278,6 +278,12 @@ export class SFX {
         [660, 880, 1320, 1760].forEach((f, i) => this.tone({ type: 'square', f0: f, f1: f * 1.02, dur: 0.18, peak: 0.08, wet: 0.7, delay: i * 0.06 }));
         this.burst({ dur: 0.4, peak: 0.1, f0: 4000, f1: 9000, type: 'highpass', wet: 0.8, delay: 0.2, attack: 0.1 });
         break;
+      case 'superCrit':
+        this.tone({ type: 'square', f0: 600, f1: 2400, dur: 0.2, peak: 0.12, pan, wet: 0.6 });
+        this.tone({ type: 'sawtooth', f0: 1200, f1: 3600, dur: 0.3, peak: 0.08, pan, wet: 0.7, delay: 0.06 });
+        this.burst({ dur: 0.25, peak: 0.12, f0: 5000, f1: 500, type: 'lowpass', pan, wet: 0.5 });
+        break;
+      case 'sweep': this.tone({ type: 'sawtooth', f0: 300, f1: 1800, dur: 0.6, peak: 0.14, pan, wet: 0.7, attack: 0.05 }); this.burst({ dur: 0.6, peak: 0.08, f0: 2000, f1: 9000, type: 'highpass', wet: 0.7, attack: 0.1 }); break;
       case 'crit':
         if (!this.gate('crit', 80)) return;
         this.tone({ type: 'square', f0: 900, f1: 1800, dur: 0.1, peak: 0.05, pan, wet: 0.5 });
@@ -288,6 +294,7 @@ export class SFX {
         this.tone({ type: 'sine', f0: 220, f1: 40, dur: 0.5, peak: 0.18, pan, wet: 0.5 });
         this.burst({ dur: 0.35, peak: 0.1, f0: 2000, f1: 200, type: 'lowpass', pan, wet: 0.6 });
         break;
+      case 'transmission': for (let i = 0; i < 3; i++) this.tone({ type: 'square', f0: 1200 + i * 300, f1: 1200 + i * 300, dur: 0.05, peak: 0.04, wet: 0.4, delay: i * 0.07 }); this.burst({ dur: 0.3, peak: 0.03, f0: 3000, f1: 1500, type: 'bandpass', q: 3, wet: 0.5 }); break;
       case 'buy':
         if (this.sample('computer', { peak: 0.12, rate: 1.6, wet: 0.3, dur: 0.25 })) break;
         this.tone({ type: 'triangle', f0: 700, f1: 1400, dur: 0.12, peak: 0.1, wet: 0.4 });

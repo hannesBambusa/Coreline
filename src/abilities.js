@@ -18,7 +18,7 @@ export class Abilities {
   use(k) {
     if (!this.ready(k) || this.scene.gameOver || this.scene.paused) return false;
     const def = ABILITIES[k], st = this.state[k], sc = this.scene, t = sc.tower;
-    st.cd = def.cd * sc.tree.mods.abilityCd; st.active = def.dur;
+    st.cd = def.cd * sc.tree.mods.abilityCd * sc.levelMods.abilityCd; st.active = def.dur;
     if (sc.stats) sc.stats.abilities[k] = (sc.stats.abilities[k] || 0) + 1;
     sc.sfx.play('ability', k);
     if (def.dur > 0) sc.ui.addEffect('ability:' + k, { name: def.name, color: k === 'overcharge' ? 0xff9f43 : 0x9be7ff, dur: def.dur, sub: 'ability', icon: ICONS['ab_' + k] });

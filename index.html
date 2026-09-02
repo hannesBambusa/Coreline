@@ -33,6 +33,9 @@
   <div id="abilities"></div>
   <div id="left-hud"><div id="cooldowns"></div><div id="effects"></div></div>
   <div id="saved-toast"><span class="st-main">Not saved yet</span><span class="st-time"></span></div>
+  <div id="tooltip" hidden></div>
+  <div id="transmission"></div>
+  <div id="choice" hidden><div class="ch-title">Threat rising. Choose.</div><div class="ch-cards"></div><div class="ch-hint">Game paused until you pick</div></div>
   <div id="threat-timer"><div class="tt-fill"></div><div class="tt-num">40</div></div>
   <div id="boss-bar" hidden><div id="boss-name"></div><div class="bbar"><div id="boss-fill"></div></div><div id="boss-sub"></div></div>
   <div id="quick-buy" hidden><div class="aq-title">Ready to upgrade</div><ol></ol></div>
@@ -56,6 +59,8 @@
       <h3>Display</h3>
       <label class="toggle"><input type="checkbox" id="opt-shake" checked> Screen shake</label>
       <label class="toggle"><input type="checkbox" id="opt-sound" checked> Sound</label>
+      <label class="toggle"><input type="checkbox" id="opt-music" checked> Music</label>
+      <label class="toggle"><input type="checkbox" id="opt-transmissions" checked> Overseer transmissions</label>
       <label class="toggle">Volume <input type="range" id="opt-volume" min="0" max="100" value="70"></label>
       <h3>Auto-buy</h3>
       <label class="toggle">Keep reserve <input type="number" id="auto-reserve" min="0" step="50" value="0" style="width:90px"> scrap</label>

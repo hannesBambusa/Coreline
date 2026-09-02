@@ -1,4 +1,4 @@
-import { WEAPONS } from './config.js';
+import { WEAPONS, CRIT } from './config.js';
 
 const dist = (a, b) => Phaser.Math.Distance.Between(a.x, a.y, b.x, b.y);
 
@@ -13,11 +13,16 @@ export class Weapon {
     this.cd = 0;
     this.angle = 0;
     this.target = null;
+    this.jammed = 0;      // seconds left of a Dreadnought jam (weapon fully disabled)
+    this.jamSlow = 0;     // fire-rate multiplier while a Jammer holds a lock (0 = none)
   }
+  /** overcharge and jammer effects on fire rate */
+  get effectiveRateMul() { return this.scene.abilities.rateMul * (this.jamSlow ? this.jamSlow : 1); }
   get mods() { return this.scene.tree.mods; }
   get wm() { return this.mods.w[this.type]; }
-  get dmg() { return this.def.dmg * Math.pow(this.def.dmgMul, this.level - 1) * this.mods.dmg * this.wm.dmg; }
-  get rate() { return this.def.rate * Math.pow(this.def.rateMul, this.level - 1) * this.mods.rate * this.wm.rate; }
+  get lm() { return this.scene.levelMods; }
+  get dmg() { return this.def.dmg * Math.pow(this.def.dmgMul, this.level - 1) * this.mods.dmg * this.wm.dmg * this.lm.dmg * (this.type === 'drones' ? this.lm.droneDmg : this.lm.otherDmg); }
+  get rate() { return this.def.rate * Math.pow(this.def.rateMul, this.level - 1) * this.mods.rate * this.wm.rate * this.lm.rate; }
   get range() { return this.def.range; }
   get dps() { return this.dmg * this.rate; }
   get color() { return this.def.color; }
@@ -63,7 +68,7 @@ export class Weapon {
 
   update(dt, mobs) {
     if (this.jammed > 0) { this.jammed -= dt; this.target = null; if (Math.random() < dt * 10) { const m = this.mount(); this.scene.fx.spark(m.x, m.y, 0xff4d6d, 2); } return; }
-    this.cd -= dt * this.scene.abilities.rateMul * (this.jamSlow ? this.jamSlow : 1);
+    this.cd -= dt * this.effectiveRateMul;
     if (!this.target || this.target.dead || dist(this.tower, this.target) > this.range) {
       this.target = this.pickTarget(mobs);
     }
@@ -80,15 +85,31 @@ export class Weapon {
 }
 
 export class PulseCannon extends Weapon {
+  get barrels() { return 1 + this.def.barrelsAt.filter(l => this.level >= l).length; }
+  get pierce() { return this.def.pierceAt.filter(l => this.level >= l).length; }
+  statLine() { return `<b>${this.dmg.toFixed(1)}</b> dmg · <b>${this.rate.toFixed(2)}</b>/s · <b>${this.barrels}</b> barrel${this.barrels > 1 ? 's' : ''}${this.pierce ? ' · pierce ' + this.pierce : ''} · <b>${(this.dps * this.barrels).toFixed(1)}</b> dps`; }
+  nextLine() {
+    const n = this.statsAt(this.level + 1), L = this.level + 1;
+    const b = 1 + this.def.barrelsAt.filter(l => L >= l).length, p = this.def.pierceAt.filter(l => L >= l).length;
+    const nextMile = [...this.def.barrelsAt.map(l => [l, 'barrel']), ...this.def.pierceAt.map(l => [l, 'pierce'])].filter(([l]) => l > this.level).sort((x, y) => x[0] - y[0])[0];
+    return `<b>${n.dmg.toFixed(1)}</b> dmg · <b>${n.rate.toFixed(2)}</b>/s · <b>${b}</b> barrel${b > 1 ? 's' : ''}${p ? ' · pierce ' + p : ''} · <b>${(n.dps * b).toFixed(1)}</b> dps${nextMile ? ` · next ${nextMile[1]} at Lv ${nextMile[0]}` : ''}`;
+  }
   fire(target) {
     const m = this.muzzle();
     const t = dist(m, target) / this.def.speed;
     const a = Phaser.Math.Angle.Between(m.x, m.y, target.x + target.vx * t, target.y + target.vy * t);
-    this.scene.spawnBullet({
-      x: m.x, y: m.y, vx: Math.cos(a) * this.def.speed, vy: Math.sin(a) * this.def.speed,
-      dmg: this.dmg, weapon: this, color: this.color, life: this.range / this.def.speed + 0.2, target,
-    });
-    this.scene.fx.flash(m.x, m.y, this.color, 0.5);
+    const n = this.barrels;
+    for (let i = 0; i < n; i++) {
+      const sp = n > 1 ? (i - (n - 1) / 2) * 0.09 : 0;
+      this.scene.spawnBullet({
+        x: m.x, y: m.y, vx: Math.cos(a + sp) * this.def.speed, vy: Math.sin(a + sp) * this.def.speed,
+        dmg: this.dmg, weapon: this, color: this.color, life: this.range / this.def.speed + 0.2, target,
+        pierce: this.pierce, hitSet: this.pierce ? new Set() : null,
+      });
+    }
+    this.scene.fx.flash(m.x, m.y, this.color, 0.5 + 0.15 * n);
+    this.charged = Math.max(0, (this.charged || 0) - (1 / this.rate));
+    if (this.tower.weapons.some(w => w.type === 'tesla') && !this.charged && this.scene.combos.roll('charged')) this.charged = 3;
     if (this.scene.combos.roll('barrage')) {
       const pod = this.tower.weapons.find(w => w.type === 'missile');
       for (let i = 0; i < 5; i++) {
@@ -115,11 +136,14 @@ export class Railgun extends Weapon {
     const ex = m.x + Math.cos(a) * this.range, ey = m.y + Math.sin(a) * this.range;
     const line = new Phaser.Geom.Line(m.x, m.y, ex, ey);
     let hits = 0;
+    const lance = this.tower.weapons.some(w => w.type === 'shock') && this.scene.combos.roll('lance');
+    const lanceMul = lance ? 1.5 : 1;
     for (const mob of mobs) {
       if (mob.dead) continue;
       const p = Phaser.Geom.Line.GetNearestPoint(line, mob, new Phaser.Geom.Point());
       if (dist(p, mob) <= mob.r + 6 && dist(m, mob) <= this.range) {
-        this.scene.hit(mob, this, p.x, p.y, { color: this.prefers(mob) ? '#ffe66d' : '#ffffff', size: 14 });
+        this.scene.hit(mob, this, p.x, p.y, { color: this.prefers(mob) ? '#ffe66d' : '#ffffff', size: 14, mul: lanceMul });
+        if (lance) { mob.dodgeVx += Math.cos(a) * 520; mob.dodgeVy += Math.sin(a) * 520; }
         hits++;
       }
     }
@@ -132,6 +156,14 @@ export class Railgun extends Weapon {
           this.scene.fx.bolt(p.x, p.y, mob.x, mob.y, 0x9be7ff);
           this.scene.hit(mob, this, mob.x, mob.y, { dmg: this.dmg * 0.6, color: '#9be7ff', size: 13 });
         }
+      }
+    }
+    if (lance) { this.scene.fx.line(m.x, m.y, ex, ey, 0x5eead4, 18, 0.3); }
+    const pod = this.tower.weapons.find(w => w.type === 'missile');
+    if (pod && hits && this.scene.combos.roll('buster')) {
+      for (let i = 0; i < 3; i++) {
+        const b = a + (i - 1) * 0.5;
+        this.scene.spawnMissile({ x: m.x, y: m.y, vx: Math.cos(b) * 220, vy: Math.sin(b) * 220, speed: pod.def.speed * 1.4, turn: pod.def.turn * 2, dmg: pod.dmg * 1.2, weapon: pod, splash: pod.def.splash, color: 0xff9f43, life: 3, target });
       }
     }
     const laser = this.tower.weapons.find(w => w.type === 'laser');
@@ -185,8 +217,10 @@ export class MissilePod extends Weapon {
 }
 
 export class LaserBeam extends Weapon {
-  constructor(...a) { super(...a); this.held = 0; this.lastTarget = null; this.overload = 0; }
+  constructor(...a) { super(...a); this.held = 0; this.lastTarget = null; this.overload = 0; this.sweepCd = this.def.sweepEvery; this.sweepT = 0; this.forkTargets = []; }
   get dps() { return this.dmg; }
+  /** continuous damage tick, credited to the laser */
+  beamDamage(m, amount) { m.lastHit = 'laser'; m.takeDamage(amount, m.x, m.y, true); this.scene.addDmg('laser', m.lastDealt ?? 0); }
   statLine() { return `<b>${this.dmg.toFixed(1)}</b> dps · ramps to <b>×${this.def.rampMax}</b>`; }
   nextLine() { const n = this.statsAt(this.level + 1); return `<b>${n.dmg.toFixed(1)}</b> dps · ramps to <b>×${this.def.rampMax}</b>`; }
   selectFrom(list) {
@@ -199,7 +233,7 @@ export class LaserBeam extends Weapon {
     if (!this.target || this.target.dead || dist(this.tower, this.target) > this.range) {
       this.target = this.pickTarget(mobs);
     }
-    if (this.target !== this.lastTarget) { this.held = 0; this.lastTarget = this.target; }
+    if (this.target !== this.lastTarget) { this.held = this.overload > 0 ? this.def.rampTime : 0; this.lastTarget = this.target; }
     if (!this.target) return;
     this.held += dt;
     this.overload = Math.max(0, this.overload - dt);
@@ -208,16 +242,41 @@ export class LaserBeam extends Weapon {
     this.angle = Phaser.Math.Angle.Between(m.x, m.y, this.target.x, this.target.y);
     const ramp = (1 + (this.def.rampMax + this.wm.rampMax - 1) * Math.min(1, this.held / this.def.rampTime)) * (this.overload > 0 ? 2.5 : 1);
     this.ramp = ramp;
-    const ld = this.dmgVs(this.target) * ramp * dt * this.scene.abilities.rateMul;
-    this.scene.addDmg('laser', Math.min(ld, Math.max(0, this.target.hp + (this.target.shield || 0)))); this.target.lastHit = 'laser';
-    this.target.takeDamage(ld, this.target.x, this.target.y, true);
+    const ld = this.dmgVs(this.target) * ramp * dt * this.effectiveRateMul;
+    this.beamDamage(this.target, ld);
+    // Target paint: drones pile on the laser target
+    const bay = this.tower.weapons.find(w => w.type === 'drones');
+    if (bay && !this.target.marked && this.scene.combos.roll('paint')) { this.target.marked = 3; for (const d of bay.drones) d.target = this.target; this.scene.fx.ripple(this.target.x, this.target.y, 0xff3df2, this.target.r, this.target.r + 40); }
+    // at full ramp: fork to nearby ships and charge a ring sweep
+    const full = this.held >= this.def.rampTime;
+    this.forkTargets = [];
+    if (full) {
+      const others = mobs.filter(o => !o.dead && o !== this.target && dist(this.tower, o) <= this.range).sort((a, b) => dist(this.target, a) - dist(this.target, b)).slice(0, this.def.forks);
+      for (const o of others) {
+        const fd = this.dmgVs(o) * ramp * this.def.forkDmg * dt * this.effectiveRateMul;
+        this.beamDamage(o, fd);
+        this.forkTargets.push(o);
+      }
+      this.sweepCd -= dt;
+      if (this.sweepCd <= 0) {
+        this.sweepCd = this.def.sweepEvery; this.sweepT = this.def.sweepDur;
+        const burst = this.dmg * this.def.rampMax * this.def.sweepMul;
+        let n = 0;
+        for (const o of mobs) { if (o.dead || dist(this.tower, o) > this.range) continue; this.scene.hit(o, this, o.x, o.y, { dmg: burst * (this.prefers(o) ? this.def.bonus : 1), color: '#ff3df2', size: 14 }); n++; }
+        this.scene.fx.ripple(this.tower.x, this.tower.y, this.color, this.tower.shieldR, this.range);
+        this.scene.fx.flash(this.tower.x, this.tower.y, this.color, 2);
+        this.scene.sfx.play('sweep', null, this.tower.x);
+        this.scene.stats.procs.sweep = (this.scene.stats.procs.sweep || 0) + 1;
+      }
+    } else this.sweepCd = Math.min(this.sweepCd + dt * 0.5, this.def.sweepEvery);
+    if (this.sweepT > 0) this.sweepT -= dt;
     if (Math.random() < dt * 8) this.scene.fx.spark(this.target.x, this.target.y, this.color, 2);
     // crit ticks: twice a second the beam can spike for an extra burst
     this.critTimer = (this.critTimer || 0) + dt;
     if (this.critTimer >= 0.5) {
       this.critTimer = 0;
-      if (Math.random() < (this.def.crit ?? 0.06)) {
-        const burst = this.dmgVs(this.target) * ramp * 0.5 * ((this.def.critMul ?? 2.2) - 1);
+      if (Math.random() < (this.def.crit ?? CRIT.chance)) {
+        const burst = this.dmgVs(this.target) * ramp * 0.5 * ((this.def.critMul ?? CRIT.mul) - 1);
         this.scene.hit(this.target, this, this.target.x, this.target.y, { dmg: burst, noCrit: true, color: '#ffb703', size: 20, tag: '' });
         this.scene.fx.spark(this.target.x, this.target.y, 0xffb703, 8);
         this.scene.fx.ripple(this.target.x, this.target.y, 0xffb703, this.target.r, this.target.r + 22);
@@ -226,8 +285,14 @@ export class LaserBeam extends Weapon {
     }
   }
   draw(g) {
+    if (this.sweepT > 0) {
+      const k = 1 - this.sweepT / this.def.sweepDur, a = k * Math.PI * 2, tw = this.tower;
+      for (let i = 0; i < 6; i++) { const aa = a - i * 0.12; g.lineStyle(6 - i, this.color, 0.7 - i * 0.1); g.lineBetween(tw.x, tw.y, tw.x + Math.cos(aa) * this.range, tw.y + Math.sin(aa) * this.range); }
+      g.lineStyle(2, 0xffffff, 0.8); g.lineBetween(tw.x, tw.y, tw.x + Math.cos(a) * this.range, tw.y + Math.sin(a) * this.range);
+    }
     if (!this.target || this.target.dead) return;
     const m = this.muzzle(10), t = this.target;
+    for (const o of this.forkTargets) { if (o.dead) continue; g.lineStyle(4, this.color, 0.15); g.lineBetween(t.x, t.y, o.x, o.y); g.lineStyle(1.5, this.color, 0.7); g.lineBetween(t.x, t.y, o.x, o.y); }
     const w = 1.5 + (this.ramp || 1) * 1.2, pulse = 0.7 + 0.3 * Math.sin(this.scene.time.now / 40);
     if (this.overload > 0) { g.lineStyle(w * 6, 0xffffff, 0.25 * pulse); g.lineBetween(m.x, m.y, t.x, t.y); }
     if (this.flare > 0) { g.lineStyle(w * 8 * this.flare, 0xffffff, 0.5 * this.flare); g.lineBetween(m.x, m.y, t.x, t.y); }
@@ -270,7 +335,12 @@ export class TeslaArc extends Weapon {
 }
 
 export class GravityWell extends Weapon {
-  selectFrom(list) { return MissilePod.prototype.selectFrom.call(this, list); }
+  // prefer clusters that are not already sitting inside an active well
+  selectFrom(list) {
+    const wells = this.scene.wells;
+    const free = list.filter(m => !wells.some(w => Phaser.Math.Distance.Between(w.x, w.y, m.x, m.y) <= w.r * 0.9));
+    return MissilePod.prototype.selectFrom.call(this, free.length ? free : list);
+  }
   fire(target) {
     const m = this.muzzle();
     const a = Phaser.Math.Angle.Between(m.x, m.y, target.x, target.y);
@@ -293,7 +363,7 @@ export class ShockEmitter extends Weapon {
   }
   update(dt, mobs) {
     if (this.jammed > 0) { this.jammed -= dt; return; }
-    this.cd -= dt * this.scene.abilities.rateMul * (this.jamSlow ? this.jamSlow : 1);
+    this.cd -= dt * this.effectiveRateMul;
     this.angle += dt * 1.5;
     this.target = null;
     if (this.cd <= 0 && this.inRange(mobs).length) { this.fire(null, mobs); this.scene.sfx.play('shock', null, this.tower.x); this.cd = this.cooldown; }
@@ -316,7 +386,23 @@ export class ShockEmitter extends Weapon {
     }
     // clears enemy shots caught in the wave
     sc.enemyBullets = sc.enemyBullets.filter(b => Phaser.Math.Distance.Between(t.x, t.y, b.x, b.y) > R);
-    for (const w of sc.wellShots) { /* untouched */ }
+    // Collapse: a well inside the wave implodes
+    const well = sc.wells.find(w => Phaser.Math.Distance.Between(t.x, t.y, w.x, w.y) <= R + w.r * 0.5);
+    if (well && sc.combos.roll('collapse')) {
+      for (const m of mobs) {
+        if (m.dead) continue;
+        const d = Phaser.Math.Distance.Between(well.x, well.y, m.x, m.y);
+        if (d <= well.r) { const a = Phaser.Math.Angle.Between(m.x, m.y, well.x, well.y); m.x += Math.cos(a) * d * 0.85; m.y += Math.sin(a) * d * 0.85; m.dodgeVx = 0; m.dodgeVy = 0; }
+      }
+      sc.damageRadius(well.x, well.y, well.r * 0.6, this.dmg * 6, 0xc084fc, this);
+      sc.fx.ripple(well.x, well.y, 0xc084fc, well.r, 10);
+      sc.fx.explode(well.x, well.y, 0xffffff, 40);
+      sc.fx.shake(0.01, 300);
+      well.age = well.life;
+    }
+    // Scramble: drones get a burst
+    const bay = t.weapons.find(w => w.type === 'drones');
+    if (bay && sc.combos.roll('scramble')) { bay.boost = 3; for (const d of bay.drones) if (d.alive) { const a = Phaser.Math.Angle.Between(t.x, t.y, d.x, d.y); d.vx += Math.cos(a) * 400; d.vy += Math.sin(a) * 400; sc.fx.flash(d.x, d.y, 0x60a5fa, 0.8); } }
     this.ring = { r: t.shieldR, r1: R, a: 1 };
     sc.fx.ripple(t.x, t.y, this.color, t.shieldR, R);
     sc.fx.ripple(t.x, t.y, 0xffffff, t.shieldR, R * 0.8);
@@ -353,7 +439,9 @@ export class DroneBay extends Weapon {
   update(dt, mobs) {
     this.sync();
     if (this.jammed > 0) { this.jammed -= dt; return; }
-    const t = this.tower, rm = this.scene.abilities.rateMul * (this.jamSlow ? this.jamSlow : 1);
+    this.boost = Math.max(0, (this.boost || 0) - dt);
+    const bm = this.boost > 0 ? 2 : 1;
+    const t = this.tower, rm = this.effectiveRateMul * bm;
     for (const d of this.drones) {
       if (!d.alive) {
         d.respawnT -= dt;
@@ -387,7 +475,7 @@ export class DroneBay extends Weapon {
         d.ang += dt * 1.2;
         tx = t.x + Math.cos(d.ang) * (t.shieldR + 40); ty = t.y + Math.sin(d.ang) * (t.shieldR + 40);
       }
-      const a = Math.atan2(ty - d.y, tx - d.x), sp = this.def.droneSpeed;
+      const a = Math.atan2(ty - d.y, tx - d.x), sp = this.def.droneSpeed * bm;
       d.vx += (Math.cos(a) * sp - d.vx) * Math.min(1, dt * 4); d.vy += (Math.sin(a) * sp - d.vy) * Math.min(1, dt * 4);
       d.x += d.vx * dt; d.y += d.vy * dt;
       for (const m of mobs) {
@@ -408,7 +496,7 @@ export class DroneBay extends Weapon {
     if (!d.alive) return;
     d.hp -= dmg;
     this.scene.fx.spark(d.x, d.y, this.color, 3);
-    if (d.hp <= 0) { d.alive = false; d.respawnT = this.respawn; this.scene.fx.explode(d.x, d.y, this.color, 14); this.scene.fx.floater(d.x, d.y - 10, 'drone lost', '#60a5fa', 11); this.scene.sfx.play('explode', 6, d.x); }
+    if (d.hp <= 0) { d.alive = false; d.respawnT = this.respawn; this.scene.fx.explode(d.x, d.y, this.color, 14); this.scene.fx.floater(d.x, d.y - 10, 'drone lost', '#60a5fa', 11); this.scene.sfx.play('explode', 6, d.x); this.scene.tx.say('droneLost', 90); }
   }
   // enemy bullets can hit drones; scene calls this
   absorb(b) {

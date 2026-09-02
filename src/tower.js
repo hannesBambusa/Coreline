@@ -1,4 +1,4 @@
-import { TOWER, TOWER_UPGRADES, COLORS, SLOT_COSTS, CORE_TIERS } from './config.js';
+import { TOWER, TOWER_UPGRADES, COLORS, SLOT_COSTS, SLOT_GATES, CORE_TIERS } from './config.js';
 import { createWeapon } from './weapons.js';
 
 export class Tower {
@@ -25,7 +25,7 @@ export class Tower {
   recompute() {
     const m = this.scene.tree ? this.scene.tree.mods : { hull: 1, shieldMax: 1, shieldRegen: 1 };
     this.hullMax = Math.round((TOWER.hullMax + this.upgrades.hull * TOWER_UPGRADES.hull.add) * m.hull);
-    this.shieldMax = Math.round((TOWER.shieldMax + this.upgrades.shieldMax * TOWER_UPGRADES.shieldMax.add) * m.shieldMax);
+    this.shieldMax = Math.round((TOWER.shieldMax + this.upgrades.shieldMax * TOWER_UPGRADES.shieldMax.add) * m.shieldMax * (this.scene.levelMods ? this.scene.levelMods.shieldMax : 1));
     this.shieldRegen = (TOWER.shieldRegen + this.upgrades.shieldRegen * TOWER_UPGRADES.shieldRegen.add) * m.shieldRegen;
     if (this.hull > this.hullMax) this.hull = this.hullMax;
     if (this.shield > this.shieldMax) this.shield = this.shieldMax;
@@ -37,7 +37,8 @@ export class Tower {
     const u = TOWER_UPGRADES[key];
     return Math.floor(u.base * Math.pow(u.growth, level));
   }
-  slotCostAt(count) { return SLOT_COSTS[count] ?? null; }
+  slotGate(count) { return SLOT_GATES[count] || 0; }
+  slotCostAt(count) { if (SLOT_COSTS[count] === undefined) return null; return this.scene.tier >= this.slotGate(count) ? SLOT_COSTS[count] : null; }
 
   buyUpgrade(key) {
     this.upgrades[key]++;
@@ -47,7 +48,8 @@ export class Tower {
     if (key === 'shieldMax') this.shield += this.shieldMax - before.shield;
   }
 
-  nextSlotCost() { return SLOT_COSTS[this.slots.length] ?? null; }
+  nextSlotCost() { return this.slotCostAt(this.slots.length); }
+  nextSlotGate() { return SLOT_COSTS[this.slots.length] === undefined ? null : this.slotGate(this.slots.length); }
   unlockSlot() { this.slots.push(null); }
   installWeapon(i, type) { this.slots[i] = createWeapon(this.scene, this, type, i); }
   // Swap keeps the slot but the new weapon starts at level 1.
@@ -57,7 +59,7 @@ export class Tower {
     this.slots[i] = w;
   }
   get weapons() { return this.slots.filter(Boolean); }
-  slotAngle(i) { return -Math.PI / 2 + i * (Math.PI * 2 / SLOT_COSTS.length) - this.spin * 0.3; }
+  slotAngle(i) { const n = Math.max(4, this.slots.length); return -Math.PI / 2 + i * (Math.PI * 2 / n) - this.spin * 0.3; }
   maxRange() { let r = 0; for (const w of this.weapons) r = Math.max(r, w.range); return r; }
 
   setPosition(x, y) { this.x = x; this.y = y; this.glow.setPosition(x, y); }
@@ -71,7 +73,7 @@ export class Tower {
       const a = Phaser.Math.Angle.Between(this.x, this.y, hx, hy);
       fx.ripple(this.x + Math.cos(a) * this.shieldR, this.y + Math.sin(a) * this.shieldR, COLORS.cyan, 6, 30);
       fx.spark(hx, hy, COLORS.cyan, 4);
-      if (this.shield < 0) { this.hull += this.shield; this.shield = 0; fx.shake(0.006, 200); this.scene.sfx.play('shieldBreak'); }
+      if (this.shield < 0) { this.hull += this.shield; this.shield = 0; fx.shake(0.006, 200); this.scene.sfx.play('shieldBreak'); this.scene.tx.say('shieldDown', 45); }
       else this.scene.sfx.play('shieldHit', null, hx);
     } else {
       this.hull -= amount;
@@ -95,7 +97,7 @@ export class Tower {
     if (tm.hullRegen > 0 && this.hull < this.hullMax) this.hull = Math.min(this.hullMax, this.hull + tm.hullRegen * dt);
     if (this.shield < this.shieldMax) {
       const mul = this.regenDelay > 0 ? TOWER.underFireRegen : this.calm ? TOWER.calmRegenMul + tm.calmMul : 1;
-      this.shield = Math.min(this.shieldMax, this.shield + this.shieldRegen * mul * dt);
+      this.shield = Math.min(this.shieldMax, this.shield + this.shieldRegen * mul * (this.scene.levelMods ? this.scene.levelMods.shieldRegen : 1) * dt);
     }
     for (const w of this.weapons) w.update(dt, mobs);
     this.draw(dt);

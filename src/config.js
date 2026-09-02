@@ -25,14 +25,16 @@ export const TOWER_UPGRADES = {
   hull:        { name: 'Hull plating',    base: 60, growth: 1.35, add: 100, unit: 'hull' },
 };
 
-export const SLOT_COSTS = [0, 150, 800, 3000];   // max 4 hardpoints: pick your loadout
+export const SLOT_COSTS = [0, 150, 800, 3000, 12000];   // 4 hardpoints normally; the 5th opens at threat 30
+export const SLOT_GATES = { 4: 30 };                    // slot index -> threat level required
 
 // install = scrap to mount the weapon in an empty slot. cost/costGrowth = per-level upgrade.
 export const WEAPONS = {
   pulse: {
     name: 'Pulse cannon', install: 0,
-    desc: 'Fast single-target bolts. Nearest enemy.',
+    desc: 'Fast bolts at the nearest ship. Grows extra barrels at Lv 10/20/30, bolts pierce from Lv 15 and ricochet on kills.',
     dmg: 5, rate: 6, range: 380, speed: 820,
+    barrelsAt: [10, 20, 30], pierceAt: [15, 30], ricochetRange: 220, ricochetDmg: 0.7,
     dmgMul: 1.15, rateMul: 1.04,
     cost: 15, costGrowth: 1.3,
     prefer: ['drone', 'swarm'], bonus: 1.4,
@@ -58,9 +60,10 @@ export const WEAPONS = {
   },
   laser: {
     name: 'Laser beam', install: 700,
-    desc: 'Continuous beam, damage ramps on the same target. Targets farthest.',
-    dmg: 14, rate: 1, range: 560, rampTime: 3, rampMax: 3,
-    dmgMul: 1.15, rateMul: 1.0,
+    desc: 'Continuous beam that ramps on one target. At full ramp it forks to two more ships and periodically sweeps the whole ring.',
+    dmg: 20, rate: 1, range: 560, rampTime: 3, rampMax: 3,
+    forks: 2, forkDmg: 0.35, sweepEvery: 6, sweepDur: 0.6, sweepMul: 2.5,
+    dmgMul: 1.16, rateMul: 1.0,
     cost: 90, costGrowth: 1.32,
     prefer: ['orbiter', 'boss'], bonus: 1.5, crit: 0.08,
     color: 0xff3df2,
@@ -229,6 +232,7 @@ export const SPAWN = {
   maxRate: 12,
   softCap: 220,          // stop regular spawns while this many ships are alive
   surgeEvery: 5,         // every Nth threat level spawns a single random ship type
+  choiceEvery: 3,        // offer a threat-level choice every Nth level; the pick lasts until the next offer
   droneAggro: 0.10,      // chance an enemy shot is aimed at the nearest friendly drone instead of the core
   // surge spawn-rate multiplier by ship toughness: light ships come in far bigger numbers
   surgeMul: { light: 2.6, medium: 1.6, heavy: 1.0 }, surgeLightHp: 35, surgeMediumHp: 100,
@@ -237,7 +241,7 @@ export const SPAWN = {
 };
 
 // Critical strikes. Per-weapon overrides via WEAPONS[x].crit / critMul.
-export const CRIT = { chance: 0.06, mul: 2.2 };
+export const CRIT = { chance: 0.06, mul: 2.2, superChance: 0.04, superMul: 3 };   // a crit can crit again: super crit, ×3 on top
 
 export const ABILITIES = {
   emp:        { name: 'EMP',          key: '1', cost: 300,  cd: 40,  dur: 3,  desc: 'Stuns every ship for 3 s.' },

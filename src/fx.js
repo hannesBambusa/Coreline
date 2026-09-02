@@ -79,23 +79,28 @@ export class FX {
   }
 
   // big punchy number: scales in fast, hangs, then drifts up and fades
-  critFloater(x, y, text, color = '#ffb703', size = 30) {
+  critFloater(x, y, text, color = '#ffb703', size = 18, big = false) {
     this.floaters = (this.floaters || 0);
-    if (this.floaters > 80) return;
-    this.floaters++;
+    this.crits = (this.crits || 0);
+    if (!big && (this.floaters > 80 || this.crits > 12)) return;   // cap crit callouts: at most 12 on screen (super crits always show)
+    this.floaters++; this.crits++;
     const t = this.scene.add.text(x, y, text, {
       fontFamily: 'Orbitron, Rajdhani, sans-serif', fontSize: `${size}px`, color, fontStyle: 'bold',
-      stroke: '#05060d', strokeThickness: 6,
-    }).setOrigin(0.5).setDepth(11).setScale(0.3).setAlpha(1);
-    t.postFX && t.postFX.addGlow(0xffb703, 4, 0, false, 0.1, 12);
+      stroke: '#05060d', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(12).setScale(big ? 0.2 : 0.5).setAlpha(1);
+    if (big && t.postFX) t.postFX.addGlow(0xff5e5b, 4, 0, false, 0.1, 12);
     this.scene.tweens.chain({
       targets: t,
-      tweens: [
-        { scale: 1.35, duration: 120, ease: 'Back.easeOut' },
-        { scale: 1, duration: 140, ease: 'Quad.easeOut' },
-        { y: y - 46, alpha: 0, duration: 700, delay: 250, ease: 'Quad.easeIn' },
+      tweens: big ? [
+        { scale: 1.5, duration: 140, ease: 'Back.easeOut' },
+        { scale: 1.15, duration: 160, ease: 'Quad.easeOut' },
+        { y: y - 60, alpha: 0, duration: 900, delay: 500, ease: 'Quad.easeIn' },
+      ] : [
+        { scale: 1.2, duration: 90, ease: 'Back.easeOut' },
+        { scale: 1, duration: 100, ease: 'Quad.easeOut' },
+        { y: y - 36, alpha: 0, duration: 500, delay: 120, ease: 'Quad.easeIn' },
       ],
-      onComplete: () => { t.destroy(); this.floaters--; },
+      onComplete: () => { t.destroy(); this.floaters--; this.crits--; },
     });
   }
 

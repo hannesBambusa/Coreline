@@ -1,4 +1,5 @@
 import { OFFLINE, SIEGE, SLOT_COSTS } from './config.js';
+import { applyChoice, baseLevelMods } from './choices.js';
 
 export const SAVE_KEY = 'core-defence-v1';
 const VERSION = 1;
@@ -25,6 +26,8 @@ export class SaveSystem {
         siegesCleared: s.siegesCleared,
         surgeType: s.surgeType || null,
         stats: s.stats,
+        levelChoice: s.levelChoice || null,
+        openChoice: s.choice ? { tier: s.choice.tier, opts: s.choice.opts } : null,
         mobs: s.mobs.filter(m => !m.dead && !['titan', 'warden', 'mine'].includes(m.type)).slice(0, 300).map(m => ({
           t: m.type, x: Math.round(m.x - t.x), y: Math.round(m.y - t.y), hp: Math.round(m.hp), sh: m.shield ? Math.round(m.shield) : undefined,
           e: m.elite || undefined, g: m.gen || undefined, tier: m.tierAtSpawn,
@@ -43,10 +46,10 @@ export class SaveSystem {
 
   // scrap per second over the last 5 minutes of play
   scrapRate() {
-    const s = this.scene, now = s.state.time, window = 300;
-    const log = s.scrapLog.filter(([t]) => now - t <= window);
+    const s = this.scene, now = s.state.time, windowSec = 300;
+    const log = s.scrapLog.filter(([t]) => now - t <= windowSec);
     s.scrapLog = log;
-    const span = Math.min(window, Math.max(30, now));
+    const span = Math.min(windowSec, Math.max(30, now));
     return log.reduce((a, [, v]) => a + v, 0) / span;
   }
 
@@ -95,16 +98,16 @@ export class SaveSystem {
     s.abilities.restore(r.abilities);
     s.siegesCleared = Number.isInteger(r.siegesCleared) ? r.siegesCleared : Math.floor(s.tier / SIEGE.every);
     s.surgeType = r.surgeType || null;
-    if (r.stats) s.stats = Object.assign(s.freshStats(), r.stats);
+    if (r.levelChoice) { s.levelChoice = r.levelChoice; s.levelMods = applyChoice(r.levelChoice, baseLevelMods()); }
+    if (r.openChoice) { s.choice = { tier: r.openChoice.tier, opts: r.openChoice.opts }; s.choosing = true; s.paused = true; s.ui.showChoice(s.choice); }
+    if (r.stats) { s.stats = Object.assign(s.freshStats(), r.stats); if (!r.stats.hits) { s.stats.crits = {}; s.stats.critExtra = {}; } }   // older saves counted crits before hits: restart the ratio cleanly
     // ships that were alive: recreate them where they were
     if (Array.isArray(r.mobs)) {
       for (const m of r.mobs) {
         try {
-          const mob = s.spawnMob(m.t, 0, m.tier);
+          const mob = s.spawnMob(m.t, 0, m.tier, m.g);
           mob.x = t.x + m.x; mob.y = t.y + m.y;
-          if (mob.elite) { /* spawnMob may have rolled an elite; keep the saved one instead */ }
           if (m.e && !mob.elite) mob.makeElite(m.e);
-          if (m.g) { /* hydra generation */ mob.gen = m.g; }
           mob.hp = Math.min(mob.hpMax, m.hp || mob.hpMax);
           if (m.sh !== undefined && mob.shieldMax) mob.shield = Math.min(mob.shieldMax, m.sh);
         } catch (e) { /* unknown type from an older save */ }

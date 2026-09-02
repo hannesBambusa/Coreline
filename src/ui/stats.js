@@ -37,7 +37,7 @@ function liveRows(scene) {
   const regen = t.shieldRegen * (t.calm ? 2 + scene.tree.mods.calmMul : 1);
   const cells = [
     cell('Shield', `${Math.ceil(t.shield)} / ${t.shieldMax}`), cell('Hull', `${Math.ceil(t.hull)} / ${t.hullMax}`),
-    cell('Spawn rate', `${spawn.toFixed(2)} ships/s`), cell('Ships alive', `${scene.mobs.filter(m => !m.dead).length} / ${Math.round(SPAWN.softCap * d.cap * (lm.cap || 1))}`),
+    cell('Spawn rate', `${spawn.toFixed(2)} ships/s`), cell('Ships alive', `${scene.mobs.filter(m => !m.dead).length} / ${Math.round(SPAWN.softCap * d.cap * lm.cap)}`),
     cell('Scrap rate', `${fmt(scrapRate)} /s`), cell('Scrap per kill', `×${scrapMul.toFixed(2)}`),
     cell('Ship HP', `×${hpMul.toFixed(2)}`), cell('Ship damage', `×${dmgMul.toFixed(2)}`),
     cell('Your DPS (20 s)', fmt(scene.recentDps())), cell('Nominal DPS', fmt(nominal)),

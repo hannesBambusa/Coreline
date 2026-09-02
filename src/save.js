@@ -1,5 +1,6 @@
 import { OFFLINE, SIEGE, SLOT_COSTS } from './config.js';
 import { CHOICES, applyChoice, baseLevelMods } from './choices.js';
+import { sumWindow } from './utils.js';
 
 export const SAVE_KEY = 'core-defence-v1';
 const VERSION = 1;
@@ -47,11 +48,8 @@ export class SaveSystem {
   // scrap per second over the last 5 minutes of play
   scrapRate() {
     const s = this.scene, now = s.state.time, windowSec = 300;
-    const log = s.scrapLog;
-    while (log.length && now - log[0][0] > windowSec) log.shift();
     const span = Math.min(windowSec, Math.max(30, now));
-    let sum = 0; for (const e of log) sum += e[1];
-    return sum / span;
+    return sumWindow(s.scrapLog, now, windowSec) / span;
   }
 
   save() {

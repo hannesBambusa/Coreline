@@ -15,7 +15,7 @@ export const CHOICES = {
   fragRun:     { name: 'Fragment lure',    good: '+50% fragments',                bad: 'ships 50% tougher',                fromTier: 4 },
   fragFever:   { name: 'Fragment fever',   good: 'double fragments',              bad: 'spawn rate ×2, ships 30% faster',  fromTier: 10 },
   bounty:      { name: 'Bounty board',     good: 'elites drop 6× scrap',          bad: 'elite chance ×4',                  fromTier: 5 },
-  swarmStorm:  { name: 'Swarm storm',      good: 'swarm drops ×5 scrap',          bad: '200+ swarm arrive now, then swarm only, ×5 numbers', fromTier: 4 },
+  swarmStorm:  { name: 'Swarm storm',      good: 'swarm drops ×5 scrap',          bad: '200+ swarm arrive now, then swarm only, ×5 spawn rate', fromTier: 4 },
   parade:      { name: 'Elite parade',     good: 'elites drop 3× scrap',          bad: 'every ship is an elite',           fromTier: 8 },
   // ---- offense and defense ----
   critHigh:    { name: 'Overtuned optics', good: '+25% crit chance',              bad: 'no shield regen',                  fromTier: 2 },

@@ -1,6 +1,7 @@
 import { Weapon } from './base.js';
 import { COLORS } from '../config.js';
 import { dist, angleTo, maxBy } from '../utils.js';
+import { onRailShot } from '../combos/procs.js';
 
 const TUNING = {
   hitPad: 6,                              // px beyond a mob's radius the beam still counts as a hit
@@ -63,6 +64,7 @@ export class Railgun extends Weapon {
       laser.overload = TUNING.overloadDur;
       laser.held = laser.def.rampTime;
     }
+    onRailShot(this, target, mobs, a, m);
     sc.fx.line(m.x, m.y, ex, ey, this.color, TUNING.beam.width, TUNING.beam.alpha);
     sc.fx.line(m.x, m.y, ex, ey, COLORS.cyan, TUNING.glow.width, TUNING.glow.alpha);
     sc.fx.flash(m.x, m.y, this.color, TUNING.flash);

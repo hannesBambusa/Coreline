@@ -1,6 +1,7 @@
 import { Weapon } from './base.js';
 import { COLORS } from '../config.js';
 import { dist, nearest } from '../utils.js';
+import { onTeslaShot, onTeslaChain } from '../combos/procs.js';
 
 const TUNING = {
   falloff: 0.8,              // damage multiplier applied per chain hop
@@ -12,8 +13,9 @@ export class TeslaArc extends Weapon {
   fire(target, mobs) {
     const m = this.muzzle(), sc = this.scene;
     const hit = new Set();
-    let from = m, cur = target, falloff = 1;
-    for (let i = 0; i < this.def.chains + this.wm.chains + (this.lm.teslaChains || 0) && cur; i++) {
+    const extra = onTeslaShot(this, target);
+    let from = m, cur = target, falloff = extra.mul;
+    for (let i = 0; i < this.def.chains + this.wm.chains + (this.lm.teslaChains || 0) + extra.chains && cur; i++) {
       hit.add(cur);
       sc.fx.bolt(from.x, from.y, cur.x, cur.y, this.color);
       sc.hit(cur, this, cur.x, cur.y, { mul: falloff, color: this.prefers(cur) ? '#ffe66d' : '#9be7ff' });
@@ -21,6 +23,7 @@ export class TeslaArc extends Weapon {
       // next hop: nearest unhit ship within chainRange of the current one
       cur = nearest(mobs, cur.x, cur.y, this.def.chainRange, o => !hit.has(o));
     }
+    onTeslaChain(this, hit, mobs);
     const well = sc.wells[0];
     if (well && sc.combos.roll('storm')) {
       for (const o of mobs) {

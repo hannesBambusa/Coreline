@@ -6,14 +6,9 @@ const LEVELS = {
   minimal: { bloom: 0, numbers: false, trails: 0, sparks: 0,   glows: 'none',  flashes: false, label: 'Minimal' },
 };
 const ORDER = ['full', 'reduced', 'minimal'];
-const AUTO = { down: 45, floor: 30, up: 58, downAfter: 3, upAfter: 15 };   // fps thresholds and seconds they must hold
+// fps thresholds, the seconds they must hold, and how many times a level may be dropped before auto stops climbing back
+const AUTO = { down: 45, floor: 30, up: 58, downAfter: 3, upAfter: 15, maxDrops: 2 };
 const SMALL_GLOW_R = 12;      // 'large' glows: only ships with a radius above this keep their glow
-const CIRCLE_STEP = 0.08;     // radians per segment for every stroked circle (Phaser's default 0.01 = 628 segments)
-
-// Coarser circles everywhere: rings are drawn for every ship, every frame, and 628 segments each is most of the
-// Graphics cost with hundreds of ships alive. 79 segments is indistinguishable at these radii.
-const G = Phaser.GameObjects.Graphics.prototype;
-G.strokeCircle = function (x, y, r) { this.beginPath(); this.arc(x, y, r, 0, Math.PI * 2, false, CIRCLE_STEP); this.closePath(); return this.strokePath(); };
 
 export class Perf {
   constructor(scene) {
@@ -22,15 +17,21 @@ export class Perf {
     this.level = 'full';
     this.lowT = 0; this.highT = 0; this.tick = 0;
     this.frame = 0;
+    this.drops = {};      // level -> times auto stepped down out of it, so a level that keeps sagging is not retried forever
+    this.applied = false; // set() is a no-op for an unchanged setting, but the first call must still apply
   }
   get cfg() { return LEVELS[this.level]; }
   get label() { return this.setting === 'auto' ? `Auto (${this.cfg.label.toLowerCase()})` : this.cfg.label; }
 
   /** from the settings tab or the save: 'auto' | 'full' | 'reduced' | 'minimal' */
   set(setting) {
-    this.setting = LEVELS[setting] || setting === 'auto' ? setting : 'auto';
-    this.lowT = 0; this.highT = 0;
-    this.apply(setting === 'auto' ? 'full' : setting);
+    const valid = LEVELS[setting] || setting === 'auto';
+    const next = valid ? setting : 'auto';
+    if (this.applied && next === this.setting) return;   // a settings resync must not throw away the auto-tuned level
+    this.applied = true;
+    this.setting = next;
+    this.lowT = 0; this.highT = 0; this.drops = {};
+    this.apply(next === 'auto' ? 'full' : next);
   }
 
   apply(level) {
@@ -61,13 +62,23 @@ export class Perf {
     if (this.tick < 1) return;
     this.tick = 0;
     const fps = this.scene.game.loop.actualFps, i = ORDER.indexOf(this.level);
-    if (fps < AUTO.down) { this.lowT++; this.highT = 0; } else if (fps > AUTO.up) { this.highT++; this.lowT = 0; } else { this.lowT = 0; this.highT = 0; }
+    if (fps < AUTO.down) {
+      this.lowT++; this.highT = 0;
+    } else if (fps > AUTO.up) {
+      this.highT++; this.lowT = 0;
+    } else {
+      this.lowT = 0; this.highT = 0;
+    }
     if (this.lowT >= AUTO.downAfter && i < ORDER.length - 1) {
       const next = fps < AUTO.floor ? 'minimal' : ORDER[i + 1];
-      this.lowT = 0; this.apply(next);
-      this.scene.ui.banner(`Effects ${this.cfg.label.toLowerCase()} · low frame rate`, false);
+      this.lowT = 0;
+      this.drops[this.level] = (this.drops[this.level] || 0) + 1;
+      this.apply(next);
+      if (this.scene.ui) this.scene.ui.banner(`Effects ${this.cfg.label.toLowerCase()} · low frame rate`, false);
     } else if (this.highT >= AUTO.upAfter && i > 0) {
-      this.highT = 0; this.apply(ORDER[i - 1]);
+      this.highT = 0;
+      // a level dropped out of maxDrops times stays dropped: otherwise a machine sitting near the thresholds oscillates
+      if ((this.drops[ORDER[i - 1]] || 0) < AUTO.maxDrops) this.apply(ORDER[i - 1]);
     }
   }
 }

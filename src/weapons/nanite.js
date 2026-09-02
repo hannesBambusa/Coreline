@@ -3,6 +3,7 @@
 // a dying host also bursts for area damage. Weak against a lone boss, brutal against packs.
 import { Weapon, formatStats } from './base.js';
 import { dist, minBy } from '../utils.js';
+import { onNaniteShot } from '../combos/procs.js';
 
 const TUNING = {
   sparkRate: 3,          // sparks per second on an infected ship
@@ -42,6 +43,7 @@ export class ReplicatorSwarm extends Weapon {
       onHit: (mob) => this.infect(mob, 0),
     });
     sc.fx.flash(m.x, m.y, this.color, 0.6);
+    onNaniteShot(this);
     // Culture well: a gravity well seeds every ship it holds
     const well = sc.wells[0];
     if (well && sc.combos.roll('culture')) {

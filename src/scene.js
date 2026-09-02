@@ -18,6 +18,7 @@ import { makeTextures, makeStarfield } from './scene/textures.js';
 import * as spawner from './scene/spawner.js';
 import * as siege from './scene/siege.js';
 import { Perf } from './perf.js';
+import { pushBucket } from './utils.js';
 import * as choices from './scene/choices.js';
 import * as damage from './scene/damage.js';
 import * as projectiles from './scene/projectiles.js';
@@ -196,7 +197,7 @@ export class GameScene extends Phaser.Scene {
     const lm = this.levelMods;
     const scrap = Math.round(m.scrap * this.tree.mods.scrap * lm.scrap * this.diff.scrap * (m.type === 'swarm' ? lm.swarmScrap : 1) * (lm.typeScrap[m.type] || 1) * (m.elite ? lm.eliteScrap : 1));
     this.state.scrap += scrap;
-    { const log = this.scrapLog, sec = Math.floor(this.state.time), last = log[log.length - 1]; if (last && last[0] === sec) last[1] += scrap; else log.push([sec, scrap]); }   // per-second buckets
+    pushBucket(this.scrapLog, Math.floor(this.state.time), scrap);
     for (const w of this.tower.weapons) if (w.onScrap) w.onScrap(scrap);
     this.sfx.play(m.type === 'boss' ? 'bigExplode' : 'explode', m.r, m.x);
     this.fx.floater(m.x, m.y + 6, `+${scrap}`, '#ffd166', 13);
@@ -214,6 +215,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   resetRun() {
+    this.time.removeAllEvents();   // drop everything the old run scheduled (storm waves, boss arrivals, the game-over screen)
     for (const m of this.mobs) if (!m.dead) m.die(false);
     this.mobs = []; this.bullets = []; this.enemyBullets = [];
     this.missiles = []; this.wellShots = []; this.wells = [];

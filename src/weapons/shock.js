@@ -1,6 +1,7 @@
 import { Weapon, formatStats } from './base.js';
 import { COLORS } from '../config.js';
 import { dist, angleTo } from '../utils.js';
+import { onShockPulse } from '../combos/procs.js';
 
 const TUNING = {
   spin: 1.5,                    // idle turret rotation, rad/s (the emitter has no target)
@@ -59,6 +60,7 @@ export class ShockEmitter extends Weapon {
     this.scramble();
     this.stasis(mobs);
     this.plague(mobs);
+    onShockPulse(this, mobs);
     this.ring = { r: t.shieldR, r1: R, a: 1 };
     sc.fx.ripple(t.x, t.y, this.color, t.shieldR, R);
     sc.fx.ripple(t.x, t.y, COLORS.white, t.shieldR, R * 0.8);

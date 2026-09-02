@@ -1,5 +1,6 @@
 // Projectiles: tower bullets, enemy bullets, homing missiles, gravity-well shots and the wells they leave behind.
 // Everything is plain data on scene.bullets / enemyBullets / missiles / wellShots / wells; this file moves, collides and draws it.
+import { onMissileImpact, onWellLand } from '../combos/procs.js';
 import { SPAWN } from '../config.js';
 import { distXY, nearest } from '../utils.js';
 
@@ -155,6 +156,7 @@ function detonateMissile(scene, m) {
     scene.fx.shake(0.008, 250);
     well.age = well.life; // collapse the well
   } else scene.damageRadius(m.x, m.y, m.splash, m.dmg, m.color, m.weapon);
+  onMissileImpact(scene, m);
   m.age = DEAD_AGE;
 }
 
@@ -176,7 +178,7 @@ function updateHomingMissiles(scene, dt) {
       if (o.dead) continue;
       if (distXY(m.x, m.y, o.x, o.y) < o.r + 5) { detonateMissile(scene, m); break; }
     }
-    if (m.age >= m.life && m.age < DEAD_AGE) { scene.damageRadius(m.x, m.y, m.splash, m.dmg, m.color, m.weapon); m.age = DEAD_AGE; }
+    if (m.age >= m.life && m.age < DEAD_AGE) { scene.damageRadius(m.x, m.y, m.splash, m.dmg, m.color, m.weapon); onMissileImpact(scene, m); m.age = DEAD_AGE; }
   }
   scene.missiles = scene.missiles.filter(m => m.age < DEAD_AGE);
 }
@@ -189,7 +191,7 @@ function updateWellShots(scene, dt) {
     if (distXY(w.x, w.y, w.tx, w.ty) < WELL_LAND_DIST || w.age > WELL_SHOT_MAX_AGE) {
       const near = scene.wells.find(o => distXY(o.x, o.y, w.x, w.y) < o.r * WELL_REFRESH_FRAC);
       if (near) { near.age = 0; near.life = Math.max(near.life, w.well.life); scene.fx.ripple(near.x, near.y, w.color, near.r * 0.5, near.r); }
-      else { scene.wells.push({ x: w.x, y: w.y, age: 0, spin: 0, ...w.well }); scene.fx.ripple(w.x, w.y, w.color, 10, w.well.r); }
+      else { const well = { x: w.x, y: w.y, age: 0, spin: 0, ...w.well }; scene.wells.push(well); scene.fx.ripple(w.x, w.y, w.color, 10, w.well.r); onWellLand(scene, well); }
       w.age = DEAD_AGE;
     }
   }

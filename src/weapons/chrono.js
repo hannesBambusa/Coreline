@@ -4,6 +4,7 @@
 import { Weapon, formatStats } from './base.js';
 import { COLORS } from '../config.js';
 import { dist } from '../utils.js';
+import { onChronoTick } from '../combos/procs.js';
 
 const TUNING = {
   ticks: 12,            // clock ticks drawn on the field rim
@@ -62,6 +63,7 @@ export class ChronoField extends Weapon {
     for (const b of sc.enemyBullets) b.chrono = dist(t, b) <= R ? ratio : 1;
     // your bullets bank time inside the field; the hit multiplier is applied in projectiles.js
     for (const b of sc.bullets) if (dist(t, b) <= R) b.chronoT = (b.chronoT || 0) + dt;
+    if (inside) onChronoTick(this, dt);
     if (this.canRewind && inside) {
       this.rewindCd -= dt * this.effectiveRateMul;
       if (this.rewindCd <= 0) { this.rewind(mobs); this.rewindCd = this.def.rewindEvery; }

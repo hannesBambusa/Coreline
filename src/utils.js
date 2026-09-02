@@ -41,6 +41,23 @@ export function nearest(list, x, y, maxDist = Infinity, filter = null) {
 /** geometric scaling used for costs and threat growth: base * growth^steps */
 export const scaleBy = (base, growth, steps) => base * Math.pow(growth, steps);
 
+/**
+ * Per-second history buckets: one [second, total] entry per second of run time, appended in order.
+ * Beams and auras add every frame, so per-event entries would run into the hundreds of thousands.
+ */
+export function pushBucket(log, sec, value) {
+  const last = log[log.length - 1];
+  if (last && last[0] === sec) last[1] += value; else log.push([sec, value]);
+}
+
+/** Drop buckets older than windowSec, then total what is left. */
+export function sumWindow(log, now, windowSec) {
+  while (log.length && log[0][0] < now - windowSec) log.shift();
+  let sum = 0;
+  for (const e of log) sum += e[1];
+  return sum;
+}
+
 /** clamp helper */
 export const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 

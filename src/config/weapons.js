@@ -92,7 +92,7 @@ export const WEAPONS = {
     name: 'Singularity core', install: 1200,
     desc: 'Charges from the scrap your kills bring in, then detonates once: every ship in range loses a share of its max HP (bosses capped) and every enemy shot is erased. From Lv 8 the blast leaves a 5 s afterglow where all your hits crit. Feed it with killing weapons.',
     dmg: 0.18, pctMax: 0.55, bossPct: 0.06, rate: 1, range: 400, need: 900, trickle: 10, afterglowAt: 8, afterglowDur: 4,
-    // `need` is in threat-1 scrap: it grows with SPAWN.scrapGrowth per threat level so a charge stays a fixed number of kills
+    // `need` is in threat-1 scrap: it grows with SPAWN.scrapGrowth per threat level, and with the flat scrap multipliers, so a charge stays a fixed number of kills
     support: true,   // cannot be the starting weapon: it only charges from kills made by other slots
     dmgMul: 1.05, rateMul: 1.06,
     cost: 180, costGrowth: 1.44,

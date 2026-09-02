@@ -1,4 +1,5 @@
 import { Weapon, formatStats } from './base.js';
+import { onPulseShot } from '../combos/procs.js';
 import { COLORS } from '../config.js';
 import { dist, angleTo } from '../utils.js';
 
@@ -47,6 +48,7 @@ export class PulseCannon extends Weapon {
     }
     this.scene.fx.flash(m.x, m.y, this.color, TUNING.flashBase + TUNING.flashPerBarrel * n);
     this.charged = Math.max(0, this.charged - (1 / this.rate));
+    onPulseShot(this, target, this.scene.mobs);
     const hasTesla = this.tower.weapons.some(w => w.type === 'tesla');
     if (hasTesla && !this.charged && this.scene.combos.roll('charged')) this.charged = TUNING.chargedDur;
     if (this.scene.combos.roll('barrage')) {

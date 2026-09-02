@@ -4,6 +4,7 @@
 import { Weapon, formatStats } from './base.js';
 import { COLORS, SPAWN } from '../config.js';
 import { dist } from '../utils.js';
+import { onSingularityBlast } from '../combos/procs.js';
 
 const TUNING = {
   bossTypes: ['boss', 'warlord', 'titan', 'warden'],
@@ -25,9 +26,13 @@ export class SingularityCore extends Weapon {
   /** percent of max hp removed by a blast */
   get pct() { return Math.min(this.def.pctMax, this.def.dmg * this.dmgGrowth(this.level) * this.mods.dmg * this.wm.dmg * this.lm.dmg * this.lw.dmg); }
   pctAt(level) { return Math.min(this.def.pctMax, this.def.dmg * this.dmgGrowth(level) * this.mods.dmg * this.wm.dmg); }
-  /** scrap needed for a full charge; falls with level via rate */
-  /** scrap per kill grows with threat, so the charge cost grows the same way (and with the difficulty's scrap multiplier) */
-  get needBase() { return this.def.need * Math.pow(SPAWN.scrapGrowth, this.scene.tier - 1) * this.scene.diff.scrap * this.scene.tree.mods.scrap; }
+  /**
+   * Scrap needed for a full charge; falls with level via rate. Scrap per kill grows with threat, so the cost grows the
+   * same way, and it tracks every flat scrap multiplier (difficulty, Salvage drones, the level choice) so a charge stays
+   * roughly the same number of kills. Per-type bonuses (swarm, elite, hunted type) are not in here: those still charge
+   * the core faster, which is the point of pairing them with it.
+   */
+  get needBase() { return this.def.need * Math.pow(SPAWN.scrapGrowth, this.scene.tier - 1) * this.scene.diff.scrap * this.scene.tree.mods.scrap * this.lm.scrap; }
   get need() { return this.needBase / (this.rateGrowth(this.level) * this.mods.rate * this.wm.rate * this.lm.rate * this.lw.rate); }
   needAt(level) { return this.needBase / (this.rateGrowth(level) * this.mods.rate * this.wm.rate); }
   get hasAfterglow() { return this.level >= this.def.afterglowAt; }
@@ -71,6 +76,7 @@ export class SingularityCore extends Weapon {
     sc.fx.shake(0.006, 300);
     sc.sfx.play('singularity', null, t.x);
     this.eventHorizon(); this.supernova(mobs);
+    onSingularityBlast(this, mobs);
   }
   // Event horizon: the blast collapses into a tower-sized well
   eventHorizon() {

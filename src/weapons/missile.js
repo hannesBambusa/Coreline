@@ -1,6 +1,7 @@
 import { Weapon } from './base.js';
 import { COLORS } from '../config.js';
 import { dist, maxBy } from '../utils.js';
+import { onMissileLaunch } from '../combos/procs.js';
 
 const TUNING = {
   launchSpeedMul: 0.5,   // missiles leave the tube at half speed and accelerate to def.speed
@@ -22,11 +23,13 @@ export class MissilePod extends Weapon {
     const m = this.muzzle(), sc = this.scene;
     const a = this.angle + (Math.random() - 0.5) * TUNING.scatter;
     const v0 = this.def.speed * TUNING.launchSpeedMul;
-    sc.spawnMissile({
+    const missile = {
       x: m.x, y: m.y, vx: Math.cos(a) * v0, vy: Math.sin(a) * v0,
       speed: this.def.speed, turn: this.def.turn, dmg: this.dmg, weapon: this, splash: this.def.splash * this.wm.splash * (this.lm.missileSplash || 1),
       color: this.color, life: TUNING.life, target,
-    });
+    };
+    onMissileLaunch(this, missile);
+    sc.spawnMissile(missile);
     sc.fx.flash(m.x, m.y, this.color, TUNING.flash);
     const bay = this.tower.weapons.find(w => w.type === 'drones');
     if (bay && bay.drones.some(d => d.alive && d.target && !d.target.dead) && sc.combos.roll('escort')) {

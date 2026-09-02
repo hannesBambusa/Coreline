@@ -1,6 +1,7 @@
 import { Weapon, formatStats } from './base.js';
 import { CRIT, COLORS } from '../config.js';
 import { dist, angleTo, maxBy, TAU } from '../utils.js';
+import { onLaserTick } from '../combos/procs.js';
 
 const TUNING = {
   overloadMul: 2.5,        // ramp multiplier while the Overload combo (railgun hit on the laser target) is active
@@ -26,6 +27,7 @@ export class LaserBeam extends Weapon {
     this.flare = 0;             // seconds left of the crit flare
     this.critTimer = 0;
     this.ramp = 1;              // current damage multiplier, read by the scene for the hum
+    this.lensT = 0; this.lensWell = null;   // Lensing combo
   }
   get dps() { return this.dmg; }
   get rampTime() { return this.def.rampTime * (this.lm.laserRamp || 1); }
@@ -65,6 +67,7 @@ export class LaserBeam extends Weapon {
     const ramp = (1 + (rampMax - 1) * Math.min(1, this.held / this.rampTime)) * (this.overload > 0 ? TUNING.overloadMul : 1);
     this.ramp = ramp;
     this.beamDamage(this.target, this.dmgVs(this.target) * ramp * dt * this.effectiveRateMul);
+    onLaserTick(this, dt, mobs);
     // Target paint: drones pile on the laser target
     const bay = tw.weapons.find(w => w.type === 'drones');
     if (bay && !this.target.marked && sc.combos.roll('paint')) {
@@ -136,6 +139,7 @@ export class LaserBeam extends Weapon {
     }
     if (!this.target || this.target.dead) return;
     const m = this.muzzle(10), t = this.target;
+    if (this.lensT > 0 && this.lensWell) { g.lineStyle(2, this.color, 0.35); g.strokeCircle(this.lensWell.x, this.lensWell.y, this.lensWell.r); }
     for (const o of this.forkTargets) {
       if (o.dead) continue;
       g.lineStyle(4, this.color, 0.15); g.lineBetween(t.x, t.y, o.x, o.y);

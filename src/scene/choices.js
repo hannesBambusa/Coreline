@@ -5,7 +5,7 @@ import { ICONS_CHOICE } from './icons.js';
 import { pickType } from './spawner.js';
 
 const PARADE_BURST = [10, 20];   // elites spawned the moment Elite parade lands
-const STORM = { total: [200, 280], groups: 12, gapMs: 350 };   // Swarm storm opener: this many swarm ships over groups × gap
+const STORM = { total: [200, 280], groups: 12, gapMs: 350, lanes: 3 };   // Swarm storm opener: this many swarm ships over groups × gap, from lanes directions
 
 const CHOICE_COLOR = 0xffd166;
 
@@ -64,13 +64,17 @@ function paradeBurst(scene) {
 
 /** Swarm storm opener: hundreds of swarm ships pour in from a few directions over a couple of seconds. */
 function swarmStorm(scene) {
-  const total = Phaser.Math.Between(STORM.total[0], STORM.total[1]), per = Math.ceil(total / STORM.groups);
-  const lanes = [0, 1, 2].map(() => Math.random() * Math.PI * 2);
+  const total = Phaser.Math.Between(STORM.total[0], STORM.total[1]);
+  const lanes = Array.from({ length: STORM.lanes }, () => Math.random() * Math.PI * 2);
   for (let g = 0; g < STORM.groups; g++) {
+    // spread the remainder over the groups so the storm delivers exactly the number the banner promises
+    const per = Math.floor((total * (g + 1)) / STORM.groups) - Math.floor((total * g) / STORM.groups);
     scene.time.delayedCall(g * STORM.gapMs, () => {
       if (scene.gameOver) return;
       const lane = lanes[g % lanes.length];
-      for (let i = 0; i < per; i++) scene.spawnMob('swarm', lane + (Math.random() - 0.5) * 0.6);
+      // the storm respects the same alive cap as normal spawning: it is a blowout card, not a way past the cap
+      const cap = SPAWN.softCap * scene.diff.cap * scene.levelMods.cap;
+      for (let i = 0; i < per && scene.mobs.length < cap; i++) scene.spawnMob('swarm', lane + (Math.random() - 0.5) * 0.6);
     });
   }
   scene.ui.banner(`Swarm storm · ${total} swarm inbound`, true);

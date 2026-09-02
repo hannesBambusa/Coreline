@@ -114,15 +114,10 @@ export class Combos {
     return true;
   }
 
+  /** A proc shows only in the effect tray on the left (plus a small flash on the two hardpoints): no ring, tint or slow-mo. */
   announce(c) {
     const s = this.scene, t = s.tower;
-    const hex = '#' + c.color.toString(16).padStart(6, '0');
-    s.fx.flash(t.x, t.y, c.color, 3);
-    s.fx.ripple(t.x, t.y, c.color, t.shieldR, t.maxRange());
-    s.fx.ripple(t.x, t.y, 0xffffff, t.shieldR, t.maxRange() * 0.6);
-    s.flashScreen(0.22, c.color);
-    s.slowMo(0.35, 0.45);
-    s.fx.shake(0.004, 160);
+    for (const type of c.pair) { const w = t.weapons.find(x => x.type === type); if (w) { const m = w.mount(); s.fx.flash(m.x, m.y, w.color, 1.2); } }
     s.ui.addEffect('combo:' + (c.id || c.name), {
       name: c.name, color: c.color, dur: c.effectDur || 2.5,
       sub: c.effectDur ? 'active' : 'combo proc',

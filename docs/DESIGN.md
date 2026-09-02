@@ -352,3 +352,5 @@ The idle ambient drone (55 Hz sawtooth pad plus wind noise, started on first int
 ## Combos, second wave (`src/combos/procs.js`)
 
 Twenty more pair combos so every pair of the original eight weapons has one, plus six for the new three. Weapons call a hook on their event (`onPulseShot`, `onRailShot`, `onMissileLaunch`, `onMissileImpact`, `onTeslaShot`/`onTeslaChain`, `onShockPulse`, `onLaserTick`, `onWellLand`, `onChronoTick`, `onNaniteShot`, `onSingularityBlast`); the hook rolls the combos for whatever else is mounted. Sabot volley, Orbital rounds, Flak burst, Gun run, Slingshot, Spotter, Ion warheads, Guided burn, Concussion, Conductor, Lensing, Flashpoint, Relay net, Orbit strike, Time dilation, Static field, Carrier strain, Spore warheads, Accretion, Collapsar rounds. Total 39 pair combos. Descriptions in `COMBOS`.
+
+Combo procs no longer draw the expanding ring, screen tint, shake or slow-mo (it read as a second shockwave next to the Shock emitter). A proc now shows as the tray card on the left plus a small flash on the two hardpoints involved.

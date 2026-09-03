@@ -3,6 +3,12 @@
 // Newest save wins, by the `savedAt` stamp save.js puts in every save.
 import { CLOUD } from './config/cloud.js';
 import { SAVE_KEY } from './save.js';
+import { askConfirm } from './ui/dom.js';
+
+/** how much a save is worth: a fresh profile scores ~0, so it can never overwrite real progress */
+const progress = (d) => d && d.profile ? (d.profile.prestige || 0) * 1000 + (d.profile.fragments || 0) + Object.keys(d.profile.tree || {}).length * 10 + (d.profile.totalKills || 0) / 100 + (d.profile.bestTime || 0) / 60 : 0;
+const FRESH = 20;   // below this a save counts as a fresh profile
+const describe = (d) => d && d.profile ? `prestige ${d.profile.prestige || 0}, ${d.profile.fragments || 0} fragments, ${Object.keys(d.profile.tree || {}).length} skills, saved ${d.savedAt ? new Date(d.savedAt).toLocaleString() : 'unknown'}` : 'nothing';
 
 const isConfigured = () => !!(CLOUD.url && CLOUD.anonKey);
 
@@ -41,6 +47,14 @@ export class Cloud {
       const { data } = await this.client.auth.getSession();   // implicit flow: the client reads #access_token here, so clean the URL only after
       if (params.get('code') || oauthError || hash.get('access_token')) history.replaceState(null, '', location.pathname);
       if (!data.session && hash.get('access_token')) this.loginError = this.diagnoseLostSession(hash.get('access_token'));
+      // came back from Google / Supabase with nothing in the URL at all: the redirect went somewhere that dropped it
+      let pending = false;
+      try { pending = sessionStorage.getItem('coreline-oauth') === '1'; sessionStorage.removeItem('coreline-oauth'); } catch (e) { /* storage blocked */ }
+      const fromAuth = pending || /supabase\.co|accounts\.google\.com/.test(document.referrer);
+      if (!data.session && !this.loginError && fromAuth && !params.get('code') && !hash.get('access_token')) {
+        this.loginError = `returned to ${location.origin + location.pathname} without a token. The Supabase redirect URL must be exactly this address (check the trailing slash), and the Site URL must be on the same origin.`;
+        console.error('Coreline cloud: redirect came back without tokens', { referrer: document.referrer, href: location.href });
+      }
       this.setUser(data.session ? data.session.user : null, false);
       this.client.auth.onAuthStateChange((_ev, session) => this.setUser(session ? session.user : null, true));
     } catch (e) {
@@ -74,10 +88,12 @@ export class Cloud {
 
   // ---- auth ----
   async signUp(email, password) { return this.report(await this.client.auth.signUp({ email, password }), 'Check your email to confirm, then sign in'); }
-  async signIn(email, password) { return this.report(await this.client.auth.signInWithPassword({ email, password }), 'Signed in'); }
+  async signIn(email, password) { this.loginError = null; return this.report(await this.client.auth.signInWithPassword({ email, password }), 'Signed in'); }
   async magicLink(email) { return this.report(await this.client.auth.signInWithOtp({ email, options: { emailRedirectTo: location.href.split('#')[0] } }), 'Magic link sent, check your email'); }
   /** Google via Supabase OAuth: leaves the page and comes back with a session */
   async signInGoogle() {
+    this.loginError = null;
+    try { sessionStorage.setItem('coreline-oauth', '1'); } catch (e) { /* storage blocked: the return trip will say so */ }
     // redirect back to this exact page; it must be on the Supabase redirect allow list (see docs/DESIGN.md)
     const { error } = await this.client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
     return error ? 'Error: ' + error.message : 'Opening Google…';
@@ -112,15 +128,26 @@ export class Cloud {
     if (error) console.error('Coreline cloud: push failed', error);
     else this.scene.saves.toast(null, 'cloud');
   }
-  /** on login: take whichever save is newer, then make sure the cloud has it */
+  /**
+   * On login, decide which save to keep. A fresh profile never overwrites real progress in either direction; when
+   * both sides have real progress and differ, the player picks. Only then does the cloud get written.
+   */
   async pullThenPush() {
     const { data, error } = await this.client.from(CLOUD.table).select('data').eq('user_id', this.user.id).maybeSingle();
     if (error) { console.error('Coreline cloud: pull failed', error); return; }
     const local = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
     const remote = data && data.data;
-    const lt = local && local.savedAt || 0, rt = remote && remote.savedAt || 0;
-    if (remote && rt > lt) {
-      // the cloud is newer: install it and restart the page on it
+    const lp = progress(local), rp = progress(remote);
+    let useCloud;
+    if (!remote || rp < FRESH) useCloud = false;                 // nothing real in the cloud: keep this device
+    else if (!local || lp < FRESH) useCloud = true;               // this device is fresh: take the cloud
+    else if (JSON.stringify(local.profile) === JSON.stringify(remote.profile)) useCloud = (remote.savedAt || 0) > (local.savedAt || 0);   // same profile, newer run wins
+    else {
+      useCloud = await askConfirm('Which save do you want to keep?',
+        `Cloud: ${describe(remote)}.\nThis device: ${describe(local)}.\nThe other one is replaced.`,
+        { okLabel: 'Use cloud save', cancelLabel: 'Keep this device', danger: false });
+    }
+    if (useCloud) {
       this.scene.saves.suspend = true;
       localStorage.setItem(SAVE_KEY, JSON.stringify(remote));
       this.scene.ui.banner('Cloud save loaded', false);

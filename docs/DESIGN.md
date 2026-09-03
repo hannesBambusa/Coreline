@@ -405,3 +405,5 @@ Railgun retuned as a slow cannon: 150 damage every 2.5 s (was 85 at 0.6/s), dama
 Login gate: with the cloud configured, the start screen is preceded by a sign-in screen (`#login`, email/password, magic link, Google) and `beginRun` refuses until signed in. Cloud unreachable (SDK or project down) shows a "play offline this time" link. Signing out mid-run does not interrupt the run; the gate returns at the next start screen.
 
 OAuth return: `cloud.init` finishes a PKCE `?code=` exchange itself, shows `?error_description=` from Supabase on the login screen, and cleans the URL. The redirect target is `origin + pathname`, so Supabase → Authentication → URL Configuration must allow `https://hannesbambusa.github.io/Coreline/**` and `http://localhost:8765/**` (the `**` wildcard covers `index.html` and `/`).
+
+Cloud conflict rule (after a fresh PC profile overwrote the real save): a save scores by prestige, fragments, skills, kills and best time; a fresh profile (score < 20) never replaces real progress in either direction. Same profile on both sides: the newer run wins. Different real progress on both sides: the player chooses in a dialog (cloud or this device).

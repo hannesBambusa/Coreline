@@ -91,7 +91,7 @@ export class UI {
     $('#account-out').hidden = c.status === 'in';
     $('#account-in').hidden = c.status !== 'in';
     $('#acc-who').textContent = who ? `Signed in as ${who}` : '';
-    if (c.loginError) { $('#acc-msg').textContent = 'Sign-in failed: ' + c.loginError; c.loginError = null; }
+    if (c.loginError && c.status !== 'in') $('#acc-msg').textContent = 'Sign-in failed: ' + c.loginError;   // sticky until the next sign-in attempt
     else if (c.status === 'loading') $('#acc-msg').textContent = 'Connecting…';
     else if (c.status === 'error') $('#acc-msg').textContent = 'Cloud unavailable right now, playing locally';
     else if (c.status === 'out') $('#acc-msg').textContent = 'Sign in to keep your progress across devices';

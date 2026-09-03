@@ -1,0 +1,17 @@
+{
+  "fragments": 163,
+  "bestTime": 2086,
+  "totalKills": 40000,
+  "prestige": 22,
+  "bestTiers": { "normal": 53, "hard": 53, "brutal": 53 },
+  "seenIntro": true,
+  "tree": {
+    "dmg": 4, "rate": 2, "crit": 2, "critMul": 1, "abilityCd": 1,
+    "shieldMax": 5, "regen": 2, "hull": 1, "hullRegen": 1,
+    "scrap": 7, "start": 3, "offRate": 1,
+    "u_railgun": 1, "u_missile": 1, "u_tesla": 1, "u_laser": 1, "u_gravity": 1, "u_shock": 1, "u_drones": 1,
+    "u_chrono": 1, "u_nanite": 1, "u_singularity": 1, "u_beamdrones": 1, "u_ionstorm": 1, "u_missiledrones": 1, "u_kamikaze": 1, "u_mirrors": 1,
+    "m_rail": 4, "m_gravity": 1, "m_laser": 1, "m_tesla": 4, "m_missile": 1, "m_pulse": 5, "m_drones": 2, "m_shock": 4,
+    "combo": 2, "swaps": 9
+  }
+}

@@ -14,3 +14,30 @@ create policy "own save: read"   on public.saves for select using (auth.uid() = 
 create policy "own save: insert" on public.saves for insert with check (auth.uid() = user_id);
 create policy "own save: update" on public.saves for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
 create policy "own save: delete" on public.saves for delete using (auth.uid() = user_id);
+
+-- ---- save history: every overwrite keeps the previous version (last 20 per player) ----
+-- Run this block too (safe to re-run). Restores are done from the admin panel.
+create table if not exists public.save_history (
+  id       bigserial primary key,
+  user_id  uuid not null references auth.users (id) on delete cascade,
+  data     jsonb not null,
+  saved_at timestamptz not null default now()
+);
+create index if not exists save_history_user on public.save_history (user_id, id desc);
+
+create or replace function public.saves_keep_history() returns trigger
+language plpgsql security definer as $$
+begin
+  insert into public.save_history (user_id, data) values (old.user_id, old.data);
+  delete from public.save_history
+    where user_id = old.user_id
+      and id not in (select id from public.save_history where user_id = old.user_id order by id desc limit 20);
+  return new;
+end $$;
+
+drop trigger if exists saves_history on public.saves;
+create trigger saves_history before update on public.saves for each row execute function public.saves_keep_history();
+
+alter table public.save_history enable row level security;
+drop policy if exists "own history: read" on public.save_history;
+create policy "own history: read" on public.save_history for select using (auth.uid() = user_id);

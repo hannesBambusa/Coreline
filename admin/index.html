@@ -34,12 +34,21 @@
   <form method="dialog">
     <h2 id="ed-title"></h2>
     <div class="grid">
-      <label>Fragments <input id="ed-frag" type="number" min="0"></label>
+      <label>Fragments <span class="inline"><input id="ed-frag" type="number" min="0"><button type="button" data-addfrag="10">+10</button><button type="button" data-addfrag="50">+50</button><button type="button" data-addfrag="200">+200</button></span></label>
       <label>Prestige <input id="ed-prestige" type="number" min="0"></label>
-      <label>Difficulty <select id="ed-diff"><option>easy</option><option>normal</option><option>hard</option><option>brutal</option><option>insane</option></select></label>
+      <label>Difficulty (current run) <select id="ed-diff"><option>easy</option><option>normal</option><option>hard</option><option>brutal</option><option>insane</option></select></label>
       <label>Scrap (current run) <input id="ed-scrap" type="number" min="0"></label>
+      <label>Best threat on Normal <input id="ed-bt-normal" type="number" min="0"></label>
+      <label>Best threat on Hard <input id="ed-bt-hard" type="number" min="0"></label>
+      <label>Best threat on Really hard <input id="ed-bt-brutal" type="number" min="0"></label>
+      <label>Best threat on Insane <input id="ed-bt-insane" type="number" min="0"></label>
     </div>
+    <details open><summary>Skills <span id="ed-skill-count" class="muted"></span></summary>
+      <div class="row" style="margin:6px 0 10px"><button type="button" id="ed-unlock-weapons">Unlock all weapons</button><button type="button" id="ed-max-all">Max everything</button><button type="button" id="ed-reset-tree" class="danger">Reset tree</button></div>
+      <div id="ed-skills"></div>
+    </details>
     <details><summary>Raw save JSON</summary><textarea id="ed-json" rows="14" spellcheck="false"></textarea></details>
+    <details open><summary>History (previous versions, newest first)</summary><div id="ed-history" class="muted">…</div></details>
     <div class="row">
       <button value="save" id="ed-save">Save changes</button>
       <button value="export" id="ed-export" type="button">Download JSON</button>

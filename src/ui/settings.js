@@ -1,5 +1,7 @@
 // Settings tab, volume controls, panel resize grip, export / import.
 import { $, askConfirm } from './dom.js';
+import { localBackups, backupLocal } from '../cloud.js';
+import { SAVE_KEY } from '../save.js';
 
 const DEFAULT_VOLUME = 0.7;
 const PANEL_MIN_W = 260;
@@ -32,8 +34,25 @@ export function syncSettings(ui) {
   scene.sfx.setVolume(volume(st));
 }
 
+/** list of local backups with restore buttons (Settings → Save) */
+export function renderBackups(ui) {
+  const el = $('#backups'); if (!el) return;
+  const list = localBackups();
+  el.innerHTML = list.length ? list.map((b, i) => `<div class="row" style="justify-content:space-between;align-items:center;margin:4px 0"><span class="muted">${new Date(b.at).toLocaleString()} · ${b.reason} · prestige ${b.data.profile?.prestige || 0}, ${b.data.profile?.fragments || 0} fragments</span><button class="buy" data-restore="${i}">Restore</button></div>`).join('') : '<div class="muted">No backups yet.</div>';
+  for (const b of el.querySelectorAll('[data-restore]')) b.onclick = async () => {
+    const bk = list[+b.dataset.restore];
+    if (!await askConfirm('Restore this backup?', 'The current save on this device is backed up first, then the page reloads on the restored one. The cloud gets it on the next sync.', { okLabel: 'Restore', danger: false })) return;
+    ui.scene.saves.suspend = true;
+    backupLocal('before restore');
+    const data = bk.data; data.savedAt = Date.now();
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    location.reload();
+  };
+}
+
 export function initSettings(ui) {
   const scene = ui.scene;
+  renderBackups(ui);
   $('#opt-shake').onchange = (e) => { scene.settings.shake = e.target.checked; };
   $('#opt-sound').onchange = (e) => { scene.settings.sound = e.target.checked; scene.sfx.setEnabled(e.target.checked); };
   const setVol = (v) => {

@@ -8,6 +8,18 @@ import { askConfirm } from './ui/dom.js';
 /** how much a save is worth: a fresh profile scores ~0, so it can never overwrite real progress */
 const progress = (d) => d && d.profile ? (d.profile.prestige || 0) * 1000 + (d.profile.fragments || 0) + Object.keys(d.profile.tree || {}).length * 10 + (d.profile.totalKills || 0) / 100 + (d.profile.bestTime || 0) / 60 : 0;
 const FRESH = 20;   // below this a save counts as a fresh profile
+const BACKUP_KEY = 'core-defence-backup';   // the local save is copied here before a cloud save replaces it (last 3)
+
+/** keep the previous local save before it is replaced, so nothing is ever lost without a copy */
+export function backupLocal(reason) {
+  const raw = localStorage.getItem(SAVE_KEY); if (!raw) return;
+  try {
+    const list = JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]');
+    list.unshift({ at: Date.now(), reason, data: JSON.parse(raw) });
+    localStorage.setItem(BACKUP_KEY, JSON.stringify(list.slice(0, 3)));
+  } catch (e) { console.warn('Coreline: could not write the local backup', e); }
+}
+export function localBackups() { try { return JSON.parse(localStorage.getItem(BACKUP_KEY) || '[]'); } catch (e) { return []; } }
 const describe = (d) => d && d.profile ? `prestige ${d.profile.prestige || 0}, ${d.profile.fragments || 0} fragments, ${Object.keys(d.profile.tree || {}).length} skills, saved ${d.savedAt ? new Date(d.savedAt).toLocaleString() : 'unknown'}` : 'nothing';
 
 const isConfigured = () => !!(CLOUD.url && CLOUD.anonKey);
@@ -34,7 +46,9 @@ export class Cloud {
         if (window.supabase) return ok();
         const s = document.createElement('script'); s.src = CLOUD.sdk; s.onload = ok; s.onerror = () => fail(new Error('sdk')); document.head.appendChild(s);
       });
-      this.client = window.supabase.createClient(CLOUD.url, CLOUD.anonKey);
+      // pkce: Google comes back with ?code= (query survives every redirect) instead of a #access_token hash, which
+      // some browsers / extensions strip. The exchange below turns the code into a stored session.
+      this.client = window.supabase.createClient(CLOUD.url, CLOUD.anonKey, { auth: { flowType: 'pkce', detectSessionInUrl: false } });
       // coming back from Google / a magic link: Supabase puts either ?code= (PKCE) or #access_token= (implicit) or
       // ?error= in the URL. Finish the exchange here, surface errors, then clean the address bar.
       const params = new URLSearchParams(location.search), hash = new URLSearchParams(location.hash.slice(1));
@@ -44,9 +58,12 @@ export class Cloud {
         const { error } = await this.client.auth.exchangeCodeForSession(params.get('code'));
         if (error) { this.loginError = error.message; console.error('Coreline cloud: code exchange failed', error); }
       }
-      const { data } = await this.client.auth.getSession();   // implicit flow: the client reads #access_token here, so clean the URL only after
+      // the SDK reads #access_token during initialize(); it keeps that error to itself unless asked
+      const init = await this.client.auth.initialize();
+      if (init && init.error) console.error('Coreline cloud: SDK initialize failed', init.error);
+      const { data } = await this.client.auth.getSession();   // clean the URL only after the client has read it
       if (params.get('code') || oauthError || hash.get('access_token')) history.replaceState(null, '', location.pathname);
-      if (!data.session && hash.get('access_token')) this.loginError = this.diagnoseLostSession(hash.get('access_token'));
+      if (!data.session && hash.get('access_token')) this.loginError = this.diagnoseLostSession(hash.get('access_token'), init && init.error, hash);
       // came back from Google / Supabase with nothing in the URL at all: the redirect went somewhere that dropped it
       let pending = false;
       try { pending = sessionStorage.getItem('coreline-oauth') === '1'; sessionStorage.removeItem('coreline-oauth'); } catch (e) { /* storage blocked */ }
@@ -64,16 +81,20 @@ export class Cloud {
   }
 
   /** Google sent tokens back but no session got stored: say why, from what we can measure here */
-  diagnoseLostSession(token) {
+  diagnoseLostSession(token, sdkError, hash) {
     let storage = true;
     try { localStorage.setItem('core-defence-probe', '1'); localStorage.removeItem('core-defence-probe'); } catch (e) { storage = false; }
     let skew = null;
     try { const p = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); skew = Math.round(Date.now() / 1000 - p.iat); } catch (e) { /* not a JWT */ }
+    // the SDK refuses the hash when any of these is missing (a proxy / extension / redirect can strip them)
+    const missing = ['refresh_token', 'expires_in', 'token_type'].filter(k => !hash.get(k));
     let why;
     if (!storage) why = 'this browser blocks site storage, so the session cannot be kept. Allow cookies / site data for this site (and check it is not a private window).';
     else if (skew !== null && Math.abs(skew) > 60) why = `this computer's clock is ${Math.abs(skew)} s ${skew < 0 ? 'behind' : 'ahead of'} real time, so the login token is rejected. Set the clock to sync automatically and retry.`;
+    else if (sdkError) why = `the login library rejected it: "${sdkError.message}". Try another browser or disable extensions on this site.`;
+    else if (missing.length) why = `the returned token is incomplete (missing ${missing.join(', ')}). Something between Supabase and this page is rewriting the URL: try another browser or disable extensions.`;
     else why = 'the session was not stored (unknown reason). Try a hard reload, or another browser.';
-    console.error('Coreline cloud: session from URL was not stored', { storage, skewSeconds: skew });
+    console.error('Coreline cloud: session from URL was not stored', { storage, skewSeconds: skew, sdkError, hashKeys: [...hash.keys()] });
     return 'Google signed you in, but ' + why;
   }
 
@@ -123,10 +144,17 @@ export class Cloud {
     if (this.status !== 'in') return;
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return;
+    const data = JSON.parse(raw), lp = progress(data);
+    // never quietly replace real cloud progress with a far poorer save (a wiped device, a stale tab): keep the cloud, tell the player
+    if ((this.remoteProgress || 0) >= FRESH && lp < (this.remoteProgress || 0) * 0.5) {
+      console.warn('Coreline cloud: push refused, this device has far less progress than the cloud', { local: lp, cloud: this.remoteProgress });
+      this.scene.saves.toast('Cloud kept · this device has less progress');
+      return;
+    }
     this.lastPushed = Date.now();
-    const { error } = await this.client.from(CLOUD.table).upsert({ user_id: this.user.id, data: JSON.parse(raw), updated_at: new Date().toISOString() });
+    const { error } = await this.client.from(CLOUD.table).upsert({ user_id: this.user.id, data, updated_at: new Date().toISOString() });
     if (error) console.error('Coreline cloud: push failed', error);
-    else this.scene.saves.toast(null, 'cloud');
+    else { this.remoteProgress = lp; this.scene.saves.toast(null, 'cloud'); }
   }
   /**
    * On login, decide which save to keep. A fresh profile never overwrites real progress in either direction; when
@@ -138,6 +166,7 @@ export class Cloud {
     const local = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
     const remote = data && data.data;
     const lp = progress(local), rp = progress(remote);
+    this.remoteProgress = rp;
     let useCloud;
     if (!remote || rp < FRESH) useCloud = false;                 // nothing real in the cloud: keep this device
     else if (!local || lp < FRESH) useCloud = true;               // this device is fresh: take the cloud
@@ -149,6 +178,7 @@ export class Cloud {
     }
     if (useCloud) {
       this.scene.saves.suspend = true;
+      backupLocal('replaced by cloud save');
       localStorage.setItem(SAVE_KEY, JSON.stringify(remote));
       this.scene.ui.banner('Cloud save loaded', false);
       setTimeout(() => location.reload(), 600);

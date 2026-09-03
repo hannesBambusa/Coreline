@@ -28,3 +28,11 @@ dialog h2 { margin: 0 0 12px; font-size: 16px; color: var(--cyan); }
 textarea { width: 100%; font: 12px/1.35 ui-monospace, monospace; margin-top: 8px; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 code { background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 4px; font-family: ui-monospace, monospace; }
+label .inline { display: flex; gap: 4px; align-items: center; } label .inline input { width: 90px; }
+label .inline button { padding: 4px 8px; font-size: 12px; }
+.skills-branch { margin: 8px 0 4px; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; }
+.skill { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.skill .sk-name b { color: var(--text); } .skill .sk-name span { color: var(--muted); font-size: 12px; margin-left: 6px; }
+.skill .sk-ctl { display: flex; align-items: center; gap: 6px; } .skill .sk-ctl button { width: 28px; padding: 3px 0; } .skill .sk-lvl { min-width: 46px; text-align: center; font-variant-numeric: tabular-nums; }
+.skill.maxed .sk-lvl { color: var(--gold); } .skill.zero .sk-lvl { color: var(--muted); }
+.hist { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--text); }

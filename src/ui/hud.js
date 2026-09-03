@@ -1,6 +1,6 @@
 // Always-visible HUD: top bar numbers and core bars, threat timer, boss bar, banners,
 // the ability bar, the auto-buy queue and the loadout card.
-import { WEAPONS, ABILITIES, SPAWN, SLOT_COSTS } from '../config.js';
+import { WEAPONS, ABILITIES, SPAWN, SLOT_COSTS, TOWER_UPGRADES } from '../config.js';
 import { ICONS } from '../icons.js';
 import { QUADS } from '../combos/quad.js';
 import { bindTips, weaponTip } from './effects.js';
@@ -178,6 +178,8 @@ export function abilityClick(ui, k) {
 // ---- Auto-buy queue ------------------------------------------------------
 
 /** Vertical queue shown on the right when the panel is collapsed and auto-buy is on. */
+const CORE_WHAT = { shieldMax: 'Shield capacity: how much the shield can soak before shots reach the hull. It refills on its own.', shieldRegen: 'Shield regen: how fast the shield refills each second, slower while under fire.', hull: 'Hull plating: the core\'s own hit points once the shield is down. Hull at zero ends the run; hull never regenerates.' };
+
 /** Right side while the panel is hidden: the mounted weapons with their levels, then every available combo as its icon pair. */
 export function renderLoadout(ui) {
   const el = $('#loadout'), scene = ui.scene, t = scene.tower, scrap = scene.state.scrap;
@@ -186,14 +188,19 @@ export function renderLoadout(ui) {
   if (!show) { ui.loPick = null; return; }
   const strip = (html) => html.replace(/<[^>]+>/g, '');
   if (ui.loPick !== null && ui.loPick !== undefined && t.slots[ui.loPick] !== null) ui.loPick = null;   // slot got filled
+  if (ui.loSwap !== null && ui.loSwap !== undefined && (!t.slots[ui.loSwap] || t.slots[ui.loSwap].type !== ui.loSwapType)) ui.loSwap = null;   // swapped (or slot gone): close
+  const swapping = ui.loSwap !== null && ui.loSwap !== undefined;
+  const swapsLeft = scene.swapsLeft();
   // one tile per hardpoint: mounted weapon (click = upgrade), empty (click = pick a weapon), then the next locked one
   let weapons = t.slots.map((w, i) => {
     if (w) {
       const cost = w.upgradeCost(), can = !w.atCap && scrap >= cost;
       const tip = w.def.name + '\nLv ' + w.level + ' · ' + strip(w.statLine()) + '\n' + (w.atCap ? 'max level' : (can ? 'click: upgrade · ' : 'upgrade ') + fmt(cost) + ' scrap');
-      return `<div class="lo-w ${w.jammed > 0 ? 'jam' : ''} ${can ? 'can up' : ''}" style="--lc:${hex(w.color)}" ${can ? `data-buy="weapon:${i}"` : ''} data-tip="${attrQuote(tip)}">${ICONS[w.type]}<span class="lv">${w.level}</span></div>`;
+      const swapTip = swapsLeft > 0 ? `Swap this weapon\nPick a replacement below · it starts at Lv 1\n${swapsLeft} swap${swapsLeft > 1 ? 's' : ''} left this run` : 'Swap this weapon\nNo swaps left this run';
+      return `<div class="lo-slot"><div class="lo-w ${w.jammed > 0 ? 'jam' : ''} ${can ? 'can up' : ''}" style="--lc:${hex(w.color)}" ${can ? `data-buy="weapon:${i}"` : ''} data-tip="${attrQuote(tip)}">${ICONS[w.type]}<span class="lv">${w.level}</span></div>` +
+        `<button class="lo-swap ${ui.loSwap === i ? 'open' : ''}" data-swap="${i}" ${swapsLeft > 0 ? '' : 'disabled'} data-tip="${attrQuote(swapTip)}">swap</button></div>`;
     }
-    return `<div class="lo-w empty ${ui.loPick === i ? 'open' : ''}" data-pick="${i}" data-tip="${attrQuote(`Hardpoint ${i + 1}\nEmpty · click to choose a weapon`)}">${ICONS.slot}</div>`;
+    return `<div class="lo-slot"><div class="lo-w empty ${ui.loPick === i ? 'open' : ''}" data-pick="${i}" data-tip="${attrQuote(`Hardpoint ${i + 1}\nEmpty · click to choose a weapon`)}">${ICONS.slot}</div></div>`;
   }).join('');
   const slotCost = t.nextSlotCost(), gate = t.nextSlotGate();
   if (slotCost !== null) {
@@ -202,14 +209,17 @@ export function renderLoadout(ui) {
   } else if (gate) {
     weapons += `<div class="lo-w lock gated" data-tip="${attrQuote(`Sealed hardpoint\nSlot ${t.slots.length + 1} of ${SLOT_COSTS.length}\nOpens at threat level ${gate}`)}">${ICONS.slot}<span class="lv">T${gate}</span></div>`;
   }
-  // weapon picker for the open empty slot
-  const pickEl = $('#lo-pick'), pick = ui.loPick;
-  pickEl.hidden = pick === null || pick === undefined;
+  // weapon picker: mount into the open empty slot, or swap the chosen mounted slot
+  const pickEl = $('#lo-pick'), pick = ui.loPick, swapSlot = ui.loSwap;
+  pickEl.hidden = (pick === null || pick === undefined) && !swapping;
   if (!pickEl.hidden) {
+    const cur = swapping ? t.slots[swapSlot] : null;
+    pickEl.querySelector('.aq-title').textContent = swapping ? `Swap ${cur.def.name} for` : 'Mount';
     const html = Object.entries(WEAPONS).filter(([type]) => scene.tree.unlocked(type)).map(([type, d]) => {
       const dup = isMounted(t, type), can = !dup && scrap >= d.install;
-      const why = dup ? 'already mounted' : (can ? 'click: mount · ' : 'need ') + fmt(d.install) + ' scrap';
-      return `<div class="lo-w pick ${can ? 'can' : 'gated'}" style="--lc:${hex(d.color)}" ${can ? `data-buy="install:${pick}:${type}"` : ''} data-tip="${attrQuote(weaponTip(type, why))}">${ICONS[type]}<span class="lv">${d.install ? fmt(d.install) : 'free'}</span></div>`;
+      const why = dup ? 'already mounted' : (can ? (swapping ? 'click: swap in · starts at Lv 1 · ' : 'click: mount · ') : 'need ') + fmt(d.install) + ' scrap';
+      const buy = swapping ? `doswap:${swapSlot}:${type}` : `install:${pick}:${type}`;
+      return `<div class="lo-w pick ${can ? 'can' : 'gated'}" style="--lc:${hex(d.color)}" ${can ? `data-buy="${buy}"` : ''} data-tip="${attrQuote(weaponTip(type, why))}">${ICONS[type]}<span class="lv">${d.install ? fmt(d.install) : 'free'}</span></div>`;
     }).join('');
     swapHtml($('#lo-pick-list'), html, (root) => { bindBuy(root, (id) => ui.buy(id)); bindTips(ui, root); });
   }
@@ -221,8 +231,21 @@ export function renderLoadout(ui) {
   swapHtml($('#lo-weapons'), weapons, (root) => {
     bindBuy(root, (id) => ui.buy(id));
     bindTips(ui, root);
-    for (const b of $$('[data-pick]', root)) b.onclick = () => { ui.loPick = ui.loPick === +b.dataset.pick ? null : +b.dataset.pick; renderLoadout(ui); };
+    // clicking an empty hardpoint opens the weapon picker under the strip; it stays open until that slot is clicked again or a weapon is mounted
+    for (const b of $$('[data-pick]', root)) b.onclick = () => { ui.loPick = ui.loPick === +b.dataset.pick ? null : +b.dataset.pick; ui.loSwap = null; renderLoadout(ui); };
+    // swap button under a mounted weapon: opens the picker in swap mode for that slot; again closes it
+    for (const b of $$('[data-swap]', root)) b.onclick = () => { const i = +b.dataset.swap; if (ui.loSwap === i) ui.loSwap = null; else { ui.loSwap = i; ui.loSwapType = t.slots[i].type; ui.loPick = null; } renderLoadout(ui); };
   });
+  // core upgrades: shield capacity, shield regen, hull, same tile style as the weapons
+  const core = Object.keys(TOWER_UPGRADES).map(key => {
+    const u = TOWER_UPGRADES[key], lvl = t.upgrades[key], cost = t.upgradeCost(key), capped = t.atCap(key), can = !capped && scrap >= cost;
+    const cur = key === 'shieldMax' ? t.shieldMax : key === 'shieldRegen' ? t.shieldRegen : t.hullMax;
+    const fmtU = (v) => key === 'shieldRegen' ? v.toFixed(1) + '/s' : fmt(Math.round(v));
+    const step = t.upgradeBonus(key, lvl + 1) - t.upgradeBonus(key, lvl);
+    const tip = `${u.name}\n${CORE_WHAT[key]}\nLv ${lvl} · now ${fmtU(cur)}\n` + (capped ? 'max level' : `Lv ${lvl + 1}: ${fmtU(cur + step)} (+${fmtU(step)})\n${can ? 'click: upgrade · ' : 'upgrade '}${fmt(cost)} scrap`);
+    return `<div class="lo-w core ${can ? 'can up' : ''} ${capped ? 'gated' : ''}" style="--lc:${key === 'hull' ? '#ff9f43' : '#4ff2ff'}" ${can ? `data-buy="tower:${key}"` : ''} data-tip="${attrQuote(tip)}">${ICONS[key]}<span class="lv">${lvl}</span></div>`;
+  }).join('');
+  swapHtml($('#lo-core'), core, (root) => { bindBuy(root, (id) => ui.buy(id)); bindTips(ui, root); });
   swapHtml($('#lo-combos'), combos || '<span class="muted" style="font-size:12px">none with this loadout</span>', (root) => bindTips(ui, root));
 }
 

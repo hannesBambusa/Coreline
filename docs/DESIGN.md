@@ -432,7 +432,7 @@ Four more ultimates, so every weapon belongs to at least one group: **Pandemic**
 
 Ultimate damage scales from `scene.baseDps()`, the 20 s DPS with damage dealt during ultimates removed, snapshotted when the ultimate fires (`ult.dps`). Reading live DPS mid-ultimate fed the ultimate's own damage back into its scaling and Barrage or Tempest grew exponentially. Barrage and Tempest are budgeted: the whole ultimate spends `budget` (10) seconds of that DPS, split over every missile or bolt, before splash and crits.
 
-Ultimates need 3 of their 4 weapons mounted to show at full power; a loadout with no such group shows its two best partial matches at reduced power (1 weapon 40 %, 2 weapons 60 %) plus Overdrive; Overdrive fills the bar when fewer than two groups are complete.
+Ultimates need 3 of their 4 weapons mounted to show at full power; the bar always fills to four: full-power groups first, then the best partial matches at reduced power (1 weapon 40 %, 2 weapons 60 %), then Overdrive; Overdrive fills the bar when fewer than two groups are complete.
 
 The sidebar starts closed (markup class `hidden`, and `beginRun` closes it again) since the HUD, loadout strip and auto-buy handle a run without it.
 
@@ -463,3 +463,11 @@ Homing missiles turn up to ×4 harder inside 140 px of their target and detonate
 Missile drone missiles launch aimed at the target (spread 0.25 rad, salvo fan 0.18) at 300 px/s with turn 9, instead of along the drone's heading with 0.9 rad scatter at 160 px/s and turn 5, which made every missile loop before homing.
 
 Hardpoints: 5 buyable (0, 150, 800, 3000, 12000 scrap) and a 6th at 40000 scrap that opens at threat 30 (`SLOT_COSTS`, `SLOT_GATES`).
+
+Wiki has a Combos sub tab (`combosHtml` in `src/ui/wiki.js`): every pair and quad combo from `COMBOS` with the pair icons (mounted ones lit), chance, effect length and cooldown, active pairs first; built-in procs (rewind and the like) in a second list. Ultimates stay on their own sub tab.
+
+Loadout strip (panel hidden): clicking an empty hardpoint opens the weapon picker, which stays open until that slot is clicked again or a weapon is mounted (it also closes when the slot fills), and a Core row under the weapons carries the shield capacity, shield regen and hull tiles (`data-buy="tower:key"`, level badge, tooltip with current and next value), so a whole run can be played without the sidebar.
+
+Every mounted weapon tile on the loadout strip has a `swap` button under it: it opens the same picker in swap mode (`doswap:slot:type`, weapon starts at Lv 1, costs the install price, uses one of the run's swaps); it closes when the swap happens or the button is clicked again. Disabled with no swaps left.
+
+Blinker toned down: jumps every 2 s (was 1) with a 0.5 s charge (was 0.25) from a ring 220–340 px out, and it is flagged `ranged` so a blinker surge brings no extra numbers. A blinker surge at threat 20 on normal was a wipe: every ship dropped every gun's lock four times a second.

@@ -110,9 +110,9 @@ export class Quads {
   bar() {
     const scored = Object.keys(ULTS).filter(id => ULTS[id].match.length && this.matches(id) > 0).sort((a, b) => this.matches(b) - this.matches(a));
     const full = scored.filter(id => this.matches(id) >= MIN_MATCH);
-    // full-power ultimates first; a loadout with none gets its two best partial matches at reduced power, and Overdrive fills the bar to at least two
-    const list = full.length ? full.slice(0, BAR_MAX) : scored.slice(0, 2);
-    if (list.length < 2 || !full.length) list.push('overdrive');
+    // the bar always fills: full-power ultimates first, then the best partial matches at reduced power, then Overdrive (only four full groups push it off)
+    const list = full.length >= BAR_MAX ? full.slice(0, BAR_MAX) : scored.slice(0, BAR_MAX - 1);
+    if (list.length < BAR_MAX) list.push('overdrive');
     return list.map((id, i) => ({ id, key: KEYS[i], ...ULTS[id] }));
   }
   need(id) { const u = ULTS[id]; return u.need + u.needPerTier * Math.max(0, Math.floor(this.scene.tier) - 1); }

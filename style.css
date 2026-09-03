@@ -476,7 +476,7 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 #loadout[hidden] { display: none; }
 #loadout .aq-title { font-family: var(--font-head); font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin: 0 0 6px 8px; opacity: 0.8; }
 #loadout .lo-sub { margin-top: 10px; }
-#lo-weapons, #lo-combos { display: flex; flex-wrap: wrap; gap: 10px; padding: 0 8px; }
+#lo-weapons, #lo-core, #lo-combos { display: flex; flex-wrap: wrap; gap: 10px; padding: 0 8px; }
 .lo-w { position: relative; width: 60px; height: 60px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--lc) 60%, transparent); background: rgba(10,14,28,0.85); display: flex; align-items: center; justify-content: center; color: var(--lc); pointer-events: auto; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--lc) 60%, transparent)); }
 .lo-w svg { width: 36px; height: 36px; }
 .lo-w .lv { position: absolute; right: -5px; bottom: -7px; font-family: var(--font-head); font-size: 11px; padding: 1px 5px; border-radius: 6px; background: var(--lc); color: #05060d; font-weight: 700; }
@@ -492,6 +492,10 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 .lo-w.lock .lv { background: rgba(10,14,28,0.95); color: var(--gold); border: 1px solid var(--gold); }
 .lo-w.lock:not(.can) { cursor: default; opacity: 0.5; }
 .lo-w.gated { opacity: 0.35; cursor: default; }
+.lo-slot { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.lo-swap { pointer-events: auto; font-family: var(--font-head); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; padding: 2px 7px; border-radius: 6px; border: 1px solid var(--line); background: rgba(10,14,28,0.85); color: var(--muted); cursor: pointer; }
+.lo-swap:hover, .lo-swap.open { color: var(--gold); border-color: var(--gold); }
+.lo-swap:disabled { opacity: 0.35; cursor: default; }
 .lo-w.pick .lv { background: rgba(10,14,28,0.95); color: var(--gold); border: 1px solid var(--lc); }
 #lo-pick-list { display: flex; flex-wrap: wrap; gap: 10px; padding: 0 8px; }
 .lo-c { display: flex; align-items: center; gap: 2px; padding: 4px 6px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(10,14,28,0.85); pointer-events: auto; }

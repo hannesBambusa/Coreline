@@ -18,7 +18,7 @@ export function tierOf(scene) { return 1 + scene.state.time / SPAWN.tierSeconds;
 /** Surge levels spawn more of a single type; how many more depends on how tough that type is. */
 export function surgeMultiplier(scene) {
   if (!scene.surgeType) return 1;
-  const d = MOBS[scene.surgeType], hp = d.hp, shooter = !!(d.fireRate || d.cooldown);   // ranged ships never get extra numbers: a level of only shooters is hard enough at ×1
+  const d = MOBS[scene.surgeType], hp = d.hp, shooter = !!(d.fireRate || d.cooldown || d.ranged);   // ranged ships (incl. blinkers) never get extra numbers: a level of only shooters is hard enough at ×1
   const full = shooter ? SPAWN.surgeMul.heavy : hp <= SPAWN.surgeLightHp ? SPAWN.surgeMul.light : hp <= SPAWN.surgeMediumHp ? SPAWN.surgeMul.medium : SPAWN.surgeMul.heavy;
   const f = Math.max(0, Math.min(1, (Math.floor(scene.tier) - SPAWN.surgeEvery) / SPAWN.surgeRampTiers));   // the first surges bring far fewer ships
   return 1 + (full - 1) * (SPAWN.surgeSoft + (1 - SPAWN.surgeSoft) * f);

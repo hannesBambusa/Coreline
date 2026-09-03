@@ -1,6 +1,7 @@
 // Wiki tab: every ship with its picture, what it does, and its numbers at threat 1 and at the current threat.
 import { MOBS, SPAWN, WEAPONS, hpGrowthAt } from '../config.js';
 import { ULTS, MIN_MATCH } from '../combos/quad.js';
+import { COMBOS } from '../combos.js';
 import { ICONS } from '../icons.js';
 import { fmt, hex, attrQuote } from './dom.js';
 
@@ -82,15 +83,39 @@ function ultRow(scene, id, u) {
   });
 }
 
-const WIKI_TABS = { ships: 'Ships', ultimates: 'Ultimates' };
+const WIKI_TABS = { ships: 'Ships', combos: 'Combos', ultimates: 'Ultimates' };
 
 export function wikiHtml(scene, tab = 'ships') {
   const nav = `<div class="subtabs">${Object.entries(WIKI_TABS).map(([k, l]) => `<button data-wiki="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  if (tab === 'combos') return nav + combosHtml(scene);
   if (tab === 'ultimates') {
     return nav + `<div class="muted" style="margin-bottom:6px">Ultimates are fired by you (Q W E R or click) once their charge is full. The core cannot be hurt while one runs. Bosses lose at most 15 % of max hp to one. At most 4 show on the bar.</div>` +
       Object.entries(ULTS).map(([id, u]) => ultRow(scene, id, u)).join('');
   }
   return nav + shipsHtml(scene);
+}
+
+/** One combo card: the weapon pair (mounted ones lit), chance, cooldown and effect length; active pairs sort first. */
+function comboRow(scene, id, c) {
+  const qs = scene.quads, col = hex(c.color), pair = [...new Set(c.pair)], active = scene.combos.available(id);
+  const group = pair.map(p => `<span class="wg${qs.mounted(p) ? ' on' : ''}" style="--wc:${hex(WEAPONS[p].color)}" data-tip="${attrQuote(WEAPONS[p].name + (qs.mounted(p) ? ' · mounted' : ' · not mounted'))}">${ICONS[p]}</span>`).join('');
+  const names = pair.map(p => WEAPONS[p].name).join(' + ');
+  const stats = c.intrinsic ? '' : `<br><span class="muted">${Math.round(c.chance * 100)} % per trigger · ${c.effectDur ? `lasts <b>${c.effectDur} s</b>` : 'instant'} · cooldown <b>${c.cd} s</b> after (double on a crit proc)</span>`;
+  return row({
+    cls: 'wiki-row ult-row' + (active ? ' on-bar' : ''), style: `--mc:${col}`, lead: `<div class="icon ult-group">${group}</div>`, name: c.name,
+    sub: (c.quad ? 'quad combo · ' : c.intrinsic ? 'built in · ' : '') + names, tag: active ? '<span class="danger d5" style="--dc:' + col + '"><em>active</em></span>' : '',
+    desc: c.desc + stats,
+  });
+}
+
+function combosHtml(scene) {
+  const list = Object.entries(COMBOS).filter(([id, c]) => !ULTS[id] && c.name !== 'Hold steady');
+  const pairs = list.filter(([, c]) => !c.intrinsic).sort((a, b) => scene.combos.available(b[0]) - scene.combos.available(a[0]) || a[1].name.localeCompare(b[1].name));
+  const built = list.filter(([, c]) => c.intrinsic);
+  let html = `<div class="muted" style="margin-bottom:6px">Mount both weapons of a pair and a shot from one can trigger the combo. Timed procs last 10 s, a crit proc twice that, and the cooldown starts when the effect ends. Active pairs are listed first.</div>`;
+  html += '<h3>Weapon pairs</h3>' + pairs.map(([id, c]) => comboRow(scene, id, c)).join('');
+  if (built.length) html += '<h3>Built-in procs</h3>' + built.map(([id, c]) => comboRow(scene, id, c)).join('');
+  return html;
 }
 
 function shipsHtml(scene) {

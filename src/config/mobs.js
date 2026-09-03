@@ -62,9 +62,9 @@ export const MOBS = {
   },
   blinker: {
     name: 'Blinker', danger: 3, why: 'teleports past the outer defence', hp: 20, speed: 30, dmg: 5, scrap: 11, r: 10,
-    blinkEvery: 1, blinkCharge: 0.25, ringMin: 200, ringMax: 320, burst: 2, burstSpread: 0.12, bulletSpeed: 320,
+    blinkEvery: 2, blinkCharge: 0.5, ringMin: 220, ringMax: 340, burst: 2, burstSpread: 0.12, bulletSpeed: 320, ranged: true,   // was every 1 s with a 0.25 s charge: guns never got a lock and a blinker surge at threat 20 was a wipe
     color: COLORS.ice, fromWave: 6, chance: 0.05,
-    desc: 'Teleports every second and fires a burst at the core from each new spot. Guns lose their lock when it jumps.',
+    desc: 'Teleports every couple of seconds and fires a burst at the core from each new spot. Guns lose their lock when it jumps, but the charge-up before a jump is a window.',
   },
   hydra: {
     name: 'Hydra', danger: 2, why: 'splits into more ships on death', hp: 70, speed: 60, dmg: 8, scrap: 14, r: 14,

@@ -55,6 +55,9 @@ export class Cloud {
       const oauthError = params.get('error_description') || hash.get('error_description') || params.get('error') || hash.get('error');
       if (oauthError) { this.loginError = decodeURIComponent(oauthError.replace(/\+/g, ' ')); console.error('Coreline cloud: sign-in returned an error', this.loginError); }
       if (params.get('code')) {
+        const before = this.verifierKeys();   // read now: the SDK deletes it during the exchange, even a failed one
+        console.log('Coreline cloud: back with a code', { verifierKeys: before });
+        if (!before.length) this.verifierGone = true;
         const { error } = await this.client.auth.exchangeCodeForSession(params.get('code'));
         if (error) {
           console.error('Coreline cloud: code exchange failed', error);
@@ -83,16 +86,18 @@ export class Cloud {
     }
   }
 
+  verifierKeys() { try { return Object.keys(localStorage).filter(k => k.includes('code-verifier')); } catch (e) { return []; } }
+
   /** the code came back but the verifier written before leaving is gone: storage did not survive the round trip */
   diagnoseLostStorage() {
     let local = null, session = null, cookie = document.cookie.includes('coreline-oauth=1');
     try { local = localStorage.getItem('coreline-oauth'); localStorage.removeItem('coreline-oauth'); } catch (e) { /* blocked */ }
     try { session = sessionStorage.getItem('coreline-oauth'); sessionStorage.removeItem('coreline-oauth'); } catch (e) { /* blocked */ }
     document.cookie = 'coreline-oauth=; max-age=0; path=/';
-    const verifierKeys = Object.keys(localStorage).filter(k => k.includes('code-verifier'));
-    console.error('Coreline cloud: storage after the round trip', { localStorage: local, sessionStorage: session, cookie, verifierKeys, origin: location.origin });
+    console.error('Coreline cloud: storage after the round trip', { localStorage: local, sessionStorage: session, cookie, verifierGone: !!this.verifierGone, origin: location.origin });
     let why;
-    if (local === null && session === null && !cookie) why = 'nothing written before leaving for Google survived the return trip. This browser wipes site data between page loads for this site: check "clear cookies and site data when you close" / tracking prevention (Edge: Settings → Cookies and site permissions; Brave: Shields), and privacy extensions. Or the page came back on a different address than it left from.';
+    if (this.verifierGone && local !== null) why = 'the login verifier was gone on return while everything else in site storage survived. Something removed that one key between leaving and returning: a second tab of the game, or a privacy extension. Close every other Coreline tab and retry.';
+    else if (local === null && session === null && !cookie) why = 'nothing written before leaving for Google survived the return trip. This browser wipes site data between page loads for this site: check "clear cookies and site data when you close" / tracking prevention (Edge: Settings → Cookies and site permissions; Brave: Shields), and privacy extensions. Or the page came back on a different address than it left from.';
     else if (local === null) why = 'localStorage was wiped on the way back while other storage survived. A privacy extension or "clear site data" rule is targeting localStorage on this site.';
     else why = 'the login verifier was removed but other site data survived, which points at another tab or extension using Supabase auth on this site.';
     return 'Google signed you in, but ' + why;
@@ -136,8 +141,14 @@ export class Cloud {
     try { sessionStorage.setItem('coreline-oauth', '1'); localStorage.setItem('coreline-oauth', '1'); } catch (e) { /* blocked: the return trip will say so */ }
     document.cookie = 'coreline-oauth=1; max-age=600; path=/; SameSite=Lax';
     // redirect back to this exact page; it must be on the Supabase redirect allow list (see docs/DESIGN.md)
-    const { error } = await this.client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
-    return error ? 'Error: ' + error.message : 'Opening Google…';
+    const { data, error } = await this.client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname, skipBrowserRedirect: true } });
+    if (error) return 'Error: ' + error.message;
+    // the SDK has now written the pkce verifier; make sure it is really there before we leave
+    const verifier = this.verifierKeys();
+    console.log('Coreline cloud: leaving for Google', { verifierKeys: verifier, url: data.url });
+    if (!verifier.length) return 'Error: the login verifier was not written to site storage, so the return trip would fail. Try another browser.';
+    location.assign(data.url);
+    return 'Opening Google…';
   }
   /** sign out, drop the local copy of this account's save and restart on the login screen */
   async signOut() {

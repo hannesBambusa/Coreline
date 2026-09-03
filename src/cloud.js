@@ -56,7 +56,10 @@ export class Cloud {
       if (oauthError) { this.loginError = decodeURIComponent(oauthError.replace(/\+/g, ' ')); console.error('Coreline cloud: sign-in returned an error', this.loginError); }
       if (params.get('code')) {
         const { error } = await this.client.auth.exchangeCodeForSession(params.get('code'));
-        if (error) { this.loginError = error.message; console.error('Coreline cloud: code exchange failed', error); }
+        if (error) {
+          console.error('Coreline cloud: code exchange failed', error);
+          this.loginError = /verifier/.test(error.message) ? this.diagnoseLostStorage() : error.message;
+        }
       }
       // the SDK reads #access_token during initialize(); it keeps that error to itself unless asked
       const init = await this.client.auth.initialize();
@@ -78,6 +81,21 @@ export class Cloud {
       console.error('Coreline cloud: init failed', e);
       this.status = 'error'; this.emit();
     }
+  }
+
+  /** the code came back but the verifier written before leaving is gone: storage did not survive the round trip */
+  diagnoseLostStorage() {
+    let local = null, session = null, cookie = document.cookie.includes('coreline-oauth=1');
+    try { local = localStorage.getItem('coreline-oauth'); localStorage.removeItem('coreline-oauth'); } catch (e) { /* blocked */ }
+    try { session = sessionStorage.getItem('coreline-oauth'); sessionStorage.removeItem('coreline-oauth'); } catch (e) { /* blocked */ }
+    document.cookie = 'coreline-oauth=; max-age=0; path=/';
+    const verifierKeys = Object.keys(localStorage).filter(k => k.includes('code-verifier'));
+    console.error('Coreline cloud: storage after the round trip', { localStorage: local, sessionStorage: session, cookie, verifierKeys, origin: location.origin });
+    let why;
+    if (local === null && session === null && !cookie) why = 'nothing written before leaving for Google survived the return trip. This browser wipes site data between page loads for this site: check "clear cookies and site data when you close" / tracking prevention (Edge: Settings → Cookies and site permissions; Brave: Shields), and privacy extensions. Or the page came back on a different address than it left from.';
+    else if (local === null) why = 'localStorage was wiped on the way back while other storage survived. A privacy extension or "clear site data" rule is targeting localStorage on this site.';
+    else why = 'the login verifier was removed but other site data survived, which points at another tab or extension using Supabase auth on this site.';
+    return 'Google signed you in, but ' + why;
   }
 
   /** Google sent tokens back but no session got stored: say why, from what we can measure here */
@@ -114,7 +132,9 @@ export class Cloud {
   /** Google via Supabase OAuth: leaves the page and comes back with a session */
   async signInGoogle() {
     this.loginError = null;
-    try { sessionStorage.setItem('coreline-oauth', '1'); } catch (e) { /* storage blocked: the return trip will say so */ }
+    // three markers, so the return trip can tell which kinds of storage survive on this browser
+    try { sessionStorage.setItem('coreline-oauth', '1'); localStorage.setItem('coreline-oauth', '1'); } catch (e) { /* blocked: the return trip will say so */ }
+    document.cookie = 'coreline-oauth=1; max-age=600; path=/; SameSite=Lax';
     // redirect back to this exact page; it must be on the Supabase redirect allow list (see docs/DESIGN.md)
     const { error } = await this.client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
     return error ? 'Error: ' + error.message : 'Opening Google…';

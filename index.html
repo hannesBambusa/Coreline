@@ -27,6 +27,19 @@
   </div>
 
   <div id="banner"></div>
+  <div id="login" hidden><img id="login-bg" src="assets/login-bg.svg" alt=""><div class="start-card">
+    <div class="start-title">CORELINE</div>
+    <div class="start-sub">Sign in to play. Your progress is saved to your account and follows you to any device.</div>
+<div id="account">
+  <div class="start-lbl">Account</div>
+  <div id="account-out"><input id="acc-email" type="email" placeholder="email" autocomplete="email"><input id="acc-pass" type="password" placeholder="password" autocomplete="current-password">
+    <div class="row"><button id="acc-signin" class="buy">Sign in</button><button id="acc-signup" class="buy">Sign up</button><button id="acc-magic" class="buy">Magic link</button></div>
+    <div class="acc-or">or</div><button id="acc-google" class="buy google"><span class="g">G</span> Continue with Google</button></div>
+  <div id="account-in"><span id="acc-who"></span> <button id="acc-signout" class="link">sign out</button></div>
+  <div id="acc-msg" class="muted"></div>
+</div>
+    <button id="acc-offline" class="link" hidden>Cloud unavailable · play offline this time</button>
+  </div></div>
   <div id="start" hidden><div class="start-card"><div class="start-title">CORELINE</div><div class="start-sub">The fleet is inbound. Spend fragments in Skills, mount your weapons, then hold the line. <button id="btn-intro-show" class="link">How does it work?</button></div>
 <div id="intro" hidden>
   <div class="intro-title">How it works</div>
@@ -87,6 +100,7 @@
       <p class="muted">Coreline <b id="version-settings"></b></p>
       <h3>Save</h3>
       <p class="muted">Autosaves every 10 s. Offline: 50 % of your recent scrap rate, up to 8 h.</p>
+      <p id="acc-settings" class="muted" hidden>Cloud: <b id="acc-settings-who"></b> <button id="acc-settings-out" class="link">sign out</button></p>
       <textarea id="save-text" rows="3" placeholder="Save code"></textarea>
       <div class="row"><button id="btn-export" class="buy">Export</button><button id="btn-import" class="buy">Import</button></div>
       <h3>Run</h3>

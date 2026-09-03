@@ -397,3 +397,9 @@ Targeting: every weapon (and every drone) goes for boss escorts first, Wardens a
 Railgun buffed into a real option: base damage 70 → 85, rate growth 1.03 → 1.04, a crater at the first ship the beam meets (70 px +2/level, 60 % of the shot's damage to everything else in it), and every 4th shot is a heavy slug (×2 damage, ×1.6 crater, gold beam, the barrel glows gold while it is loaded). Stat line shows crater and slug cadence.
 
 Railgun retuned as a slow cannon: 150 damage every 2.5 s (was 85 at 0.6/s), damage growth ×1.19, crater 80 px at 75 % of the shot, heavy slug ×2.5 with a ×1.8 crater, crit 15 % at ×3.5. Same dps as before at the trigger, roughly, but each shot lands about twice as hard.
+
+## Cloud saves (Supabase)
+
+`src/config/cloud.js` holds the project URL and anon key (empty = local only, the account box stays hidden). `src/cloud.js` loads the Supabase JS SDK from the CDN, handles email/password, sign-up, magic-link and Google (OAuth) login, and syncs the localStorage save: every local save is pushed (debounced 4 s) as one row in `saves` (`docs/supabase.sql`, row-level security so a player only touches their own row); on login the newer save wins by `savedAt` and a newer cloud save reloads the page onto it. The start card shows a Cloud save box, Settings shows who is signed in. The game never depends on the network: cloud down means local play with a note.
+
+Login gate: with the cloud configured, the start screen is preceded by a sign-in screen (`#login`, email/password, magic link, Google) and `beginRun` refuses until signed in. Cloud unreachable (SDK or project down) shows a "play offline this time" link. Signing out mid-run does not interrupt the run; the gate returns at the next start screen.

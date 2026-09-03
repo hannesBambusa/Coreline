@@ -18,6 +18,7 @@ export class SaveSystem {
     return {
       v: VERSION,
       lastTick: Date.now(),
+      savedAt: Date.now(),   // cloud sync: the newer of local and cloud wins
       run: {
         difficulty: s.state.difficulty || 'normal', scrap: s.state.scrap, time: s.state.time, tier: s.state.tier, kills: s.state.kills, swapsUsed: s.state.swapsUsed || 0,
         hull: t.hull, shield: t.shield, upgrades: { ...t.upgrades },
@@ -53,17 +54,26 @@ export class SaveSystem {
   }
 
   save() {
-    try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(this.serialize()));
-      this.toast();
-    } catch (e) { /* storage full or blocked */ }
+    if (this.suspend) return;   // a cloud save is being installed: do not overwrite it with the old state
+    let json;
+    try { json = JSON.stringify(this.serialize()); }
+    catch (e) { console.error('Coreline: could not build the save', e); this.toast('Save failed · ' + e.message); return; }
+    try { localStorage.setItem(SAVE_KEY, json); this.toast(); if (this.scene.cloud) this.scene.cloud.noteSaved(); }
+    catch (e) { console.error('Coreline: could not write the save', e); this.toast('Save blocked · ' + (e.name === 'QuotaExceededError' ? 'storage full' : 'storage disabled')); }
   }
 
-  toast() {
+  /** true when localStorage can be written at all (private windows and some browser settings block it) */
+  static storageWorks() {
+    try { localStorage.setItem('core-defence-probe', '1'); localStorage.removeItem('core-defence-probe'); return true; } catch (e) { return false; }
+  }
+
+  toast(problem = null, where = 'local') {
     const el = document.getElementById('saved-toast');
     if (!el) return;
     const d = new Date();
-    el.innerHTML = '<span class="st-main">Saved</span><span class="st-time">' + d.toTimeString().slice(0, 8) + '</span>';
+    el.classList.toggle('failed', !!problem);
+    const label = where === 'cloud' ? 'Saved ☁' : 'Saved';
+    el.innerHTML = problem ? `<span class="st-main">${problem}</span>` : `<span class="st-main">${label}</span><span class="st-time">` + d.toTimeString().slice(0, 8) + '</span>';
     el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
     clearTimeout(this.toastTimer);
     this.toastTimer = setTimeout(() => el.classList.remove('flash'), 2500);

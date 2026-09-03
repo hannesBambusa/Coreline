@@ -18,6 +18,7 @@ import { makeTextures, makeStarfield } from './scene/textures.js';
 import * as spawner from './scene/spawner.js';
 import * as siege from './scene/siege.js';
 import { Perf } from './perf.js';
+import { Cloud } from './cloud.js';
 import { pushBucket } from './utils.js';
 import * as choices from './scene/choices.js';
 import * as damage from './scene/damage.js';
@@ -90,8 +91,10 @@ export class GameScene extends Phaser.Scene {
     this.scale.on('resize', this.onResize, this);
 
     // ui + saves last: they read everything above
+    this.cloud = new Cloud(this);   // before the UI: the start card's account box listens to it
     this.ui = new UI(this);
     this.saves = new SaveSystem(this);
+    if (!SaveSystem.storageWorks()) this.ui.banner('Saving is blocked in this browser (private window?)', true);
     const data = this.saves.load();
     if (data) {
       const res = this.saves.apply(data);
@@ -133,6 +136,7 @@ export class GameScene extends Phaser.Scene {
     if (!this.starting || !DIFFICULTY[key] || !this.diffUnlocked(key)) return;
     this.state.difficulty = key;
     this.ui.renderStartWeapons();
+    this.saves.save();
   }
 
   setStartWeapon(type) {
@@ -140,6 +144,7 @@ export class GameScene extends Phaser.Scene {
     this.tower.installWeapon(0, type);
     this.ui.renderStartWeapons();
     this.ui.render();
+    this.saves.save();
   }
 
   showStart() {
@@ -154,14 +159,16 @@ export class GameScene extends Phaser.Scene {
     if (this.ui.activeTab === 'tower' || this.ui.activeTab === 'upgrades') this.ui.showTab('skills');
     document.getElementById('intro').hidden = !!this.profile.seenIntro;
     document.getElementById('start').hidden = false;
+    this.ui.syncAccount();   // shows the login screen instead when not signed in
     document.getElementById('paused').hidden = true;
     document.getElementById('btn-pause').classList.add('on');
   }
 
   beginRun() {
-    if (!this.starting) return;
+    if (!this.starting || this.ui.loginGate()) return;   // must be signed in (when the cloud is configured)
     this.starting = false;
     this.profile.seenIntro = true;
+    this.saves.save();
     document.body.classList.remove('starting');
     if (this.ui.activeTab === 'skills') this.ui.showTab('tower');
     document.getElementById('start').hidden = true;

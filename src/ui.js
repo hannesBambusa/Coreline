@@ -51,6 +51,7 @@ export class UI {
     $('#btn-rebuild').onclick = () => { $('#overlay').hidden = true; scene.prestige(); this.showTab('skills'); };
     $('#btn-prestige').onclick = () => this.confirmPrestige();
     $('#btn-endrun').onclick = () => this.confirmEndRun();
+    this.initAccount();
     $('#version-num').textContent = 'v' + VERSION; $('#version-settings').textContent = 'v' + VERSION;
     $('#version-update').onclick = () => location.reload();
     watchVersion((remote) => { const b = $('#version-update'); b.textContent = `v${remote} available · reload`; b.hidden = false; });
@@ -59,6 +60,43 @@ export class UI {
   }
 
   panelHidden() { return this.panel.classList.contains('hidden'); }
+
+  // ---- Cloud account (start card + settings) ----
+  initAccount() {
+    const scene = this.scene, cloud = scene.cloud, msg = (t) => { $('#acc-msg').textContent = t || ''; };
+    const creds = () => [$('#acc-email').value.trim(), $('#acc-pass').value];
+    $('#acc-signin').onclick = async () => { const [e, p] = creds(); msg('…'); msg(await cloud.signIn(e, p)); };
+    $('#acc-signup').onclick = async () => { const [e, p] = creds(); if (p.length < 6) return msg('Password needs 6+ characters'); msg('…'); msg(await cloud.signUp(e, p)); };
+    $('#acc-magic').onclick = async () => { const [e] = creds(); if (!e) return msg('Type your email first'); msg('…'); msg(await cloud.magicLink(e)); };
+    $('#acc-google').onclick = async () => { msg('…'); msg(await cloud.signInGoogle()); };
+    $('#acc-offline').onclick = () => { this.offlineOk = true; this.syncAccount(); };
+    $('#acc-signout').onclick = $('#acc-settings-out').onclick = async () => msg(await cloud.signOut());
+    $('#acc-pass').onkeydown = (e) => { if (e.key === 'Enter') $('#acc-signin').click(); };
+    cloud.onChange(() => this.syncAccount());
+    this.syncAccount();
+  }
+  /** true while the player must sign in before a run can start */
+  loginGate() {
+    const c = this.scene.cloud;
+    return c.enabled && c.status !== 'in' && !(c.status === 'error' && this.offlineOk);
+  }
+  syncAccount() {
+    const c = this.scene.cloud, scene = this.scene, on = c.enabled, who = c.user ? (c.user.email || 'signed in') : '';
+    const gate = scene.starting && this.loginGate();
+    $('#login').hidden = !gate;
+    document.body.classList.toggle('login', gate);
+    $('#start').hidden = !scene.starting || gate;
+    $('#acc-offline').hidden = c.status !== 'error';
+    $('#account-out').hidden = c.status === 'in';
+    $('#account-in').hidden = c.status !== 'in';
+    $('#acc-who').textContent = who ? `Signed in as ${who}` : '';
+    if (c.status === 'loading') $('#acc-msg').textContent = 'Connecting…';
+    else if (c.status === 'error') $('#acc-msg').textContent = 'Cloud unavailable right now, playing locally';
+    else if (c.status === 'out') $('#acc-msg').textContent = 'Sign in to keep your progress across devices';
+    else $('#acc-msg').textContent = 'Progress syncs after every save';
+    $('#acc-settings').hidden = !(on && c.status === 'in');
+    $('#acc-settings-who').textContent = who;
+  }
 
   /** game speed from the top bar: ¼, ½, 1, 2 or 4. Remembered in settings. */
   setSpeed(v) {
@@ -136,7 +174,7 @@ export class UI {
     let changed = false;
     if (kind === 'toggle') { if (arg === 'combos') this.combosOpen = !this.combosOpen; }
     else if (kind === 'auto') this.autoAction(id);
-    else if (kind === 'skill') scene.sfx.play(scene.tree.buy(arg) ? 'buy' : 'deny');
+    else if (kind === 'skill') { const ok = scene.tree.buy(arg); scene.sfx.play(ok ? 'buy' : 'deny'); if (ok) scene.saves.save(); }   // a skill is permanent: write it now, not at the next autosave
     else if (kind === 'prestige') this.confirmPrestige();
     else changed = purchase(scene, id);
     if (!silent) scene.sfx.play(changed || isFreeInstall(id) ? 'buy' : 'deny');

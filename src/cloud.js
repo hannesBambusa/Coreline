@@ -40,13 +40,27 @@ export class Cloud {
       }
       const { data } = await this.client.auth.getSession();   // implicit flow: the client reads #access_token here, so clean the URL only after
       if (params.get('code') || oauthError || hash.get('access_token')) history.replaceState(null, '', location.pathname);
-      if (!data.session && hash.get('access_token')) { this.loginError = 'Signed in with Google, but this browser blocks site storage so the session cannot be kept. Allow cookies/site data for this site.'; console.error('Coreline cloud: session from URL was not stored'); }
+      if (!data.session && hash.get('access_token')) this.loginError = this.diagnoseLostSession(hash.get('access_token'));
       this.setUser(data.session ? data.session.user : null, false);
       this.client.auth.onAuthStateChange((_ev, session) => this.setUser(session ? session.user : null, true));
     } catch (e) {
       console.error('Coreline cloud: init failed', e);
       this.status = 'error'; this.emit();
     }
+  }
+
+  /** Google sent tokens back but no session got stored: say why, from what we can measure here */
+  diagnoseLostSession(token) {
+    let storage = true;
+    try { localStorage.setItem('core-defence-probe', '1'); localStorage.removeItem('core-defence-probe'); } catch (e) { storage = false; }
+    let skew = null;
+    try { const p = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); skew = Math.round(Date.now() / 1000 - p.iat); } catch (e) { /* not a JWT */ }
+    let why;
+    if (!storage) why = 'this browser blocks site storage, so the session cannot be kept. Allow cookies / site data for this site (and check it is not a private window).';
+    else if (skew !== null && Math.abs(skew) > 60) why = `this computer's clock is ${Math.abs(skew)} s ${skew < 0 ? 'behind' : 'ahead of'} real time, so the login token is rejected. Set the clock to sync automatically and retry.`;
+    else why = 'the session was not stored (unknown reason). Try a hard reload, or another browser.';
+    console.error('Coreline cloud: session from URL was not stored', { storage, skewSeconds: skew });
+    return 'Google signed you in, but ' + why;
   }
 
   setUser(user, fresh) {

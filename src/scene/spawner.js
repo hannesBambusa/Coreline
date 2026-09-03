@@ -9,6 +9,7 @@ const SPAWN_RADIUS_JITTER = 80;        // mobs spawn up to this far beyond the s
 const BURST_SPREAD = 0.6;              // radians of angular scatter within a spawn burst
 const SWARM_SPREAD = 0.4;              // tighter scatter for swarm groups
 const NEVER_SURGE = ['boss', 'titan', 'warden', 'mine', 'warlord', 'pylon'];
+const canSurge = (type) => !NEVER_SURGE.includes(type) && !MOBS[type].noSolo;   // noSolo ships (bulwark) never come alone
 const LEVEL_SCRAP_BASE = 20;           // scrap bonus at level start = base * scrapGrowth^tier
 
 /** Fractional threat tier: 1 + minutes-ish of run time. */
@@ -29,7 +30,7 @@ export function spawnRate(scene) {
 
 /** Pick a surge type among everything unlocked by this tier, excluding bosses and static hazards. */
 export function pickSurge(scene, tierInt) {
-  const pool = Object.keys(MOBS).filter(t => MOBS[t].fromWave <= tierInt && !NEVER_SURGE.includes(t));
+  const pool = Object.keys(MOBS).filter(t => MOBS[t].fromWave <= tierInt && canSurge(t));
   return pick(pool) || 'drone';
 }
 
@@ -52,7 +53,7 @@ export function pickType(scene) {
 
 /** Elite roll for a natural spawn. Bosses and swarm never go elite. */
 function maybeMakeElite(scene, m, type) {
-  if (type === 'boss' || type === 'swarm' || type === 'warlord' || type === 'pylon') return;
+  if (type === 'boss' || type === 'swarm' || type === 'shoal' || type === 'warlord' || type === 'pylon') return;
   const chance = scene.levelMods.allElite ? 1 : Math.min(ELITES.chanceMax * 3, (ELITES.chanceBase + ELITES.chancePerTier * scene.tier) * scene.levelMods.elite * scene.diff.elite);
   if (Math.random() < chance) {
     m.makeElite(pick(Object.keys(ELITES.mods)));
@@ -137,9 +138,9 @@ function spawnBurst(scene) {
   const a = Math.random() * TAU;
   for (let i = 0; i < n; i++) {
     const type = pickType(scene);
-    if (type === 'swarm') {
-      const k = Phaser.Math.Between(MOBS.swarm.group[0], MOBS.swarm.group[1]);
-      for (let j = 0; j < k; j++) scene.spawnMob('swarm', a + rnd(-0.5, 0.5) * SWARM_SPREAD);
+    if (MOBS[type].group) {   // pack types (swarm, shoal) come as a group each
+      const k = Phaser.Math.Between(MOBS[type].group[0], MOBS[type].group[1]);
+      for (let j = 0; j < k; j++) scene.spawnMob(type, a + rnd(-0.5, 0.5) * SWARM_SPREAD);
     } else scene.spawnMob(type, a + rnd(-0.5, 0.5) * BURST_SPREAD);
   }
   scene.spawnTimer = n / spawnRate(scene);

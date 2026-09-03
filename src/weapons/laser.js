@@ -79,7 +79,8 @@ export class LaserBeam extends Weapon {
     const full = this.held >= this.rampTime;
     this.forkTargets = [];
     if (this.held >= this.rampTime * this.def.forkRamp) {
-      const others = mobs.filter(o => !o.dead && o !== this.target && dist(tw, o) <= this.range)
+      // forks only reach ships within forkRange of the beam's target
+      const others = mobs.filter(o => !o.dead && o !== this.target && dist(tw, o) <= this.range && dist(this.target, o) <= this.def.forkRange)
         .sort((a, b) => dist(this.target, a) - dist(this.target, b)).slice(0, this.forks);
       for (const o of others) {
         this.beamDamage(o, this.dmgVs(o) * ramp * this.def.forkDmg * dt * this.effectiveRateMul);

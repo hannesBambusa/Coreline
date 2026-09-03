@@ -120,7 +120,7 @@ export class Mob {
     this.scene.spawnEnemyBullet({
       x, y,
       vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-      dmg, color, from: this.type,
+      dmg, color, from: this.type, owner: this,
     });
   }
 

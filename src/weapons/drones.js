@@ -7,9 +7,10 @@ const TUNING = {
   spawnRing: 80,                    // fresh drones appear this far from the core
   orbit: 70, orbitSpin: 2.5,        // hold this far off the target and circle it, rad/s
   idleOffset: 40, idleSpin: 1.2,    // no target: circle this far outside the shield ring, rad/s
+  mirrorClearance: 34,              // idle orbit sits this far outside the mirror plates when mirrors are mounted
   steer: 4,                         // velocity blend rate towards the wanted heading
   boostMul: 2,                      // speed and fire-rate multiplier while Scramble boost is active
-  ramTypes: ['swarm', 'drone', 'bomber'],   // ships that die on contact with a drone
+  ramTypes: ['swarm', 'shoal', 'drone', 'bomber'],   // ships that die on contact with a drone
   ramFraction: 0.6,                 // ramming ships deal this fraction of their dmg to the drone; bombers deal it all
   bomberBlast: 24,
   trailRate: 20,                    // trail particles per second
@@ -144,6 +145,11 @@ export class DroneBay extends Weapon {
     }
     claim(d.target, 1);
   }
+  /** idle orbit radius: outside the shield ring, or outside the mirror plates when mirrors are mounted */
+  idleRadius(extra = 0) {
+    const t = this.tower, mr = t.weapons.find(w => w.type === 'mirrors');
+    return Math.max(t.shieldR + TUNING.idleOffset + extra, mr ? mr.ringR + TUNING.mirrorClearance + extra : 0);
+  }
   /** fly towards the orbit point around the target, or idle around the shield ring */
   steer(d, dt, bm) {
     const t = this.tower;
@@ -153,7 +159,7 @@ export class DroneBay extends Weapon {
       tx = d.target.x + Math.cos(d.ang) * TUNING.orbit; ty = d.target.y + Math.sin(d.ang) * TUNING.orbit;
     } else {
       d.ang += dt * TUNING.idleSpin;
-      const ir = t.shieldR + TUNING.idleOffset;
+      const ir = this.idleRadius();
       tx = t.x + Math.cos(d.ang) * ir; ty = t.y + Math.sin(d.ang) * ir;
     }
     const a = Math.atan2(ty - d.y, tx - d.x), sp = this.def.droneSpeed * bm, k = Math.min(1, dt * TUNING.steer);

@@ -108,6 +108,12 @@ export const COMBOS = {
                  desc: 'A kamikaze blast makes every missile drone salvo the ships caught in it.' },
   sporebomb:   { name: 'Spore bomb',       pair: ['kamikaze', 'nanite'],     chance: 0.25, cd: 9, color: 0x5eead4,
                  desc: 'Every ship caught in a kamikaze blast is infected.' },
+  prismcannon: { name: 'Prism cannon',     pair: ['mirrors', 'laser'],      chance: 0.20, cd: 8, color: 0xff3df2,
+                 desc: 'A reflect also fires the laser from the plate at the farthest ship for 3× beam damage.' },
+  ricochetfield: { name: 'Ricochet field', pair: ['mirrors', 'pulse'],      chance: 0.25, cd: 8, color: 0xc084fc,
+                 desc: 'Reflected shots pierce through two ships.' },
+  focalpoint:  { name: 'Focal point',      pair: ['mirrors', 'chrono'],     chance: 0.25, cd: 8, color: 0x9be7ff,
+                 desc: 'A shot crawling through the chrono field is reflected for double damage.' },
   collapsar:   { name: 'Collapsar rounds', pair: ['singularity', 'railgun'], chance: 0.25, cd: 12, color: 0xffffff,
                  desc: 'The blast lands a triple railgun hit on the three biggest ships in range.' },
 };

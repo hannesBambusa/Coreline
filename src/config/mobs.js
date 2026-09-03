@@ -22,6 +22,11 @@ export const MOBS = {
     name: 'Swarm', hp: 4, speed: 140, dmg: 3, scrap: 1, r: 6,
     group: [8, 12], color: COLORS.gold, fromWave: 3, chance: 0.10,
   },
+  shoal: {
+    name: 'Shoal', hp: 6, speed: 190, dmg: 2, scrap: 1, r: 5,
+    group: [18, 28], linkRange: 55, color: COLORS.sky, fromWave: 4, chance: 0.06,
+    desc: 'Tiny, very fast, and they come in shoals of 20 or more flying straight at the core. Only the ships at the front of the shoal can be hit: anyone with a shoal-mate ahead of them is covered.',
+  },
   orbiter: {
     name: 'Orbiter', hp: 55, speed: 90, dmg: 2, scrap: 14, r: 13,
     fireRate: 2.2, range: 340, bulletSpeed: 340, dodge: 0.15,
@@ -48,6 +53,12 @@ export const MOBS = {
     fireRate: 1.0, range: 210, bulletSpeed: 300, phaseOn: 1.6, phaseOff: 1.4,
     color: COLORS.violet, fromWave: 7, chance: 0.05,
     desc: 'Phases out of reality every few seconds. Only solid ships can be hit.',
+  },
+  bulwark: {
+    name: 'Bulwark', hp: 260, speed: 55, dmg: 5, scrap: 42, r: 16,
+    fireRate: 0.8, range: 240, bulletSpeed: 280, burst: 2,
+    color: COLORS.orange, fromWave: 5, chance: 0.045, noSolo: true,   // never the only ship type on screen (surges, hunts)
+    desc: 'A heavy raider hull. Slow, well armoured, keeps firing while you chew through it.',
   },
   blinker: {
     name: 'Blinker', hp: 20, speed: 30, dmg: 5, scrap: 11, r: 10,

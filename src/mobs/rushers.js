@@ -1,4 +1,5 @@
 // Mobs that fly straight at the core and ram it (plus the mine, which is launched the same way).
+import { dist, distXY } from '../utils.js';
 import { Mob } from './base.js';
 
 /** launch speed of hydra fragments */
@@ -24,6 +25,49 @@ export class Drone extends Mob {
     this.sprite.setRotation(a);
     if (this.distToTower() < this.coreReach()) this.ramCore();
     super.update(dt);
+  }
+}
+
+/** Shoal: fast rammers in big packs. A shoal ship with a shoal-mate closer to the core within linkRange is covered and takes no damage. */
+export class Shoal extends Mob {
+  constructor(scene, tier, x, y) {
+    super(scene, 'shoal', tier, x, y);
+    this.wob = Math.random() * 10; this.cover = null; this.coverText = 0;
+    this.sprite.setScale(0.8);
+  }
+  /** the closest shoal-mate that is nearer the core than this one, within linkRange */
+  findCover() {
+    const t = this.tower, my = this.distToTower(), L = this.def.linkRange;
+    let best = null, bd = L;
+    for (const o of this.scene.mobs) {
+      if (o === this || o.dead || o.type !== 'shoal') continue;
+      const d = dist(this, o);
+      if (d < bd && distXY(o.x, o.y, t.x, t.y) < my - 2) { bd = d; best = o; }
+    }
+    return best;
+  }
+  takeDamage(amount, hx, hy, quiet) {
+    if (this.cover && !this.cover.dead) {
+      this.lastDealt = 0;
+      this.coverText = Math.max(0, this.coverText - 0.0001);
+      if (!quiet && Math.random() < 0.15) this.scene.fx.floater(hx, hy - 6, 'covered', '#60a5fa', 9);
+      return false;
+    }
+    return super.takeDamage(amount, hx, hy, quiet);
+  }
+  update(dt) {
+    this.wob += dt * 9;
+    const a = this.angleToTower(), s = this.def.speed, side = Math.sin(this.wob) * 25;
+    this.move(dt, Math.cos(a) * s + Math.cos(a + Math.PI / 2) * side, Math.sin(a) * s + Math.sin(a + Math.PI / 2) * side);
+    this.sprite.setRotation(Math.atan2(this.vy, this.vx));
+    this.cover = this.findCover();
+    this.sprite.setAlpha(this.cover ? 0.55 : 1);
+    if (this.distToTower() < this.coreReach()) this.ramCore();
+    super.update(dt);
+  }
+  drawExtra(g) {
+    if (this.cover && !this.cover.dead) { g.lineStyle(1, this.def.color, 0.25); g.lineBetween(this.x, this.y, this.cover.x, this.cover.y); }
+    else { g.lineStyle(1.5, this.def.color, 0.6); g.strokeCircle(this.x, this.y, this.r + 2); }
   }
 }
 

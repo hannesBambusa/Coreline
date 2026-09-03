@@ -96,7 +96,7 @@ function pierceThrough(b, m) {
 function bulletHit(scene, b, m) {
   const opts = {};
   focusCombo(scene, b, m, opts);
-  if (b.ricochet) opts.dmg = b.dmg;
+  if (b.ricochet || b.reflected) opts.dmg = b.dmg;   // these carry their own damage instead of the weapon's
   if (b.chronoT) { const cf = scene.tower.weapons.find(w => w.type === 'chrono'); if (cf) { opts.mul = (opts.mul || 1) * cf.bulletMul(b.chronoT); opts.color = opts.color || '#e0f2fe'; } }
   const hpBefore = m.hp;
   if (b.weapon) scene.hit(m, b.weapon, b.x, b.y, opts);
@@ -128,11 +128,13 @@ function updateTowerBullets(scene, dt) {
 
 function updateEnemyBullets(scene, dt) {
   const t = scene.tower;
-  const bays = t.weapons.filter(w => Array.isArray(w.drones));
+  const bays = t.weapons.filter(w => Array.isArray(w.drones)), mirror = t.weapons.find(w => w.type === 'mirrors');
   for (const b of scene.enemyBullets) {
     const k = b.chrono || 1;   // chrono field slows shots inside it
+    const prevD = mirror ? distXY(b.x, b.y, t.x, t.y) : 0;
     b.x += b.vx * dt * k; b.y += b.vy * dt * k; b.age += dt;
     if (bays.length && bays.some(w => w.absorb(b))) { b.age = DEAD_AGE; continue; }
+    if (mirror && mirror.reflect(b, prevD)) { b.age = DEAD_AGE; continue; }
     const d = distXY(b.x, b.y, t.x, t.y);
     const hitR = t.shield > 0 ? t.shieldR : t.r + 4;
     if (d < hitR) { t.takeDamage(b.dmg, b.x, b.y, false, b.from); b.age = DEAD_AGE; }

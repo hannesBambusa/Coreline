@@ -40,6 +40,7 @@ export class GameScene extends Phaser.Scene {
     this.state = { scrap: 0, fragments: 0, time: 0, tier: 1, kills: 0, bestTime: 0, swapsUsed: 0, difficulty: 'normal' };
     this.profile = { totalKills: 0, prestige: 0 };
     this.settings = { shake: true, sound: true, volume: 0.7, music: true, transmissions: true };
+    this.speed = 1;            // game speed multiplier, set from the top bar (SPEEDS in ui/hud.js)
     this.stats = this.freshStats();
     this.scrapLog = [];
     this.dmgLog = [];          // [second, amount] buckets for recentDps
@@ -248,14 +249,21 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.gameOver) { this.fx.update(dt); return; }
     if (this.paused) { this.saves.update(dt); this.tower.draw(0); this.music.setState(this.musicState(true)); return; }
+    this.perf.update(dt); this.saves.update(dt);   // real time: frame-rate watch and autosave
+    // game speed: slow speeds shrink the step, fast speeds run whole extra steps so physics stays accurate
+    const speed = this.speed || 1;
+    if (speed < 1) this.step(dt * speed);
+    else for (let i = 0; i < speed; i++) this.step(dt);
+  }
+
+  /** one simulation step of `dt` game seconds */
+  step(dt) {
     this.driftStars(dt);
-    this.perf.update(dt);
     this.abilities.update(dt);
     this.autobuy.update(dt);
     this.updateMusic(dt);
     this.combos.update(dt);
     this.afterglow = Math.max(0, (this.afterglow || 0) - dt);
-    this.saves.update(dt);
     this.tower.update(dt, this.mobs);
     for (const m of this.mobs) if (!m.dead) { if (m.marked > 0) m.marked -= dt; if (m.stun > 0) m.stunned(dt); else m.update(dt); }
     this.updateHums();

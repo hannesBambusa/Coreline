@@ -34,6 +34,9 @@ const T = {
   wingmen: { boost: 3, burst: 3 },
   targetlock: { dmgMul: 2 },
   chainblast: { salvo: 2 },
+  prismcannon: { dmgMul: 3 },
+  ricochetfield: { pierce: 2 },
+  focalpoint: { dmgMul: 2 },
 };
 
 const mounted = (tower, type) => tower.weapons.find(w => w.type === type);
@@ -318,4 +321,19 @@ export function kamikazeMul(w, target) {
   const bd = mounted(w.tower, 'beamdrones');
   if (bd && target && bd.drones.some(x => x.alive && x.beams && x.beams.includes(target)) && w.scene.combos.roll('targetlock')) return T.targetlock.dmgMul;
   return 1;
+}
+
+// ---- mirrors: `b` is the enemy shot, `shot` the reflected bullet about to spawn (mutable) ----
+export function onReflect(w, b, shot) {
+  const sc = w.scene, tw = w.tower;
+  // Ricochet field: reflected shots pierce
+  if (mounted(tw, 'pulse') && sc.combos.roll('ricochetfield')) { shot.pierce = T.ricochetfield.pierce; shot.hitSet = new Set(); }
+  // Focal point: a slowed shot comes back harder
+  if (mounted(tw, 'chrono') && b.chrono && b.chrono < 1 && sc.combos.roll('focalpoint')) shot.dmg *= T.focalpoint.dmgMul;
+  // Prism cannon: the laser fires from the plate at the farthest ship
+  const laser = mounted(tw, 'laser');
+  if (laser && sc.combos.roll('prismcannon')) {
+    const far = sc.mobs.filter(o => !o.dead && dist(tw, o) <= laser.range).sort((p, q) => dist(tw, q) - dist(tw, p))[0];
+    if (far) { sc.fx.line(shot.x, shot.y, far.x, far.y, laser.color, 4, 0.5); sc.hit(far, laser, far.x, far.y, { mul: T.prismcannon.dmgMul, color: '#ff3df2', size: 15 }); }
+  }
 }

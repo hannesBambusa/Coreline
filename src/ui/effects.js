@@ -15,7 +15,7 @@ const ENDING_S = 1;                   // blink when less than this is left
 const WHOLE_SECONDS_FROM_S = 10;      // above this show whole seconds, below one decimal
 const TIP_GAP = 12, TIP_MARGIN = 8, TIP_DEFAULT_W = 260, TIP_DEFAULT_H = 80;
 const DRONE_CARD_NAME = { drones: 'Drones', beamdrones: 'Beam drones', missiledrones: 'Missile drones', kamikaze: 'Kamikaze' };
-const COOLDOWN_TYPES = ['drones', 'beamdrones', 'missiledrones', 'kamikaze', 'railgun', 'shock', 'singularity', 'chrono', 'ionstorm'];   // weapons that get a cooldown card
+const COOLDOWN_TYPES = ['drones', 'beamdrones', 'missiledrones', 'kamikaze', 'mirrors', 'railgun', 'shock', 'singularity', 'chrono', 'ionstorm'];   // weapons that get a cooldown card
 
 // ---- Card markup shared by effects and cooldowns -------------------------
 
@@ -85,6 +85,17 @@ export function updateEffects(ui, dt) {
 const cooldownCard = (w) =>
   `<div class="fx-item cd show" data-slot="${w.slot}" style="--fx:${hex(w.color)}">${fxCard(ICONS[w.type], w.def.name, 'cooldown')}</div>`;
 
+function updateMirrorCard(card, w) {
+  setRing(card, 1);
+  const alive = w.plateState.filter(p => p.alive).length, rebuilding = w.plateState.filter(p => !p.alive).sort((a, b) => a.respawnT - b.respawnT)[0];
+  setRing(card, rebuilding ? 1 - rebuilding.respawnT / w.def.rebuild : 1);
+  card.nameEl.textContent = 'Mirrors';
+  card.subEl.textContent = w.jammed > 0 ? 'jammed' : `${alive} / ${w.plates} · ${rebuilding ? 'rebuilding' : w.reflected + ' reflected'}`;
+  card.timeEl.textContent = rebuilding ? rebuilding.respawnT.toFixed(1) + 's' : '';
+  card.el.classList.toggle('ready', !rebuilding);
+  card.el.classList.toggle('jammed', w.jammed > 0);
+}
+
 function updateStormCard(card, w) {
   const hunting = w.clouds.filter(c => c.vx * c.vx + c.vy * c.vy > 100).length;
   setRing(card, 1);
@@ -148,7 +159,7 @@ export function updateCooldowns(ui) {
   for (const w of ws) {
     const card = ui.cooldownRows[w.slot];
     if (!card) continue;
-    if (Array.isArray(w.drones)) updateDroneCard(card, w); else if (w.type === 'ionstorm') updateStormCard(card, w); else if (w.type === 'singularity') updateChargeCard(card, w); else if (w.type === 'chrono') updateChronoCard(card, w); else updateWeaponCard(card, w);
+    if (Array.isArray(w.drones)) updateDroneCard(card, w); else if (w.type === 'mirrors') updateMirrorCard(card, w); else if (w.type === 'ionstorm') updateStormCard(card, w); else if (w.type === 'singularity') updateChargeCard(card, w); else if (w.type === 'chrono') updateChronoCard(card, w); else updateWeaponCard(card, w);
   }
 }
 

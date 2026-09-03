@@ -35,7 +35,7 @@ export class KamikazeDrones extends DroneBay {
     const t = this.tower;
     let tx, ty;
     if (d.target) { tx = d.target.x; ty = d.target.y; }
-    else { d.ang += dt * TUNING.idleSpin; const ir = t.shieldR + TUNING.idleOffset; tx = t.x + Math.cos(d.ang) * ir; ty = t.y + Math.sin(d.ang) * ir; }
+    else { d.ang += dt * TUNING.idleSpin; const ir = this.idleRadius(TUNING.idleOffset - 40); tx = t.x + Math.cos(d.ang) * ir; ty = t.y + Math.sin(d.ang) * ir; }
     const a = Math.atan2(ty - d.y, tx - d.x), sp = this.def.droneSpeed * bm, k = Math.min(1, dt * TUNING.steer);
     d.vx += (Math.cos(a) * sp - d.vx) * k; d.vy += (Math.sin(a) * sp - d.vy) * k;
     d.x += d.vx * dt; d.y += d.vy * dt;

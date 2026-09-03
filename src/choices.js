@@ -39,7 +39,7 @@ export const CHOICES = {
 
 // ---- hunts: one ship type only, big scrap, tougher (and more of them when they are light) ----
 for (const [type, d] of Object.entries(MOBS)) {
-  if (NO_HUNT.has(type) || !d.fromWave || d.fromWave >= 999) continue;
+  if (NO_HUNT.has(type) || d.noSolo || !d.fromWave || d.fromWave >= 999) continue;
   const light = d.hp <= LIGHT_HP;
   CHOICES['hunt_' + type] = {
     name: `${d.name} hunt`, hunt: type, fromTier: Math.max(1, d.fromWave + 1),

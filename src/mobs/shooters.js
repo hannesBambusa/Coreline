@@ -83,6 +83,25 @@ export class Shielder extends Mob {
   }
 }
 
+/** Bulwark: a raider with far more hull. Slow, orbits close, fires paired shots. */
+export class Bulwark extends Mob {
+  constructor(scene, tier, x, y) {
+    super(scene, 'bulwark', tier, x, y, orbitOpts('bulwark', 0.8, 0.15));
+    this.cd = 1 + Math.random();
+    this.sprite.setScale(1.15); this.glow.setScale(this.r / 16).setAlpha(0.55);
+  }
+  update(dt) {
+    const d = this.distToTower(), a = this.angleToTower();
+    this.approachAndOrbit(dt, { gap: 10, tangent: 0.4, backoff: 0.5 });
+    this.sprite.setRotation(a);
+    if (d <= this.def.range && this.tickCooldown(dt, this.def.fireRate)) {
+      for (let i = 0; i < this.def.burst; i++) this.fireAt(a + (i - 0.5) * 0.1, { x: this.x + Math.cos(a) * this.r, y: this.y + Math.sin(a) * this.r });
+    }
+    super.update(dt);
+  }
+  drawExtra(g) { g.lineStyle(2, this.def.color, 0.35); g.strokeCircle(this.x, this.y, this.r + 3); }
+}
+
 /** Blinker: charges for a moment, vanishes, reappears somewhere else on its ring and fires a burst at the core. */
 export class Blinker extends Mob {
   constructor(scene, tier, x, y) {

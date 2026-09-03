@@ -15,6 +15,7 @@ export const ICONS = {
   beamdrones: wrap(`<circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8 8l4 4M16 8l-4 4M8 16l4-4M16 16l-4-4" opacity=".8"/><path d="M12 12h9" opacity=".6"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/>`),
   missiledrones: wrap(`<circle cx="6" cy="6" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="6" cy="18" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M13 10l5 5-2 1-4-4z"/><path d="M12 11l-4 4 1 1 4-4" opacity=".8"/><path d="M8 8l4 4M16 16l-3-3" opacity=".4"/>`),
   kamikaze: wrap(`<path d="M12 3l4 9-4 9-4-9z"/><circle cx="12" cy="12" r="2" fill="currentColor"/><path d="M4 6l2 2M20 6l-2 2M4 18l2-2M20 18l-2-2" opacity=".6"/><circle cx="12" cy="12" r="8" opacity=".3"/>`),
+  mirrors: wrap(`<path d="M5 6a9 9 0 0 0 0 12"/><path d="M19 6a9 9 0 0 1 0 12"/><path d="M4 4l1 2M4 20l1-2M20 4l-1 2M20 20l-1-2" opacity=".6"/><path d="M12 2l3 5-3 5" opacity=".7"/><circle cx="12" cy="12" r="2" fill="currentColor"/>`),
   ionstorm: wrap(`<path d="M6 14a4 4 0 0 1 1-7.9A5 5 0 0 1 16.5 7 3.5 3.5 0 0 1 18 14z"/><path d="M12 14l-2 4h3l-2 4" opacity=".9"/><path d="M8 16l-1 2M16 16l1 2" opacity=".5"/>`),
   drones: wrap(`<circle cx="12" cy="12" r="2.2" fill="currentColor"/><path d="M9.8 9.8L6 6M14.2 9.8L18 6M9.8 14.2L6 18M14.2 14.2L18 18"/><circle cx="5" cy="5" r="2.4"/><circle cx="19" cy="5" r="2.4"/><circle cx="5" cy="19" r="2.4"/><circle cx="19" cy="19" r="2.4"/><path d="M3 5h4M17 5h4M3 19h4M17 19h4" opacity=".7"/>`),
   slot: wrap(`<circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/><path d="M12 8v8M8 12h8"/>`),
@@ -25,5 +26,12 @@ export const ICONS = {
   ab_overcharge: wrap(`<path d="M13 2L5 14h6l-1 8 8-12h-6z"/><path d="M4 4l3 1M20 20l-3-1" opacity=".5"/>`),
   ab_burst: wrap(`<path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M12 8v4l3 2" opacity=".7"/><path d="M3 3l2 2M21 3l-2 2M3 21l2-2M21 21l-2-2" opacity=".5"/>`),
   ab_nuke: wrap(`<circle cx="12" cy="12" r="2.5"/><path d="M12 9.5V3a9 9 0 0 1 7.8 4.5l-5.6 3.3M9.8 13.2L4.2 16.5A9 9 0 0 1 4.2 7.5l5.6 3.3M14.2 13.2l5.6 3.3A9 9 0 0 1 12 21v-6.5"/>`),
+  // panel tabs
+  tab_tower: wrap(`<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><circle cx="12" cy="12" r="3"/><path d="M12 3v6M12 15v6" opacity=".4"/>`),
+  tab_upgrades: wrap(`<path d="M6 18l6-6 6 6"/><path d="M6 11l6-6 6 6" opacity=".5"/><path d="M4 21h16" opacity=".4"/>`),
+  tab_skills: wrap(`<circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5v5M12 12.5l-5.5 4.5M12 12.5l5.5 4.5"/>`),
+  tab_stats: wrap(`<path d="M4 20V10M10 20V4M16 20v-8M22 20H2" /><path d="M4 8l6-4 6 4 6-3" opacity=".4"/>`),
+  tab_wiki: wrap(`<path d="M4 4h7a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4z"/><path d="M20 4h-7a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h7z"/><path d="M7 8h3M7 11h3M14 8h3M14 11h3" opacity=".5"/>`),
+  tab_settings: wrap(`<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M5 19l2-2"/>`),
   level: wrap(`<path d="M6 18l6-6 6 6"/><path d="M6 12l6-6 6 6" opacity=".5"/>`),
 };

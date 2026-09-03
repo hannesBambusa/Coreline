@@ -25,6 +25,7 @@ export function syncSettings(ui) {
   $('#opt-transmissions').checked = st.transmissions !== false; scene.tx.enabled = st.transmissions !== false;
   $('#opt-flash').checked = st.flash !== false;
   $('#opt-perf').value = st.perf || 'auto'; scene.perf.set(st.perf || 'auto');
+  ui.setSpeed([0.25, 0.5, 1, 2, 4].includes(st.speed) ? st.speed : 1);
   $('#opt-volume').value = toSlider(volume(st));
   $('#vol-slider').value = toSlider(volume(st));
   syncMute(ui);

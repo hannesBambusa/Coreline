@@ -292,6 +292,12 @@ function drawTurret(g, w, mx, my, a, c, recoil) {
       g.lineStyle(1.5, c, 1); line(g, mx, my, a, 3, -4, 8, 0); line(g, mx, my, a, 3, 4, 8, 0);
       break;
     }
+    case 'mirrors': {      // small angled plate on a stalk
+      g.lineStyle(2, c, 0.9); line(g, mx, my, a, 0, 0, 7, 0);
+      g.lineStyle(2.5, COLORS.white, 0.9); line(g, mx, my, a, 8, -6, 8, 6);
+      g.lineStyle(1.5, c, 0.7); line(g, mx, my, a, 10, -5, 10, 5);
+      break;
+    }
     case 'ionstorm': {     // antenna mast with a dish
       g.lineStyle(2, c, 0.9); line(g, mx, my, a, 0, 0, 12, 0);
       const [dx, dy] = P(mx, my, a, 12, 0); g.lineStyle(1.5, c, 1); g.beginPath(); g.arc(dx, dy, 5, a - 1.3, a + 1.3, false); g.strokePath();

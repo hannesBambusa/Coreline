@@ -6,11 +6,12 @@ import * as hud from './ui/hud.js';
 import * as fx from './ui/effects.js';
 import { renderTowerTab, renderUpgradesTab, renderSkillsTab } from './ui/panel.js';
 import { statsHtml } from './ui/stats.js';
+import { wikiHtml } from './ui/wiki.js';
 import { purchase, isFreeInstall } from './ui/purchases.js';
 import { initSettings, initResize, syncSettings, syncMute } from './ui/settings.js';
 
 const RENDER_MS = 150;
-const TAB_BUILDERS = { tower: renderTowerTab, upgrades: renderUpgradesTab, skills: renderSkillsTab, stats: (ui) => statsHtml(ui.scene) };
+const TAB_BUILDERS = { tower: renderTowerTab, upgrades: renderUpgradesTab, skills: renderSkillsTab, stats: (ui) => statsHtml(ui.scene), wiki: (ui) => wikiHtml(ui.scene) };
 const TEXT_INPUTS = ['INPUT', 'TEXTAREA'];
 
 export class UI {
@@ -29,7 +30,8 @@ export class UI {
     for (const el of $$('.tab')) this.tabEls[el.id.replace('tab-', '')] = el;
 
     $('#panel-toggle').onclick = () => { this.panel.classList.toggle('hidden'); this.render(); };
-    for (const b of $$('#tabs button')) b.onclick = () => this.showTab(b.dataset.tab);
+    for (const b of $$('#tabs button')) { b.innerHTML = ICONS['tab_' + b.dataset.tab] || b.dataset.tab; b.onclick = () => this.showTab(b.dataset.tab); }
+    fx.bindTips(this, $('#tabs'));
     $('#tabs button[data-tab=skills]').hidden = false;
     initSettings(this);
     this.applyPanelWidth = initResize(this);
@@ -39,6 +41,7 @@ export class UI {
     $('#start-weapons').onclick = (e) => { const b = e.target.closest('[data-start]'); if (b) scene.setStartWeapon(b.dataset.start); };
     $('#start-diff').onclick = (e) => { const b = e.target.closest('[data-diff]'); if (b) scene.setDifficulty(b.dataset.diff); };
     $('#btn-pause').onclick = () => scene.setPaused(!scene.paused);
+    $('#speed').onclick = (e) => { const b = e.target.closest('[data-speed]'); if (b) this.setSpeed(+b.dataset.speed); };
     $('#btn-auto').onclick = () => this.toggleAuto(true);
     $('#auto-reserve').oninput = (e) => { scene.autobuy.reserve = Math.max(0, +e.target.value || 0); };
     window.addEventListener('keydown', (e) => this.onKey(e));
@@ -50,6 +53,13 @@ export class UI {
   }
 
   panelHidden() { return this.panel.classList.contains('hidden'); }
+
+  /** game speed from the top bar: ¼, ½, 1, 2 or 4. Remembered in settings. */
+  setSpeed(v) {
+    const scene = this.scene;
+    scene.speed = v; scene.settings.speed = v;
+    for (const b of $$('#speed button')) b.classList.toggle('on', +b.dataset.speed === v);
+  }
 
   onKey(e) {
     const scene = this.scene;

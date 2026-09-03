@@ -1,6 +1,6 @@
 // Mob roster: one class per enemy type, plus the factory the scene and the mobs themselves spawn through.
-import { Drone, Swarm, Hydra, Bomber, Behemoth, Mine } from './rushers.js';
-import { Raider, Orbiter, Shielder, Phantom, Sniper, Jammer, Blinker } from './shooters.js';
+import { Drone, Swarm, Hydra, Bomber, Behemoth, Mine, Shoal } from './rushers.js';
+import { Raider, Orbiter, Shielder, Phantom, Sniper, Jammer, Blinker, Bulwark } from './shooters.js';
 import { Leech, Siphon, Carrier, Beacon } from './support.js';
 import { Boss, Warden, Warlord, Pylon } from './bosses.js';
 import { Titan } from './titan.js';
@@ -11,7 +11,7 @@ export { Drone, Swarm, Hydra, Bomber, Behemoth, Mine, Raider, Orbiter, Shielder,
 /** type key -> class */
 export const MOB_CLASSES = {
   drone: Drone, raider: Raider, swarm: Swarm, orbiter: Orbiter, shielder: Shielder, boss: Boss,
-  bomber: Bomber, leech: Leech, phantom: Phantom, blinker: Blinker, hydra: Hydra, sniper: Sniper, carrier: Carrier,
+  bomber: Bomber, leech: Leech, phantom: Phantom, blinker: Blinker, bulwark: Bulwark, shoal: Shoal, hydra: Hydra, sniper: Sniper, carrier: Carrier,
   jammer: Jammer, siphon: Siphon, beacon: Beacon, behemoth: Behemoth, titan: Titan, mine: Mine, warden: Warden, warlord: Warlord, pylon: Pylon,
 };
 

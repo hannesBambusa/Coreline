@@ -22,6 +22,7 @@
     <div id="vol"><button id="btn-mute" title="Mute">🔊</button><input type="range" id="vol-slider" min="0" max="100" value="70" title="Volume"></div>
     <button id="btn-auto" title="Auto-buy upgrades (order in Upgrades tab)">AUTO</button>
     <button id="btn-pause" title="Pause (Space)">❚❚</button>
+    <div id="speed" title="Game speed"><button data-speed="0.25">¼</button><button data-speed="0.5">½</button><button data-speed="1" class="on">1×</button><button data-speed="2">2×</button><button data-speed="4">4×</button></div>
     <button id="panel-toggle" title="Toggle panel">☰</button>
   </div>
 
@@ -43,16 +44,18 @@
   <aside id="panel">
     <div id="panel-grip" title="Drag to resize"></div>
     <nav id="tabs">
-      <button data-tab="tower" class="active">Tower</button>
-      <button data-tab="upgrades">Upgrades</button>
-      <button data-tab="skills" hidden>Skills</button>
-      <button data-tab="stats">Stats</button>
-      <button data-tab="settings">Settings</button>
+      <button data-tab="tower" class="active" data-tip="Tower&#10;Hardpoints, weapons and combos"></button>
+      <button data-tab="upgrades" data-tip="Upgrades&#10;Core upgrades and auto-buy"></button>
+      <button data-tab="skills" hidden data-tip="Skills&#10;Prestige and the permanent tree"></button>
+      <button data-tab="stats" data-tip="Stats&#10;Live numbers and run statistics"></button>
+      <button data-tab="wiki" data-tip="Wiki&#10;Every ship: what it does, hp, damage"></button>
+      <button data-tab="settings" data-tip="Settings&#10;Display, sound, save"></button>
     </nav>
     <section id="tab-tower" class="tab active"></section>
     <section id="tab-upgrades" class="tab"></section>
     <section id="tab-skills" class="tab"></section>
     <section id="tab-stats" class="tab"></section>
+    <section id="tab-wiki" class="tab"></section>
     <section id="tab-settings" class="tab">
       <h3>Display</h3>
       <label class="toggle"><input type="checkbox" id="opt-shake" checked> Screen shake</label>

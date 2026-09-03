@@ -32,9 +32,9 @@ export const WEAPONS = {
   },
   laser: {
     name: 'Laser beam', install: 700,
-    desc: 'Continuous beam that ramps on one target and keeps most of its ramp when it switches. From half ramp it forks to nearby ships (more forks at Lv 8, 16, 24); at full ramp it sweeps the whole ring. From Lv 5 its crit ticks burst in an area.',
+    desc: 'Continuous beam that ramps on one target and keeps most of its ramp when it switches. From half ramp it forks to ships within 170 px of its target (more forks at Lv 8, 16, 24); at full ramp it sweeps the whole ring. From Lv 5 its crit ticks burst in an area.',
     dmg: 20, rate: 1, range: 560, rampTime: 3, rampMax: 3, keepRamp: 0.6,
-    forksAt: [1, 8, 16, 24], forkDmg: 0.5, forkRamp: 0.5, burstAt: 5, burstRadius: 80,
+    forksAt: [1, 8, 16, 24], forkDmg: 0.5, forkRamp: 0.5, forkRange: 170, burstAt: 5, burstRadius: 80,
     sweepEvery: 6, sweepDur: 0.6, sweepMul: 2.5,
     dmgMul: 1.16, rateMul: 1.0,
     cost: 135, costGrowth: 1.42,
@@ -137,6 +137,16 @@ export const WEAPONS = {
     cost: 110, costGrowth: 1.42,
     prefer: ['shielder', 'behemoth', 'carrier', 'hydra'], bonus: 1.4,
     color: COLORS.red,
+  },
+  mirrors: {
+    name: 'Mirrors', install: 800,
+    desc: 'Reflector plates orbiting just outside the shield. Enemy shots that hit a plate fly back at whoever fired them, for the shot\'s own damage times a multiplier. Ships that crash into a plate die and damage it; reflections wear it too. A broken plate rebuilds in 10 s. Plates turn to face incoming fire. More plates at Lv 8 and 16.',
+    dmg: 1, rate: 1, range: 0, arc: 1.0, arcPerLevel: 0.03, arcMax: 1.7, mul: 1.5, mulPerLevel: 0.12, platesAt: [8, 16],
+    plateHp: 220, plateHpMul: 1.14, reflectWear: 0.08, rebuild: 10,   // a plate has hp: rams hit it for their damage, each reflect costs wear × the shot's damage; dead plates rebuild
+    dmgMul: 1.0, rateMul: 1.0,
+    cost: 100, costGrowth: 1.4,
+    prefer: ['sniper', 'raider', 'orbiter', 'warden'], bonus: 1,
+    color: COLORS.ice,
   },
   drones: {
     name: 'Drone bay', install: 600,

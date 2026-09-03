@@ -48,6 +48,7 @@ export const TREE = {
   u_beamdrones: { branch: 'weapons', name: 'Unlock Beam drones', max: 1, cost: () => 3, unlock: 'beamdrones', effect: () => {}, text: () => 'beam drones can be mounted' },
   u_missiledrones: { branch: 'weapons', name: 'Unlock Missile drones', max: 1, cost: () => 3, unlock: 'missiledrones', effect: () => {}, text: () => 'missile drones can be mounted' },
   u_kamikaze: { branch: 'weapons', name: 'Unlock Kamikaze drones', max: 1, cost: () => 3, unlock: 'kamikaze', effect: () => {}, text: () => 'kamikaze drones can be mounted' },
+  u_mirrors: { branch: 'weapons', name: 'Unlock Mirrors', max: 1, cost: () => 3, unlock: 'mirrors', effect: () => {}, text: () => 'mirrors can be mounted' },
   u_ionstorm: { branch: 'weapons', name: 'Unlock Ion storm', max: 1, cost: () => 3, unlock: 'ionstorm', effect: () => {}, text: () => 'ion storm can be mounted' },
   u_singularity: { branch: 'weapons', name: 'Unlock Singularity core', max: 1, cost: () => 4, unlock: 'singularity', effect: () => {}, text: () => 'singularity core can be mounted' },
   m_shock:  { branch: 'weapons', weapon: 'shock', name: 'Resonance coils', max: 4, cost: lin(2, 2), requires: 'u_shock', effect: (m, l) => { m.w.shock.rate *= 1 + 0.12 * l; }, text: (l) => `shock emitter cooldown -${Math.round(100 - 100 / (1 + 0.12 * l))}%` },
@@ -63,7 +64,7 @@ export const TREE = {
 
 export function baseMods() {
   const w = {};
-  for (const k of ['pulse', 'railgun', 'missile', 'laser', 'tesla', 'gravity', 'shock', 'drones', 'chrono', 'nanite', 'singularity', 'beamdrones', 'ionstorm', 'missiledrones', 'kamikaze']) w[k] = { dmg: 1, rate: 1, splash: 1, chains: 0, rampMax: 0, radius: 1, life: 0 };
+  for (const k of ['pulse', 'railgun', 'missile', 'laser', 'tesla', 'gravity', 'shock', 'drones', 'chrono', 'nanite', 'singularity', 'beamdrones', 'ionstorm', 'missiledrones', 'kamikaze', 'mirrors']) w[k] = { dmg: 1, rate: 1, splash: 1, chains: 0, rampMax: 0, radius: 1, life: 0 };
   return {
     dmg: 1, rate: 1, crit: 0, critMul: 0, abilityCd: 1,
     shieldMax: 1, shieldRegen: 1, hull: 1, hullRegen: 0, calmMul: 0,

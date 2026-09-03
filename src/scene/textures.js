@@ -133,6 +133,18 @@ export function makeTextures(scene) {
     g.lineStyle(2, WHITE, 1); g.beginPath(); g.arc(c, c, 9, 0.6, 5.7, false); g.strokePath();
     g.fillStyle(WHITE, 0.8); g.fillCircle(c + 6, c - 6, 2); g.fillCircle(c + 6, c + 6, 2);
   });
+  // bulwark: chunky armoured hull, hexagon with a nose
+  shape('ship_bulwark', 40, (c) => {
+    g.lineStyle(2, WHITE, 1); g.fillStyle(WHITE, 0.22);
+    poly(g, [[c + 17, c], [c + 8, c - 12], [c - 8, c - 12], [c - 15, c], [c - 8, c + 12], [c + 8, c + 12]]);
+    g.lineStyle(1.5, WHITE, 0.7); g.strokeCircle(c - 2, c, 5);
+    g.lineBetween(c + 4, c - 7, c + 12, c - 3); g.lineBetween(c + 4, c + 7, c + 12, c + 3);
+  });
+  // shoal: tiny fish-like dart
+  shape('ship_shoal', 14, (c) => {
+    g.lineStyle(1.2, WHITE, 1); g.fillStyle(WHITE, 0.6);
+    poly(g, [[c + 6, c], [c - 3, c - 3], [c - 5, c], [c - 3, c + 3]]);
+  });
   // blinker: split chevron, two halves with a gap
   shape('ship_blinker', 26, (c) => {
     g.lineStyle(1.5, WHITE, 1); g.fillStyle(WHITE, 0.2);

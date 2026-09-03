@@ -1,6 +1,6 @@
 // Game version. Bumped automatically by scripts/hooks/pre-commit (via scripts/bump-version.sh) together with version.json. The page shows it bottom-left and
 // polls version.json so a player on an old build gets an "update available" prompt.
-export const VERSION = '1.0.7';
+export const VERSION = '1.0.8';
 export const VERSION_CHECK_MS = 5 * 60 * 1000;
 
 /** Poll version.json (cache-busted) and call `onNew(remote)` once when the deployed version differs. */

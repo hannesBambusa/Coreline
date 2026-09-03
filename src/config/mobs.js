@@ -158,14 +158,14 @@ export const SIEGE = {
 
 export const SPAWN = {
   tierSeconds: 40,       // one threat level per this many seconds survived
-  hpGrowth: 1.17,        // mob hp multiplier per threat level, from earlyTiers on (steeper than before so the late game stays where it was)
-  hpGrowthEarly: 1.08,   // gentler multiplier for the first earlyTiers levels: a fresh player has few weapons yet
-  earlyTiers: 10,
+  hpGrowth: 1.15,        // mob hp multiplier per threat level, from earlyTiers on (was 1.17 from level 10: normal got hard around level 14, the aim is trouble around 45)
+  hpGrowthEarly: 1.06,   // gentler multiplier for the first earlyTiers levels: a fresh player has few weapons yet (was 1.08)
+  earlyTiers: 20,        // (was 10)
   hpBase: 1.15,          // flat multiplier on every ship's hp
-  dmgGrowth: 1.045,      // mob damage multiplier per threat level
+  dmgGrowth: 1.035,      // mob damage multiplier per threat level (was 1.045)
   scrapGrowth: 1.08,     // scrap multiplier per threat level
   baseRate: 1.0,         // mobs per second at t=0
-  ratePerSecond: 0.011,  // extra mobs/sec per second survived
+  ratePerSecond: 0.007,  // extra mobs/sec per second survived (was 0.011: 7 ships/s by level 14; now 4.4/s there and the 12/s cap around level 40)
   startScrap: 150,       // every run starts with this much scrap (plus Emergency reserve)
   maxRate: 12,
   softCap: 220,          // stop regular spawns while this many ships are alive
@@ -175,7 +175,7 @@ export const SPAWN = {
   // surge spawn-rate multiplier by ship toughness: light ships come in far bigger numbers
   surgeMul: { light: 2.6, medium: 1.6, heavy: 1.0 }, surgeLightHp: 35, surgeMediumHp: 100,
   surgeSoft: 0.35, surgeRampTiers: 25, surgeSettle: 3,   // a ship type can surge only 3 levels after it first appears   // surge numbers start at 35 % of the extra and reach the full multiplier 25 tiers after the first surge
-  burst: [2, 4],         // mobs per spawn tick, min/max
+  burst: [2, 3],         // mobs per spawn tick, min/max (was 2–4)
   raiderPerTier: 0.06, raiderMax: 0.45,
 };
 

@@ -475,3 +475,6 @@ Blinker toned down: jumps every 2 s (was 1) with a 0.5 s charge (was 0.25) from 
 Siphon tethers respect mirrors: a live plate across the tether angle blocks the drain and the siphon takes the plate's reflect damage per second (`mirror.reflectDmg` of its drain rate, quiet hits), the plate wears a little and the tether is drawn gold to the ring. The loadout strip title shows swaps left for the run.
 
 Missile pod buff: 30 dmg at 1.6/s (was 22 at 1.4), splash 90, speed 360, turn 7, and salvos of 2 from Lv 7 and 3 from Lv 14 (`salvoAt`), the extra missiles going to the nearest other ships in range. Stat lines show missiles per shot and the salvo dps.
+
+## Normal curve, second pass
+Normal got hard around threat 14 and should bite around 45. Ship hp now grows ×1.06 per level to level 20 then ×1.15 (was ×1.08 to 10 then ×1.17): level 14 is 2.5× base hp instead of 4.3×, level 45 about 115× instead of 560×. Ship damage grows ×1.035 per level (was 1.045). Spawn rate grows 0.007 ships/s per second (was 0.011), so level 14 sees 4.4 ships/s instead of 7 and the 12/s cap lands near level 40; spawn bursts are 2–3 ships (were 2–4). Harder difficulties keep their multipliers on top. First pass, to be tuned by play.

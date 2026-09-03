@@ -55,6 +55,10 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 #speed button:hover { color: var(--text); }
 #speed button.on { color: var(--cyan); background: rgba(79,242,255,0.18); }
 #btn-pause.on { background: rgba(79,242,255,0.2); box-shadow: 0 0 12px rgba(79,242,255,0.4); }
+#btn-logout { margin-left: 6px; pointer-events: auto; background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; width: 34px; height: 30px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: color 0.12s, border-color 0.12s; }
+#btn-logout svg { width: 18px; height: 18px; }
+#btn-logout:hover { color: var(--red); border-color: var(--red); }
+#btn-logout[hidden] { display: none; }
 #panel-toggle { margin-left: 10px; pointer-events: auto; background: none; border: 1px solid var(--line); color: var(--cyan); border-radius: 6px; width: 34px; height: 30px; cursor: pointer; }
 
 

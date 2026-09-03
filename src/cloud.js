@@ -29,7 +29,18 @@ export class Cloud {
         const s = document.createElement('script'); s.src = CLOUD.sdk; s.onload = ok; s.onerror = () => fail(new Error('sdk')); document.head.appendChild(s);
       });
       this.client = window.supabase.createClient(CLOUD.url, CLOUD.anonKey);
-      const { data } = await this.client.auth.getSession();
+      // coming back from Google / a magic link: Supabase puts either ?code= (PKCE) or #access_token= (implicit) or
+      // ?error= in the URL. Finish the exchange here, surface errors, then clean the address bar.
+      const params = new URLSearchParams(location.search), hash = new URLSearchParams(location.hash.slice(1));
+      const oauthError = params.get('error_description') || hash.get('error_description') || params.get('error') || hash.get('error');
+      if (oauthError) { this.loginError = decodeURIComponent(oauthError.replace(/\+/g, ' ')); console.error('Coreline cloud: sign-in returned an error', this.loginError); }
+      if (params.get('code')) {
+        const { error } = await this.client.auth.exchangeCodeForSession(params.get('code'));
+        if (error) { this.loginError = error.message; console.error('Coreline cloud: code exchange failed', error); }
+      }
+      const { data } = await this.client.auth.getSession();   // implicit flow: the client reads #access_token here, so clean the URL only after
+      if (params.get('code') || oauthError || hash.get('access_token')) history.replaceState(null, '', location.pathname);
+      if (!data.session && hash.get('access_token')) { this.loginError = 'Signed in with Google, but this browser blocks site storage so the session cannot be kept. Allow cookies/site data for this site.'; console.error('Coreline cloud: session from URL was not stored'); }
       this.setUser(data.session ? data.session.user : null, false);
       this.client.auth.onAuthStateChange((_ev, session) => this.setUser(session ? session.user : null, true));
     } catch (e) {
@@ -53,7 +64,8 @@ export class Cloud {
   async magicLink(email) { return this.report(await this.client.auth.signInWithOtp({ email, options: { emailRedirectTo: location.href.split('#')[0] } }), 'Magic link sent, check your email'); }
   /** Google via Supabase OAuth: leaves the page and comes back with a session */
   async signInGoogle() {
-    const { error } = await this.client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.href.split('#')[0].split('?')[0] } });
+    // redirect back to this exact page; it must be on the Supabase redirect allow list (see docs/DESIGN.md)
+    const { error } = await this.client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
     return error ? 'Error: ' + error.message : 'Opening Google…';
   }
   async signOut() { await this.client.auth.signOut(); this.user = null; this.status = 'out'; this.emit(); return 'Signed out'; }

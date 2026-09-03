@@ -1,3 +1,4 @@
 .DS_Store
 ongoing-implementations/
 desktop.ini
+.supabase-secret

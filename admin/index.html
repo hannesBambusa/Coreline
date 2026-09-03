@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Coreline admin</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<header>
+  <h1>Coreline <span>admin</span></h1>
+  <div id="conn" class="muted">not connected</div>
+  <button id="btn-refresh" hidden>Refresh</button>
+  <button id="btn-disconnect" hidden>Disconnect</button>
+</header>
+
+<section id="gate">
+  <p>This panel talks to Supabase through the local dev server, which holds the project's <b>secret key</b>. Supabase refuses secret keys sent from a browser, so the key never reaches this page.</p>
+  <p>Setup, once: copy the secret key (Project Settings → API Keys → Secret keys) into a file named <code>.supabase-secret</code> next to <code>serve.py</code> (it is gitignored), or export <code>CORELINE_SECRET</code>, then restart <code>python3 serve.py</code>.</p>
+  <button id="btn-connect">Connect</button>
+  <div id="gate-msg" class="muted"></div>
+</section>
+
+<main hidden>
+  <div class="stats" id="totals"></div>
+  <div class="toolbar"><input id="filter" placeholder="filter by email or id"><label><input type="checkbox" id="only-saves"> only users with a save</label></div>
+  <table id="users">
+    <thead><tr><th>Email</th><th>Signed up</th><th>Last sign-in</th><th>Prestige</th><th>Fragments</th><th>Best run</th><th>Difficulty</th><th>Save updated</th><th></th></tr></thead>
+    <tbody></tbody>
+  </table>
+</main>
+
+<dialog id="editor">
+  <form method="dialog">
+    <h2 id="ed-title"></h2>
+    <div class="grid">
+      <label>Fragments <input id="ed-frag" type="number" min="0"></label>
+      <label>Prestige <input id="ed-prestige" type="number" min="0"></label>
+      <label>Difficulty <select id="ed-diff"><option>easy</option><option>normal</option><option>hard</option><option>brutal</option><option>insane</option></select></label>
+      <label>Scrap (current run) <input id="ed-scrap" type="number" min="0"></label>
+    </div>
+    <details><summary>Raw save JSON</summary><textarea id="ed-json" rows="14" spellcheck="false"></textarea></details>
+    <div class="row">
+      <button value="save" id="ed-save">Save changes</button>
+      <button value="export" id="ed-export" type="button">Download JSON</button>
+      <button value="wipe" id="ed-wipe" type="button" class="danger">Delete save</button>
+      <button value="ban" id="ed-delete-user" type="button" class="danger">Delete user</button>
+      <button value="cancel">Close</button>
+    </div>
+    <div id="ed-msg" class="muted"></div>
+  </form>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script type="module" src="admin.js"></script>
+</body>
+</html>

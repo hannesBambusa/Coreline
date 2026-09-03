@@ -56,3 +56,7 @@ The version shows bottom-left in the game and in Settings → About. It is bumpe
 ## Credits
 
 - Sound samples: [Sci-fi Sounds by Kenney](https://kenney.nl/assets/sci-fi-sounds), CC0. Files in `assets/sfx/kenney/`.
+
+## Admin panel
+
+`admin/` is a local-only page for users and cloud saves: `python3 serve.py`, then http://localhost:8765/admin/. The dev server proxies its requests to Supabase and attaches the project's **secret** key server-side (Supabase refuses secret keys from a browser): put the key in a gitignored `.supabase-secret` file next to `serve.py`, or export `CORELINE_SECRET`, and restart the server. Lists every account with its save summary, opens a save for editing (fragments, prestige, difficulty, scrap, raw JSON), exports it, deletes the save or the account. Never commit the secret key.

@@ -70,8 +70,9 @@ export class UI {
     $('#acc-magic').onclick = async () => { const [e] = creds(); if (!e) return msg('Type your email first'); msg('…'); msg(await cloud.magicLink(e)); };
     $('#acc-google').onclick = async () => { msg('…'); msg(await cloud.signInGoogle()); };
     $('#acc-offline').onclick = () => { this.offlineOk = true; this.syncAccount(); };
-    $('#acc-signout').onclick = $('#acc-settings-out').onclick = async () => msg(await cloud.signOut());
+    $('#acc-signout').onclick = $('#acc-settings-out').onclick = $('#btn-logout').onclick = async () => msg(await cloud.signOut());
     $('#acc-pass').onkeydown = (e) => { if (e.key === 'Enter') $('#acc-signin').click(); };
+    fx.bindTips(this, $('#topbar'));
     cloud.onChange(() => this.syncAccount());
     this.syncAccount();
   }
@@ -90,12 +91,15 @@ export class UI {
     $('#account-out').hidden = c.status === 'in';
     $('#account-in').hidden = c.status !== 'in';
     $('#acc-who').textContent = who ? `Signed in as ${who}` : '';
-    if (c.status === 'loading') $('#acc-msg').textContent = 'Connecting…';
+    if (c.loginError) { $('#acc-msg').textContent = 'Sign-in failed: ' + c.loginError; c.loginError = null; }
+    else if (c.status === 'loading') $('#acc-msg').textContent = 'Connecting…';
     else if (c.status === 'error') $('#acc-msg').textContent = 'Cloud unavailable right now, playing locally';
     else if (c.status === 'out') $('#acc-msg').textContent = 'Sign in to keep your progress across devices';
     else $('#acc-msg').textContent = 'Progress syncs after every save';
     $('#acc-settings').hidden = !(on && c.status === 'in');
     $('#acc-settings-who').textContent = who;
+    $('#btn-logout').hidden = c.status !== 'in';
+    $('#btn-logout').dataset.tip = who ? `Sign out\n${who}` : 'Sign out';
   }
 
   /** game speed from the top bar: ¼, ½, 1, 2 or 4. Remembered in settings. */

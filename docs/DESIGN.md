@@ -471,3 +471,7 @@ Loadout strip (panel hidden): clicking an empty hardpoint opens the weapon picke
 Every mounted weapon tile on the loadout strip has a `swap` button under it: it opens the same picker in swap mode (`doswap:slot:type`, weapon starts at Lv 1, costs the install price, uses one of the run's swaps); it closes when the swap happens or the button is clicked again. Disabled with no swaps left.
 
 Blinker toned down: jumps every 2 s (was 1) with a 0.5 s charge (was 0.25) from a ring 220–340 px out, and it is flagged `ranged` so a blinker surge brings no extra numbers. A blinker surge at threat 20 on normal was a wipe: every ship dropped every gun's lock four times a second.
+
+Siphon tethers respect mirrors: a live plate across the tether angle blocks the drain and the siphon takes the plate's reflect damage per second (`mirror.reflectDmg` of its drain rate, quiet hits), the plate wears a little and the tether is drawn gold to the ring. The loadout strip title shows swaps left for the run.
+
+Missile pod buff: 30 dmg at 1.6/s (was 22 at 1.4), splash 90, speed 360, turn 7, and salvos of 2 from Lv 7 and 3 from Lv 14 (`salvoAt`), the extra missiles going to the nearest other ships in range. Stat lines show missiles per shot and the salvo dps.

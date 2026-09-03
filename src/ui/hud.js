@@ -191,6 +191,7 @@ export function renderLoadout(ui) {
   if (ui.loSwap !== null && ui.loSwap !== undefined && (!t.slots[ui.loSwap] || t.slots[ui.loSwap].type !== ui.loSwapType)) ui.loSwap = null;   // swapped (or slot gone): close
   const swapping = ui.loSwap !== null && ui.loSwap !== undefined;
   const swapsLeft = scene.swapsLeft();
+  el.querySelector('.aq-title').textContent = `Loadout · ${swapsLeft} swap${swapsLeft === 1 ? '' : 's'} left`;
   // one tile per hardpoint: mounted weapon (click = upgrade), empty (click = pick a weapon), then the next locked one
   let weapons = t.slots.map((w, i) => {
     if (w) {

@@ -2,6 +2,8 @@
 import { TAU, pick } from '../utils.js';
 import { Mob, orbitOpts } from './base.js';
 
+const REFLECT_COLOR = 0xffd166;   // a tether caught by a mirror plate turns gold, like reflected shots
+
 /** launch speed of carrier drones and their fan spread (radians between the two) */
 const CARRIER_LAUNCH_IMPULSE = 160, CARRIER_LAUNCH_SPREAD = 0.6;
 /** warped-in mobs appear this far from the beacon */
@@ -58,7 +60,18 @@ export class Siphon extends Mob {
       this.pulse += dt;
       // drains the shield and heals itself for double the amount; also holds the shield regen back
       const t = this.tower, drain = this.tierDrain(this.def.drain, dt);
-      if (t.shield > 0) {
+      // a mirror plate across the tether turns it round: no drain, the siphon eats its own beam at the plate's reflect strength
+      const mirror = t.weapons.find(w => w.type === 'mirrors'), plate = mirror ? mirror.plateAt(Phaser.Math.Angle.Between(t.x, t.y, this.x, this.y)) : -1;
+      this.blocked = plate !== -1;
+      if (this.blocked) {
+        const perSec = mirror.reflectDmg({ dmg: this.tierDrain(this.def.drain, 1) }, this);
+        this.scene.hit(this, mirror, this.x, this.y, { dmg: perSec * dt, quiet: true, noCrit: true });
+        mirror.wear(plate, drain * mirror.def.reflectWear);
+        mirror.flash[plate] = 0.2;
+        if (this.scene.quads) this.scene.quads.onBlock();
+        if (Math.random() < dt * 0.8) this.scene.fx.floater(this.x, this.y - this.r - 8, 'reflected', '#ffd166', 11);
+        if (Math.random() < dt * 14) { const k = Math.random(); this.scene.fx.trailAt(t.x + (this.x - t.x) * k, t.y + (this.y - t.y) * k, REFLECT_COLOR); }
+      } else if (t.shield > 0) {
         const took = Math.min(t.shield, drain); t.shield -= took;
         this.hp = Math.min(this.hpMax, this.hp + took * 2);
         t.regenDelay = Math.max(t.regenDelay, 0.5); t.sinceHit = 0;
@@ -70,6 +83,15 @@ export class Siphon extends Mob {
   drawExtra(g) {
     if (!this.tethered) return;
     const t = this.tower, w = 1.5 + Math.sin(this.pulse * 10);
+    if (this.blocked) {
+      // tether stops at the mirror ring and comes back gold
+      const mirror = t.weapons.find(x => x.type === 'mirrors'), R = mirror ? mirror.ringR : t.shieldR, a = Phaser.Math.Angle.Between(t.x, t.y, this.x, this.y);
+      const px = t.x + Math.cos(a) * R, py = t.y + Math.sin(a) * R;
+      g.lineStyle(w * 3, REFLECT_COLOR, 0.15); g.lineBetween(this.x, this.y, px, py);
+      g.lineStyle(w, REFLECT_COLOR, 0.85); g.lineBetween(this.x, this.y, px, py);
+      g.fillStyle(0xffffff, 0.9); g.fillCircle(px, py, 3);
+      return;
+    }
     g.lineStyle(w * 3, this.def.color, 0.12); g.lineBetween(this.x, this.y, t.x, t.y);
     g.lineStyle(w, this.def.color, 0.7); g.lineBetween(this.x, this.y, t.x, t.y);
   }

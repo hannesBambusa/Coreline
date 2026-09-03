@@ -25,8 +25,8 @@ export const WEAPONS = {
   },
   missile: {
     name: 'Missile pod', install: 400,
-    desc: 'Homing missiles that explode on impact and hurt everything nearby. Aims at the biggest cluster.',
-    dmg: 22, rate: 1.4, range: 460, speed: 330, turn: 5, splash: 80,
+    desc: 'Homing missiles that explode on impact and hurt everything nearby. Aims at the biggest cluster. Higher levels fire salvos at several targets at once.',
+    dmg: 30, rate: 1.6, range: 460, speed: 360, turn: 7, splash: 90, salvoAt: [7, 14],   // buffed: was 22 dmg at 1.4/s, splash 80, no salvos; it trailed every other turret on dps
     dmgMul: 1.16, rateMul: 1.04,
     cost: 105, costGrowth: 1.42,
     prefer: ['raider', 'orbiter'], bonus: 1.5,

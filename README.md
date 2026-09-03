@@ -49,6 +49,10 @@ Saves live in the player's localStorage per domain. Moving hosts later means pla
 | `src/save.js`, `src/abilities.js`, `src/autobuy.js`, `src/combos.js`, `src/tree.js`, `src/music.js`, `src/transmissions.js`, `src/fx.js`, `src/icons.js` | one concern each |
 - After editing modules, hard reload (Cmd+Shift+R) since the browser caches ES modules.
 
+## Versioning
+
+The version shows bottom-left in the game and in Settings → About. It is bumped automatically: `scripts/hooks/pre-commit` runs `scripts/bump-version.sh` on every commit (patch +1, both files staged). The hook path is set with `git config core.hooksPath scripts/hooks`, so run that once after cloning. `./scripts/bump-version.sh minor` or `major` for bigger jumps, `SKIP_BUMP=1 git commit …` to leave the version alone. Open tabs poll `version.json` every five minutes and show an "update available · reload" button when the deployed version is newer.
+
 ## Credits
 
 - Sound samples: [Sci-fi Sounds by Kenney](https://kenney.nl/assets/sci-fi-sounds), CC0. Files in `assets/sfx/kenney/`.

@@ -7,6 +7,7 @@ import * as fx from './ui/effects.js';
 import { renderTowerTab, renderUpgradesTab, renderSkillsTab } from './ui/panel.js';
 import { statsHtml } from './ui/stats.js';
 import { wikiHtml } from './ui/wiki.js';
+import { VERSION, watchVersion } from './version.js';
 import { purchase, isFreeInstall } from './ui/purchases.js';
 import { initSettings, initResize, syncSettings, syncMute } from './ui/settings.js';
 
@@ -50,6 +51,9 @@ export class UI {
     $('#btn-rebuild').onclick = () => { $('#overlay').hidden = true; scene.prestige(); this.showTab('skills'); };
     $('#btn-prestige').onclick = () => this.confirmPrestige();
     $('#btn-endrun').onclick = () => this.confirmEndRun();
+    $('#version-num').textContent = 'v' + VERSION; $('#version-settings').textContent = 'v' + VERSION;
+    $('#version-update').onclick = () => location.reload();
+    watchVersion((remote) => { const b = $('#version-update'); b.textContent = `v${remote} available · reload`; b.hidden = false; });
     this.render();
     setInterval(() => this.render(), RENDER_MS);
   }

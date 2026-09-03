@@ -44,6 +44,7 @@
   <div id="paused" hidden><div>PAUSED</div><span>Space or ❚❚ to resume</span><small>Upgrades, mounts and skills can be bought while paused</small></div>
   <div id="abilities"></div>
   <div id="left-hud"><div id="cooldowns"></div><div id="effects"></div></div>
+  <div id="version"><span id="version-num"></span><button id="version-update" hidden>Update available · reload</button></div>
   <div id="saved-toast"><span class="st-main">Not saved yet</span><span class="st-time"></span></div>
   <div id="tooltip" hidden></div>
   <div id="transmission"></div>
@@ -82,6 +83,8 @@
       <h3>Auto-buy</h3>
       <label class="toggle">Keep reserve <input type="number" id="auto-reserve" min="0" step="50" value="0" style="width:90px"> scrap</label>
       <p class="muted">Auto-buy never spends below this amount. Order and toggles are in the Upgrades tab.</p>
+      <h3>About</h3>
+      <p class="muted">Coreline <b id="version-settings"></b></p>
       <h3>Save</h3>
       <p class="muted">Autosaves every 10 s. Offline: 50 % of your recent scrap rate, up to 8 h.</p>
       <textarea id="save-text" rows="3" placeholder="Save code"></textarea>

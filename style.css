@@ -500,8 +500,10 @@ body.login #game, body.login #topbar, body.login #panel, body.login #left-hud, b
 #login .start-card { position: relative; background: rgba(10,14,28,0.78); backdrop-filter: blur(6px); }
 #login .start-card { pointer-events: auto; }
 #login #account { border: none; background: none; padding: 0; margin: 0 0 8px; }
-#acc-offline { margin-top: 10px; font-size: 12px; }                        /* below the panel: the panel stays usable on the start screen */
+#acc-offline { margin-top: 10px; font-size: 12px; }
+#login-version { margin-top: 14px; font-size: 11px; letter-spacing: 1px; color: var(--muted); }                        /* below the panel: the panel stays usable on the start screen */
 body.starting #tabs button[data-tab=tower], body.starting #tabs button[data-tab=upgrades] { opacity: 0.25; pointer-events: none; }
+body.starting #btn-pause { opacity: 0.25; pointer-events: none; }
 #btn-intro-show, .link { background: none; border: none; color: var(--cyan); cursor: pointer; font: inherit; text-decoration: underline; padding: 0; }
 #account { margin: 0 0 16px; padding: 12px 14px; border: 1px solid rgba(96,165,250,0.35); border-radius: 12px; background: rgba(5,6,13,0.5); text-align: center; }
 #account[hidden] { display: none; }

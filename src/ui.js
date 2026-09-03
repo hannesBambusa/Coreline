@@ -43,7 +43,7 @@ export class UI {
     $('#btn-intro-show').onclick = () => { $('#intro').hidden = false; };
     $('#start-weapons').onclick = (e) => { const b = e.target.closest('[data-start]'); if (b) scene.setStartWeapon(b.dataset.start); };
     $('#start-diff').onclick = (e) => { const b = e.target.closest('[data-diff]'); if (b) scene.setDifficulty(b.dataset.diff); };
-    $('#btn-pause').onclick = () => scene.setPaused(!scene.paused);
+    $('#btn-pause').onclick = () => { if (!scene.starting) scene.setPaused(!scene.paused); };
     $('#speed').onclick = (e) => { const b = e.target.closest('[data-speed]'); if (b) this.setSpeed(+b.dataset.speed); };
     $('#btn-auto').onclick = () => this.toggleAuto(true);
     $('#auto-reserve').oninput = (e) => { scene.autobuy.reserve = Math.max(0, +e.target.value || 0); };
@@ -52,7 +52,7 @@ export class UI {
     $('#btn-prestige').onclick = () => this.confirmPrestige();
     $('#btn-endrun').onclick = () => this.confirmEndRun();
     this.initAccount();
-    $('#version-num').textContent = 'v' + VERSION; $('#version-settings').textContent = 'v' + VERSION;
+    $('#version-num').textContent = 'v' + VERSION; $('#version-settings').textContent = 'v' + VERSION; $('#login-version').textContent = 'Coreline v' + VERSION;
     $('#version-update').onclick = () => location.reload();
     watchVersion((remote) => { const b = $('#version-update'); b.textContent = `v${remote} available · reload`; b.hidden = false; });
     this.render();

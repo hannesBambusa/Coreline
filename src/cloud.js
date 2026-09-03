@@ -68,7 +68,17 @@ export class Cloud {
     const { error } = await this.client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: location.origin + location.pathname } });
     return error ? 'Error: ' + error.message : 'Opening Google…';
   }
-  async signOut() { await this.client.auth.signOut(); this.user = null; this.status = 'out'; this.emit(); return 'Signed out'; }
+  /** sign out, drop the local copy of this account's save and restart on the login screen */
+  async signOut() {
+    if (!this.scene.gameOver) this.scene.saves.save();
+    await this.push();   // last sync so nothing is lost
+    await this.client.auth.signOut();
+    this.user = null; this.status = 'out';
+    this.scene.saves.suspend = true;   // the autosave must not write the old run back
+    this.scene.saves.clear();
+    location.reload();
+    return 'Signed out';
+  }
   report({ error }, okText) { return error ? 'Error: ' + error.message : okText; }
 
   // ---- sync ----

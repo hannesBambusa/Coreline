@@ -158,12 +158,15 @@ export const SIEGE = {
 
 export const SPAWN = {
   tierSeconds: 40,       // one threat level per this many seconds survived
-  hpGrowth: 1.15,        // mob hp multiplier per threat level
-  hpBase: 1.3,           // flat multiplier on every ship's hp
+  hpGrowth: 1.17,        // mob hp multiplier per threat level, from earlyTiers on (steeper than before so the late game stays where it was)
+  hpGrowthEarly: 1.08,   // gentler multiplier for the first earlyTiers levels: a fresh player has few weapons yet
+  earlyTiers: 10,
+  hpBase: 1.15,          // flat multiplier on every ship's hp
   dmgGrowth: 1.045,      // mob damage multiplier per threat level
   scrapGrowth: 1.08,     // scrap multiplier per threat level
-  baseRate: 1.2,         // mobs per second at t=0
-  ratePerSecond: 0.012,  // extra mobs/sec per second survived
+  baseRate: 1.0,         // mobs per second at t=0
+  ratePerSecond: 0.011,  // extra mobs/sec per second survived
+  startScrap: 150,       // every run starts with this much scrap (plus Emergency reserve)
   maxRate: 12,
   softCap: 220,          // stop regular spawns while this many ships are alive
   surgeEvery: 5,         // every Nth threat level spawns a single random ship type
@@ -185,3 +188,9 @@ export const ELITES = {
     cloaked:  { name: 'Cloaked',  color: COLORS.violet, dodge: 0.35, alpha: 0.35 },
   },
 };
+
+/** ship hp multiplier from threat alone: gentle for the first SPAWN.earlyTiers levels, then the full growth */
+export function hpGrowthAt(tier) {
+  const early = Math.min(tier, SPAWN.earlyTiers) - 1, late = Math.max(0, tier - SPAWN.earlyTiers);
+  return SPAWN.hpBase * Math.pow(SPAWN.hpGrowthEarly, early) * Math.pow(SPAWN.hpGrowth, late);
+}

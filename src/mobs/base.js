@@ -1,4 +1,4 @@
-import { MOBS, SPAWN } from '../config.js';
+import { MOBS, SPAWN, hpGrowthAt } from '../config.js';
 import { TAU, distXY, angleTo, randomSign } from '../utils.js';
 import { createMob } from './index.js';
 import { makeElite, eliteTick, drawElite, spawnSplit } from './elite.js';
@@ -31,7 +31,7 @@ export class Mob {
     this.x = x; this.y = y; this.vx = 0; this.vy = 0;
     this.r = this.def.r;
     const diff = scene.diff;
-    this.hpMax = this.def.hp * SPAWN.hpBase * Math.pow(SPAWN.hpGrowth, tier - 1) * diff.hp; this.hp = this.hpMax;
+    this.hpMax = this.def.hp * hpGrowthAt(tier) * diff.hp; this.hp = this.hpMax;
     this.dmg = this.def.dmg * Math.pow(SPAWN.dmgGrowth, tier - 1) * diff.dmg;
     this.scrap = Math.max(1, Math.round(this.def.scrap * Math.pow(SPAWN.scrapGrowth, tier - 1)));
     this.dead = false;

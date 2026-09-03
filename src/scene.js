@@ -1,7 +1,7 @@
 // The one Phaser scene. Owns the run state and the game objects; the mechanics live in ./scene/*.js as
 // plain functions that take the scene first. The thin methods at the bottom keep the old `scene.x()` API
 // for everything else in the game (mobs, weapons, ui, saves).
-import { COLORS, PRESTIGE, ABILITIES, DIFFICULTY, WEAPONS, FRESH_START_FRAGMENTS } from './config.js';
+import { COLORS, PRESTIGE, ABILITIES, DIFFICULTY, WEAPONS, FRESH_START_FRAGMENTS, SPAWN } from './config.js';
 import { Tree } from './tree.js';
 import { Abilities } from './abilities.js';
 import { SFX } from './sfx.js';
@@ -259,7 +259,7 @@ export class GameScene extends Phaser.Scene {
     for (const e of [this.fx.burst, this.fx.sparks, this.fx.trail]) e.killAll();
     this.tower.gfx.destroy(); this.tower.glow.destroy();
     this.tower = new Tower(this, this.scale.width / 2, this.scale.height / 2);
-    this.state.scrap = this.tree.mods.startScrap; this.state.time = 0; this.state.tier = 1; this.state.kills = 0; this.state.swapsUsed = 0;
+    this.state.scrap = SPAWN.startScrap + this.tree.mods.startScrap; this.state.time = 0; this.state.tier = 1; this.state.kills = 0; this.state.swapsUsed = 0;
     this.showStart();
     this.spawnTimer = 2; this.scrapLog = []; this.dmgLog = []; this.takenLog = []; this.warlord = null; this.siege = null; this.siegesCleared = 0; this.surgeType = null; this.ui.removeEffect('surge');
     this.stats = this.freshStats();

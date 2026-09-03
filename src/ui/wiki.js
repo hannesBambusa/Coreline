@@ -1,5 +1,5 @@
 // Wiki tab: every ship with its picture, what it does, and its numbers at threat 1 and at the current threat.
-import { MOBS, SPAWN } from '../config.js';
+import { MOBS, SPAWN, hpGrowthAt } from '../config.js';
 import { fmt, hex } from './dom.js';
 import { row } from './rows.js';
 
@@ -33,7 +33,7 @@ function picOf(scene, type) {
 
 function statsLine(d, scene) {
   const tier = Math.max(1, scene.tier), diff = scene.diff;
-  const hpNow = d.hp * SPAWN.hpBase * Math.pow(SPAWN.hpGrowth, tier - 1) * diff.hp;
+  const hpNow = d.hp * hpGrowthAt(tier) * diff.hp;
   const dmgNow = d.dmg * Math.pow(SPAWN.dmgGrowth, tier - 1) * diff.dmg;
   const scrapNow = d.scrap * Math.pow(SPAWN.scrapGrowth, tier - 1);
   const how = d.fireRate ? `${d.burst ? d.burst + '-shot burst' : 'shot'} every ${(1 / d.fireRate).toFixed(1)} s, range ${d.range}` : d.drain ? `drains ${d.drain}/s` : d.blast ? `blast ${d.blast} px` : 'ram';
@@ -64,7 +64,7 @@ export function wikiHtml(scene) {
   const all = Object.entries(MOBS).filter(([k, d]) => d.name && typeof d.hp === 'number');
   const regular = all.filter(([k]) => !BOSSES.includes(k)).sort((a, b) => (a[1].fromWave || 0) - (b[1].fromWave || 0));
   const bosses = Object.keys(ESCORTS).map(k => [k, MOBS[k]]);
-  let html = `<div class="muted" style="margin-bottom:6px">Base numbers are threat 1 on Normal. Ship HP grows ×${SPAWN.hpGrowth} and damage ×${SPAWN.dmgGrowth} per threat level, then difficulty multiplies.</div>`;
+  let html = `<div class="muted" style="margin-bottom:6px">Base numbers are threat 1 on Normal. Ship HP grows ×${SPAWN.hpGrowthEarly} per threat level up to threat ${SPAWN.earlyTiers}, then ×${SPAWN.hpGrowth}; damage ×${SPAWN.dmgGrowth}; then difficulty multiplies.</div>`;
   html += '<h3>Ships</h3>' + regular.map(([k, d]) => mobRow(scene, k, d)).join('');
   html += '<h3>Bosses and their escorts</h3>' + bosses.map(([k, d]) => mobRow(scene, k, d) + ESCORTS[k].map(e => mobRow(scene, e, MOBS[e], true)).join('')).join('');
   return html;

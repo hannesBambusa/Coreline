@@ -1,5 +1,5 @@
 // Run statistics markup (Stats tab and the game-over card).
-import { WEAPONS, MOBS, ABILITIES, SPAWN, ELITES, CRIT } from '../config.js';
+import { WEAPONS, MOBS, ABILITIES, SPAWN, ELITES, CRIT, hpGrowthAt } from '../config.js';
 import { CHOICES } from '../choices.js';
 import { ICONS } from '../icons.js';
 import { COMBOS } from '../combos.js';
@@ -24,7 +24,7 @@ function liveRows(scene) {
   const s = scene.state, t = scene.tower, lm = scene.levelMods, d = scene.diff, tier = scene.tier, tierInt = Math.floor(tier);
   const cell = (label, value) => `<div class="live-cell"><span class="lbl">${label}</span><b>${value}</b></div>`;
   const spawn = scene.spawnRate(), scrapRate = scene.saves.scrapRate();
-  const hpMul = SPAWN.hpBase * Math.pow(SPAWN.hpGrowth, tier - 1) * d.hp * lm.mobHp, dmgMul = Math.pow(SPAWN.dmgGrowth, tier - 1) * d.dmg;
+  const hpMul = hpGrowthAt(tier) * d.hp * lm.mobHp, dmgMul = Math.pow(SPAWN.dmgGrowth, tier - 1) * d.dmg;
   const scrapMul = Math.pow(SPAWN.scrapGrowth, tier - 1) * scene.tree.mods.scrap * lm.scrap * d.scrap;
   const elite = lm.allElite ? 1 : Math.min(ELITES.chanceMax * 3, (ELITES.chanceBase + ELITES.chancePerTier * tier) * lm.elite * d.elite);
   const crit = CRIT.chance + scene.tree.mods.crit + lm.crit;

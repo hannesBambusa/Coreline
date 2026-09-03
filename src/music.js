@@ -1,4 +1,5 @@
-// Procedural music: a slow bass pulse, a pad, an arpeggio and a hi-hat, layered in as threat rises.
+// Procedural music: a slow bass pulse, an arpeggio and a hi-hat, layered in as threat rises. No sustained pad: a
+// constant drone under the game read as a stray beam sound.
 // Drops to a heartbeat when the hull is low. All WebAudio, no files.
 const NOTES = { root: 55 }; // A1
 const SCALE = [0, 3, 5, 7, 10, 12, 15, 17]; // minor pentatonic-ish, semitones above root
@@ -21,13 +22,6 @@ export class Music {
     this.started = true;
     this.bus = c.createGain(); this.bus.gain.value = 0; this.bus.connect(this.sfx.master);
     this.bus.gain.linearRampToValueAtTime(this.enabled ? this.volume * 0.5 : 0, c.currentTime + 6);
-    // pad: two detuned saws through a slow lowpass
-    this.padGain = c.createGain(); this.padGain.gain.value = 0;
-    const pf = c.createBiquadFilter(); pf.type = 'lowpass'; pf.frequency.value = 300; pf.Q.value = 1.5;
-    this.padFilter = pf;
-    for (const det of [-6, 6]) { const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = hz(0, 1); o.detune.value = det; o.connect(pf); o.start(); }
-    pf.connect(this.padGain); this.padGain.connect(this.bus);
-    const w = c.createGain(); w.gain.value = 0.5; this.padGain.connect(w); w.connect(this.sfx.verb);
     // hat noise source reused
     this.stepTimer = setInterval(() => this.tick(), 60000 / this.bpm / 2);
   }
@@ -36,10 +30,6 @@ export class Music {
     this.intensity = Math.min(1, (tier - 1) / 30) + (siege ? 0.35 : 0);
     this.danger = hullFrac < 0.3 ? 1 - hullFrac / 0.3 : 0;
     this.paused = paused;
-    if (!this.started) return;
-    const c = this.sfx.ctx, t = c.currentTime;
-    this.padGain.gain.setTargetAtTime(this.paused ? 0.02 : 0.05 + 0.05 * this.intensity, t, 0.5);
-    this.padFilter.frequency.setTargetAtTime(250 + 900 * this.intensity, t, 0.5);
   }
 
   tone(type, f, dur, peak, dest, attack = 0.005) {

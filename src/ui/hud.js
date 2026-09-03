@@ -1,9 +1,10 @@
 // Always-visible HUD: top bar numbers and core bars, threat timer, boss bar, banners,
-// the ability bar, the auto-buy queue and the quick-buy list.
-import { WEAPONS, ABILITIES, SPAWN } from '../config.js';
+// the ability bar, the auto-buy queue and the loadout card.
+import { WEAPONS, ABILITIES, SPAWN, SLOT_COSTS } from '../config.js';
 import { ICONS } from '../icons.js';
-import { bindTips } from './effects.js';
-import { AUTO_ITEMS } from '../autobuy.js';
+import { QUADS } from '../combos/quad.js';
+import { bindTips, weaponTip } from './effects.js';
+import { isMounted } from './purchases.js';
 import { $, $$, fmt, fmtTime, hex, swapHtml, restartAnimation, bindBuy, attrQuote } from './dom.js';
 import { queueItem } from './rows.js';
 import { QUEUE_LEN } from './panel.js';
@@ -13,9 +14,7 @@ const COMBO_BANNER_MS = 1600;
 const COMBO_BANNER_FADE_MS = 300;
 const HUD_DPS_WINDOW = 2;          // seconds: the top-bar dps readouts follow the fight; Stats and boss scaling use 20 s
 const THREAT_SOON_S = 5;           // timer blinks red below this
-const CORE_COLOR = 0x4ff2ff;       // quick-buy colour for tower upgrades and slots
 const ABILITY_COLOR = 0x9be7ff;
-const QUICK_BUY_TOWER_KEYS = ['shieldRegen', 'shieldMax', 'hull'];
 
 // Elements read every frame, looked up once.
 let els = null;
@@ -126,6 +125,33 @@ export function buildAbilityBar(ui) {
   for (const b of ui.abilityButtons) b.el.onclick = () => ui.abilityClick(b.key);
 }
 
+/** Ultimate buttons above the ability bar: the loadout's matched ultimates plus the universal ones, keys Q W E R. */
+export function renderUltimates(ui) {
+  const bar = $('#ultimates'), scene = ui.scene, qs = scene.quads;
+  if (scene.starting || scene.gameOver) { bar.hidden = true; return; }
+  bar.hidden = false;
+  const list = qs.bar();
+  const key = list.map(u => u.id + ':' + qs.matches(u.id)).join(',');
+  if (bar.dataset.key !== key) {
+    bar.dataset.key = key;
+    bar.innerHTML = list.map(u => {
+      const icons = (u.match.length ? u.match : ['level']).map(p => `<span style="color:${p === 'level' ? hex(u.color) : hex(WEAPONS[p].color)}${u.match.length && !qs.mounted(p) ? ';opacity:.25' : ''}">${ICONS[p] || ICONS.level}</span>`).join('');
+      const pw = Math.round(qs.powerOf(u.id) * 100), match = u.match.length ? `${qs.matches(u.id)} of 4 weapons mounted · ${pw} % power\n` : '';
+      return `<button class="ult-btn" data-ult="${u.id}" style="--uc:${hex(u.color)}" data-tip="${attrQuote(u.name + '\n' + u.desc + '\n' + match + 'Press ' + u.key + ' or click when full.')}">` +
+        `<span class="fill"></span><span class="icons ${u.match.length ? '' : 'one'}">${icons}</span><span class="txt"><span class="nm">${u.name}</span><span class="st"></span></span><span class="key">${u.key}</span></button>`;
+    }).join('');
+    for (const b of $$('.ult-btn', bar)) b.onclick = () => ui.fireUltimate(b.dataset.ult);
+    bindTips(ui, bar);
+  }
+  for (const u of list) {
+    const b = bar.querySelector(`[data-ult="${u.id}"]`); if (!b) continue;
+    const running = qs.ult && qs.ult.id === u.id, busy = qs.ult && !running, ready = qs.ready(u.id), siegeBlock = scene.siege && scene.siege.t < 10, cd = (qs.cd[u.id] || 0) > 0, ch = qs.charge[u.id] || 0;
+    b.querySelector('.fill').style.height = (running ? 100 : ch * 100) + '%';
+    b.querySelector('.st').textContent = running ? 'firing' : ready ? 'READY' : busy ? 'wait' : siegeBlock ? 'siege' : cd ? `${Math.ceil(qs.cd[u.id])}s` : `${Math.floor(ch * 100)}%`;
+    b.classList.toggle('ready', ready); b.classList.toggle('firing', !!running); b.classList.toggle('blocked', !ready && !running);
+  }
+}
+
 export function renderAbilities(ui) {
   const a = ui.scene.abilities, scrap = ui.scene.state.scrap;
   for (const b of ui.abilityButtons) {
@@ -149,67 +175,69 @@ export function abilityClick(ui, k) {
   ui.render();
 }
 
-// ---- Auto-buy queue and quick-buy list ------------------------------------
+// ---- Auto-buy queue ------------------------------------------------------
 
 /** Vertical queue shown on the right when the panel is collapsed and auto-buy is on. */
 /** Right side while the panel is hidden: the mounted weapons with their levels, then every available combo as its icon pair. */
 export function renderLoadout(ui) {
-  const el = $('#loadout'), scene = ui.scene;
+  const el = $('#loadout'), scene = ui.scene, t = scene.tower, scrap = scene.state.scrap;
   const show = ui.panelHidden() && !scene.starting && !scene.gameOver;
   el.hidden = !show;
-  if (!show) return;
-  // sit under whatever is showing above it (the auto-buy queue or the quick-buy list)
-  const above = [$('#auto-queue'), $('#quick-buy')].find(x => !x.hidden);
-  el.style.top = (above ? above.getBoundingClientRect().bottom + 14 : 70) + 'px';
+  if (!show) { ui.loPick = null; return; }
   const strip = (html) => html.replace(/<[^>]+>/g, '');
-  const weapons = scene.tower.weapons.map(w =>
-    `<div class="lo-w ${w.jammed > 0 ? 'jam' : ''}" style="--lc:${hex(w.color)}" data-tip="${attrQuote(w.def.name + '\nLv ' + w.level + ' · ' + strip(w.statLine()))}">${ICONS[w.type]}<span class="lv">${w.level}</span></div>`).join('');
+  if (ui.loPick !== null && ui.loPick !== undefined && t.slots[ui.loPick] !== null) ui.loPick = null;   // slot got filled
+  // one tile per hardpoint: mounted weapon (click = upgrade), empty (click = pick a weapon), then the next locked one
+  let weapons = t.slots.map((w, i) => {
+    if (w) {
+      const cost = w.upgradeCost(), can = !w.atCap && scrap >= cost;
+      const tip = w.def.name + '\nLv ' + w.level + ' · ' + strip(w.statLine()) + '\n' + (w.atCap ? 'max level' : (can ? 'click: upgrade · ' : 'upgrade ') + fmt(cost) + ' scrap');
+      return `<div class="lo-w ${w.jammed > 0 ? 'jam' : ''} ${can ? 'can up' : ''}" style="--lc:${hex(w.color)}" ${can ? `data-buy="weapon:${i}"` : ''} data-tip="${attrQuote(tip)}">${ICONS[w.type]}<span class="lv">${w.level}</span></div>`;
+    }
+    return `<div class="lo-w empty ${ui.loPick === i ? 'open' : ''}" data-pick="${i}" data-tip="${attrQuote(`Hardpoint ${i + 1}\nEmpty · click to choose a weapon`)}">${ICONS.slot}</div>`;
+  }).join('');
+  const slotCost = t.nextSlotCost(), gate = t.nextSlotGate();
+  if (slotCost !== null) {
+    const can = scrap >= slotCost;
+    weapons += `<div class="lo-w lock ${can ? 'can' : ''}" ${can ? 'data-buy="slot"' : ''} data-tip="${attrQuote(`Locked hardpoint\nSlot ${t.slots.length + 1} of ${SLOT_COSTS.length}\n${can ? 'click: unlock · ' : 'unlock '}${fmt(slotCost)} scrap`)}">${ICONS.slot}<span class="lv">${fmt(slotCost)}</span></div>`;
+  } else if (gate) {
+    weapons += `<div class="lo-w lock gated" data-tip="${attrQuote(`Sealed hardpoint\nSlot ${t.slots.length + 1} of ${SLOT_COSTS.length}\nOpens at threat level ${gate}`)}">${ICONS.slot}<span class="lv">T${gate}</span></div>`;
+  }
+  // weapon picker for the open empty slot
+  const pickEl = $('#lo-pick'), pick = ui.loPick;
+  pickEl.hidden = pick === null || pick === undefined;
+  if (!pickEl.hidden) {
+    const html = Object.entries(WEAPONS).filter(([type]) => scene.tree.unlocked(type)).map(([type, d]) => {
+      const dup = isMounted(t, type), can = !dup && scrap >= d.install;
+      const why = dup ? 'already mounted' : (can ? 'click: mount · ' : 'need ') + fmt(d.install) + ' scrap';
+      return `<div class="lo-w pick ${can ? 'can' : 'gated'}" style="--lc:${hex(d.color)}" ${can ? `data-buy="install:${pick}:${type}"` : ''} data-tip="${attrQuote(weaponTip(type, why))}">${ICONS[type]}<span class="lv">${d.install ? fmt(d.install) : 'free'}</span></div>`;
+    }).join('');
+    swapHtml($('#lo-pick-list'), html, (root) => { bindBuy(root, (id) => ui.buy(id)); bindTips(ui, root); });
+  }
   const combos = scene.combos.list().filter(c => c.available).map(c => {
     const fx = ui.effects['combo:' + c.id], active = fx && fx.left > 0 && c.effectDur;
     return `<div class="lo-c ${active ? 'active' : c.cd > 0 ? 'cd' : ''}" data-tip="${attrQuote(c.name + '\n' + c.desc + (c.cd > 0 ? '\ncooldown ' + Math.ceil(c.cd) + ' s' : '\nready'))}">` +
       c.pair.map(p => `<span style="color:${hex(WEAPONS[p].color)}">${ICONS[p]}</span>`).join('<span class="plus">+</span>') + '</div>';
   }).join('');
-  swapHtml($('#lo-weapons'), weapons || '<span class="muted" style="font-size:12px">no weapons</span>', (root) => bindTips(ui, root));
+  swapHtml($('#lo-weapons'), weapons, (root) => {
+    bindBuy(root, (id) => ui.buy(id));
+    bindTips(ui, root);
+    for (const b of $$('[data-pick]', root)) b.onclick = () => { ui.loPick = ui.loPick === +b.dataset.pick ? null : +b.dataset.pick; renderLoadout(ui); };
+  });
   swapHtml($('#lo-combos'), combos || '<span class="muted" style="font-size:12px">none with this loadout</span>', (root) => bindTips(ui, root));
 }
 
 export function renderQueue(ui) {
-  const el = $('#auto-queue'), ab = ui.scene.autobuy;
-  const q = ab.on && ui.panelHidden() ? ab.queue(QUEUE_LEN) : [];
+  const el = $('#auto-queue'), scene = ui.scene, ab = scene.autobuy;
+  const q = ui.panelHidden() && !scene.starting && !scene.gameOver ? ab.queue(QUEUE_LEN) : [];
   el.hidden = !q.length;
   if (el.hidden) return;
-  swapHtml(el.querySelector('ol'), q.map(e => queueItem(e, ICONS[e.icon] || ICONS.level, e.now ? 'now' : '')).join(''));
-}
-
-function quickBuyItems(scene) {
-  const t = scene.tower, items = [];
-  t.slots.forEach((w, i) => {
-    if (w && !w.atCap) items.push({ id: 'weapon:' + i, icon: w.type, color: w.color, label: w.def.name, from: w.level, to: w.level + 1, cost: w.upgradeCost() });
-  });
-  for (const key of QUICK_BUY_TOWER_KEYS) {
-    const lvl = t.upgrades[key];
-    if (t.atCap(key)) continue;
-    items.push({ id: 'tower:' + key, icon: key, color: CORE_COLOR, label: AUTO_ITEMS[key].name, from: lvl, to: lvl + 1, cost: t.upgradeCost(key) });
-  }
-  const slotCost = t.nextSlotCost();
-  if (slotCost !== null) {
-    items.push({ id: 'slot', icon: 'slot', color: CORE_COLOR, label: 'Hardpoint', from: t.slots.length, to: t.slots.length + 1, cost: slotCost });
-  }
-  for (const k in scene.abilities.state) {
-    if (scene.abilities.state[k].unlocked) continue;
-    items.push({ id: 'ability:' + k, icon: 'ab_' + k, color: ABILITY_COLOR, label: ABILITIES[k].name, from: null, cost: ABILITIES[k].cost });
-  }
-  return items;
-}
-
-/** Panel collapsed and auto-buy off: clickable cards for everything affordable right now. */
-export function renderQuickBuy(ui) {
-  const el = $('#quick-buy'), scene = ui.scene;
-  el.hidden = scene.autobuy.on || !ui.panelHidden() || scene.gameOver;
-  if (el.hidden) return;
-  const ready = quickBuyItems(scene).filter(e => e.cost <= scene.state.scrap).sort((a, b) => a.cost - b.cost);
-  const html = ready.length
-    ? ready.map(e => queueItem(e, ICONS[e.icon] || ICONS.level, 'now', ` data-buy="${e.id}"`)).join('')
-    : '<li class="empty">Nothing affordable yet</li>';
-  swapHtml(el.querySelector('ol'), html, (ol) => bindBuy(ol, (id) => ui.buy(id)));
+  el.classList.toggle('manual', !ab.on);
+  el.querySelector('.aq-title').textContent = ab.on ? 'Auto-buy queue' : 'Upgrades';
+  el.querySelector('.aq-hint').hidden = ab.on;
+  // auto off: an affordable entry is a button, everything else is a preview of what auto-buy would do
+  const html = q.map(e => {
+    const can = !ab.on && e.now && e.id;
+    return queueItem(e, ICONS[e.icon] || ICONS.level, (e.now ? 'now' : '') + (can ? ' can' : ''), can ? ` data-buy="${e.id}"` : '');
+  }).join('');
+  swapHtml(el.querySelector('ol'), html, (root) => bindBuy(root, (id) => ui.buy(id)));
 }

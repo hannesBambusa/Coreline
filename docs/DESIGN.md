@@ -62,7 +62,7 @@ Mob AI is not "walk straight and hit". Mobs shoot at the tower, some dodge, some
 
 ## Weapons
 
-Tower has hardpoint slots. Start with 1, unlock up to 4 with scrap. A 5th hardpoint (12 000 scrap) opens at threat 30 (`SLOT_GATES`). With eight weapon types every loadout still leaves some out. Each slot holds one weapon with its own level. Weapons pick targets automatically by their own rule.
+Tower has hardpoint slots. Start with 1, unlock up to 5 with scrap. A 6th hardpoint (40 000 scrap) opens at threat 30 (`SLOT_GATES`). With eight weapon types every loadout still leaves some out. Each slot holds one weapon with its own level. Weapons pick targets automatically by their own rule.
 
 | Weapon | Behaviour | Target rule | Counters |
 |---|---|---|---|
@@ -414,4 +414,52 @@ Early curve softened for fresh players (a new account died at threat 5 on Normal
 
 ## Quad combos and ultimates (`src/combos/quad.js`)
 
-Four specific weapons mounted together unlock a quad combo registered in `COMBOS` with a four-entry `pair` (`available` now checks every entry). First one, **Swarm Protocol** (drone bay + beam drones + missile drones + kamikaze): rolled on every drone kill (8 %, 30 s cd). Rebuilds every lost drone at once, boosts all bays for 10 s and points every drone at the ships the beam drones hold. One proc in four (every crit proc) escalates into the **Hive Collapse** ultimate (90 s cd, not in a siege's first 10 s): 1.4 s recall of every drone into a gold ring on the shield radius with the screen darkened, 0.9 s overbuild, then 2× the total drone count launch as gold kamikaze strikes, one per ship biggest first, at 3× kamikaze damage with the kamikaze crater; every enemy shot is wiped, survivors are marked 10 s, bosses lose at most 15 % of max hp (`m.ultCap`), and the real drones are rebuilt in place. Shown as a gold ultimate card in the tray and counted under procs.
+Four specific weapons mounted together unlock a quad combo registered in `COMBOS` with a four-entry `pair` (`available` now checks every entry). First one, **Swarm Protocol** (drone bay + beam drones + missile drones + kamikaze): rolled on every drone kill (8 %, 30 s cd). Rebuilds every lost drone at once, boosts all bays for 10 s and points every drone at the ships the beam drones hold. The **Hive Collapse** ultimate is the player's: every drone kill charges it (40 + 5 per threat level kills for a full charge; elites count 3, bosses 10), and once full a gold button above the ability bar (or **Q**) fires it, 20 s recharge after, not in a siege's first 10 s. It runs: 1.4 s recall of every drone into a gold ring on the shield radius with the screen darkened, 0.9 s overbuild, then 2× the total drone count launch as gold kamikaze strikes, one per ship biggest first, at 3× kamikaze damage with the kamikaze crater; every enemy shot is wiped, survivors are marked 10 s, bosses lose at most 15 % of max hp (`m.ultCap`), and the real drones are rebuilt in place. Shown as a gold ultimate card in the tray and counted under procs.
+
+While an ultimate runs the core is invulnerable (`Tower.takeDamage` returns early; hits still flare) and the shield ring shows every segment in gold.
+
+## Ultimates (`src/combos/quad.js`)
+
+Player-fired power moves above the ability bar (keys Q W E R by position), each with its own charge source and a cooldown, and the core is invulnerable while one runs. Every ultimate names four weapons; mounted count sets power (1 → 40 %, 2 → 60 %, 3 → 80 %, 4 → 100 %) and one of the four is enough to get it on the bar. Overdrive is universal, so the bar always has at least two; at most four show. (Core Nova was dropped: it duplicated the Nova ability.)
+
+- **Hive Collapse** (drone bays, drone kills): recall, overbuild, gold kamikaze ring, marks, shot wipe.
+- **Coherence** (pulse/railgun/laser/tesla, crits): one white beam sweeps the ring twice in 3 s, 2.5× your DPS on everything it passes, all crits.
+- **Event Horizon** (gravity/shock/chrono/singularity, ship-seconds held in wells or the chrono field): 4 s of everything dragged inward through slowed time with shots swallowed, then a crush for 40 % max hp on what reached the shield ring, and the singularity fires if mounted.
+- **Overdrive** (universal, shield damage taken): 8 s of ×3 fire rate, drones rebuilt, core invulnerable.
+Bosses lose at most 15 % of max hp to any ultimate (`m.ultCap`). Swarm Protocol stays a combo (drone bay, beam drones, missile drones) rolled on drone kills.
+
+Four more ultimates, so every weapon belongs to at least one group: **Pandemic** (nanite, missile pod, ion storm, beam drones; charged by infections and splash hits): everything in range rots for 50 % of max hp over 6 s, deaths burst. **Fortress** (mirrors, chrono, shock, drone bay; charged by reflections, drone absorbs, plate rams): 6 s where every shot reaching the ring flies back at 4×, rams die on the ring and blast, a shockwave every second, a final push. **Barrage** (missile pod, missile drones, railgun, pulse; charged by their hits): 4 s of heavy missile volleys from the core, biggest ships first. **Tempest** (ion storm, tesla, shock, mirrors; charged by arcs and reflections): 5 s storm over the whole range, eight bolts a quarter second, hit ships stunned, shots eaten. The bar shows only the loadout's matched ultimates (best match first, at most four); Overdrive only fills in when fewer than two match.
+
+Ultimate damage scales from `scene.baseDps()`, the 20 s DPS with damage dealt during ultimates removed, snapshotted when the ultimate fires (`ult.dps`). Reading live DPS mid-ultimate fed the ultimate's own damage back into its scaling and Barrage or Tempest grew exponentially. Barrage and Tempest are budgeted: the whole ultimate spends `budget` (10) seconds of that DPS, split over every missile or bolt, before splash and crits.
+
+Ultimates need 3 of their 4 weapons mounted to show at full power; a loadout with no such group shows its two best partial matches at reduced power (1 weapon 40 %, 2 weapons 60 %) plus Overdrive; Overdrive fills the bar when fewer than two groups are complete.
+
+The sidebar starts closed (markup class `hidden`, and `beginRun` closes it again) since the HUD, loadout strip and auto-buy handle a run without it.
+
+Local autosave runs every second (`AUTOSAVE_EVERY` in `src/save.js`); the cloud push stays debounced to one write per 4 s (`syncDebounceMs`).
+
+Mirrors: a reflected shot deals the shot's damage × the plate multiplier plus a share of the shooter's max hp (`hpFrac` 8 % + 0.5 %/level, bosses ×0.2, scaled by damage mods), so reflections keep pace with ship hp instead of fading to nothing at high threat.
+Music: the sustained saw pad was removed; it sounded like a beam constantly humming under the game. Bass, arpeggio, hat and stabs remain.
+
+Bug fixed: `bulletHit` applied raw `takeDamage` after `scene.hit` for every bullet without an `onHit`, so pulse, drone and reflected bullets hit twice. Raw damage is now only for weaponless bullets.
+
+Swarm Protocol needs drone bay, beam drones and missile drones (kamikaze no longer required); every bay mounted, kamikaze included, still joins the effect.
+
+Hive Collapse without a kamikaze bay mounted spawns a temporary kamikaze wing (`Quads.spawnTempKamikaze`, level = best mounted bay, no rebuild) that joins the recall, build and strike like a mounted bay; the wing is removed once every drone has flown or after `tempKzLife` (12 s). Weapons are created through a lazy `import()` since the weapon modules import the combo modules.
+
+## Threat ramp for the harsh spawn events
+Fixed numbers made the first Elite parade, Swarm storm, hunt or surge a wall on normal difficulty. They now ramp with threat (`ramp`, `scaled` in `src/choices.js`, span 20 tiers from each card's first tier): parade burst 4 → 20 elites, storm 60 → 280 swarm and spawn ×2 → ×5, hunts ×1.2 → ×1.8 hp and ×1.5 → ×2.5 numbers for light ships, bounty elite chance ×2 → ×4, fever and blood money spawn ramps likewise. Surges (`surgeMultiplier`) bring 35 % of their extra numbers at the first surge and the full multiplier 25 tiers later (`surgeSoft`, `surgeRampTiers`). `applyChoice` takes the tier and the save restores mods with the saved tier.
+
+The header sign-out button was removed (too close to the panel toggle); signing out lives in Settings next to the account line, and on the start card.
+
+Surges skip ship types that unlocked within the last `surgeSettle` (3) levels, so a type never arrives as a whole level of itself the moment it appears (an orbiter surge at level 5 was a wipe), and ranged types (anything with `fireRate` or `cooldown`) get no extra numbers.
+
+Every ship type carries `danger` (1–5) and `why` in `src/config/mobs.js`; the Wiki shows it as a five-bar meter next to the name (`.danger`), tooltip gives the reason. Hand-tuned, not computed: the number is a judgement about how the ship plays, not its hp.
+
+The Wiki has sub tabs (`.subtabs`, `ui.wikiTab`): Ships, and Ultimates listing every entry of `ULTS` with its 4-weapon group (mounted ones lit), rule, charge source, current charge need, duration and cooldown, and a tag when it is on the bar right now.
+
+Homing missiles turn up to ×4 harder inside 140 px of their target and detonate by proximity fuse once they are past it and within 70 % of their splash radius (`HOMING_*` in `src/scene/projectiles.js`). Before this a missile drone's missile (380 px/s, turn 5) had a 76 px turn radius and circled a target it had just missed.
+
+Missile drone missiles launch aimed at the target (spread 0.25 rad, salvo fan 0.18) at 300 px/s with turn 9, instead of along the drone's heading with 0.9 rad scatter at 160 px/s and turn 5, which made every missile loop before homing.
+
+Hardpoints: 5 buyable (0, 150, 800, 3000, 12000 scrap) and a 6th at 40000 scrap that opens at threat 30 (`SLOT_COSTS`, `SLOT_GATES`).

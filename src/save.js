@@ -2,6 +2,8 @@ import { OFFLINE, SIEGE, SLOT_COSTS, SPAWN } from './config.js';
 import { CHOICES, applyChoice, baseLevelMods } from './choices.js';
 import { sumWindow } from './utils.js';
 
+const AUTOSAVE_EVERY = 1;   // seconds between local autosaves (a few KB of JSON; the cloud push is debounced separately in config/cloud.js)
+
 export const SAVE_KEY = 'core-defence-v1';
 const VERSION = 1;
 
@@ -113,7 +115,7 @@ export class SaveSystem {
     s.abilities.restore(r.abilities);
     s.siegesCleared = Number.isInteger(r.siegesCleared) ? r.siegesCleared : Math.floor(s.tier / SIEGE.every);
     s.surgeType = r.surgeType || null;
-    if (r.levelChoice) { s.levelChoice = r.levelChoice; s.levelMods = applyChoice(r.levelChoice, baseLevelMods()); }
+    if (r.levelChoice) { s.levelChoice = r.levelChoice; s.levelMods = applyChoice(r.levelChoice, baseLevelMods(), Math.floor(r.state && r.state.tier || 1)); }
     if (r.openChoice && r.openChoice.opts.every(id => CHOICES[id])) { s.choice = { tier: r.openChoice.tier, opts: r.openChoice.opts }; s.choosing = true; s.paused = true; s.ui.showChoice(s.choice); }
     if (r.stats) { s.stats = Object.assign(s.freshStats(), r.stats); if (!r.stats.hits) { s.stats.crits = {}; s.stats.critExtra = {}; } }   // older saves counted crits before hits: restart the ratio cleanly
     // ships that were alive: recreate them where they were
@@ -149,7 +151,7 @@ export class SaveSystem {
 
   update(dt) {
     this.timer += dt;
-    if (this.timer >= 10) { this.timer = 0; this.save(); }
+    if (this.timer >= AUTOSAVE_EVERY) { this.timer = 0; this.save(); }
   }
 
   export() { return btoa(unescape(encodeURIComponent(JSON.stringify(this.serialize())))); }

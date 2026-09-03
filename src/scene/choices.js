@@ -1,11 +1,11 @@
 // Scene-side glue for the threat-level choice cards. The card data and the mod maths live in ../choices.js.
 import { SPAWN } from '../config.js';
-import { CHOICES, applyChoice, baseLevelMods, rollChoices } from '../choices.js';
+import { CHOICES, applyChoice, baseLevelMods, rollChoices, scaled } from '../choices.js';
 import { ICONS_CHOICE } from './icons.js';
 import { pickType } from './spawner.js';
 
-const PARADE_BURST = [10, 20];   // elites spawned the moment Elite parade lands
-const STORM = { total: [200, 280], groups: 12, gapMs: 350, lanes: 3 };   // Swarm storm opener: this many swarm ships over groups × gap, from lanes directions
+const PARADE_BURST = [4, 20];    // elites spawned the moment Elite parade lands: soft at the card's first tier, full 20 tiers later (±20 %)
+const STORM = { total: [60, 280], groups: 12, gapMs: 350, lanes: 3 };   // Swarm storm opener: swarm ships over groups × gap from lanes directions, ramping with threat the same way
 
 const CHOICE_COLOR = 0xffd166;
 
@@ -37,7 +37,7 @@ export function pickChoice(scene, id) {
 
 /** Apply a card for the coming levels and show its effect chip. */
 function applyPick(scene, id) {
-  scene.levelMods = applyChoice(id, baseLevelMods());
+  scene.levelMods = applyChoice(id, baseLevelMods(), Math.floor(scene.tier));
   scene.levelChoice = id === 'nothing' ? null : id;
   scene.tower.recompute();
   if (id === 'parade') paradeBurst(scene);
@@ -52,7 +52,7 @@ function applyPick(scene, id) {
 
 /** Elite parade opener: a ring of elites arrives at once (every spawn is elite while the card is active). */
 function paradeBurst(scene) {
-  const n = Phaser.Math.Between(PARADE_BURST[0], PARADE_BURST[1]), a0 = Math.random() * Math.PI * 2;
+  const n = Math.max(2, Math.round(scaled(PARADE_BURST, Math.floor(scene.tier), CHOICES.parade.fromTier) * (0.8 + Math.random() * 0.4))), a0 = Math.random() * Math.PI * 2;
   for (let i = 0; i < n; i++) {
     let type = pickType(scene);
     if (type === 'swarm') type = 'raider';   // swarm never goes elite
@@ -64,7 +64,7 @@ function paradeBurst(scene) {
 
 /** Swarm storm opener: hundreds of swarm ships pour in from a few directions over a couple of seconds. */
 function swarmStorm(scene) {
-  const total = Phaser.Math.Between(STORM.total[0], STORM.total[1]);
+  const total = Math.round(scaled(STORM.total, Math.floor(scene.tier), CHOICES.swarmStorm.fromTier) * (0.85 + Math.random() * 0.3));
   const lanes = Array.from({ length: STORM.lanes }, () => Math.random() * Math.PI * 2);
   for (let g = 0; g < STORM.groups; g++) {
     // spread the remainder over the groups so the storm delivers exactly the number the banner promises

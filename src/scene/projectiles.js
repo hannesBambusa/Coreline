@@ -101,7 +101,7 @@ function bulletHit(scene, b, m) {
   const hpBefore = m.hp;
   if (b.weapon) scene.hit(m, b.weapon, b.x, b.y, opts);
   if (b.onHit) b.onHit(m);
-  else { m.takeDamage(b.dmg, b.x, b.y); scene.fx.floater(m.x, m.y - m.r - 6, Math.round(b.dmg), '#dbe7ff', 12); }
+  else if (!b.weapon) { m.takeDamage(b.dmg, b.x, b.y); scene.fx.floater(m.x, m.y - m.r - 6, Math.round(b.dmg), '#dbe7ff', 12); }   // weaponless bullets only: a weapon bullet already landed through scene.hit
   if (b.ricochet) scene.fx.floater(m.x, m.y - m.r - 18, 'ricochet', RICOCHET_COLOR, 10);
   chargedArc(scene, b, m);
   ricochet(scene, b, m, hpBefore);
@@ -164,6 +164,8 @@ function detonateMissile(scene, m, hitShip = null) {
   m.age = DEAD_AGE;
 }
 
+const HOMING_BOOST_DIST = 140, HOMING_BOOST = 3, HOMING_FUSE = 0.7;   // turn up to ×4 inside 140 px; fuse at 70 % of the splash radius once past the target
+
 function updateHomingMissiles(scene, dt) {
   for (const m of scene.missiles) {
     m.age += dt;
@@ -171,8 +173,12 @@ function updateHomingMissiles(scene, dt) {
     const cur = Math.atan2(m.vy, m.vx);
     let a = cur;
     if (m.target) {
-      const want = Phaser.Math.Angle.Between(m.x, m.y, m.target.x, m.target.y);
-      a = Phaser.Math.Angle.RotateTo(cur, want, m.turn * dt);
+      const want = Phaser.Math.Angle.Between(m.x, m.y, m.target.x, m.target.y), d = distXY(m.x, m.y, m.target.x, m.target.y);
+      // close in, turn much harder: a missile that can only turn at m.turn circles a target it just missed (turn radius = speed / turn)
+      const boost = d < HOMING_BOOST_DIST ? 1 + (1 - d / HOMING_BOOST_DIST) * HOMING_BOOST : 1;
+      a = Phaser.Math.Angle.RotateTo(cur, want, m.turn * boost * dt);
+      // proximity fuse: already past the target and inside the blast, pop now instead of coming round again
+      if (m.splash && d < m.splash * HOMING_FUSE && Math.cos(want - cur) < 0) { detonateMissile(scene, m, m.target); continue; }
     }
     const sp = Math.min(m.speed, Math.hypot(m.vx, m.vy) + m.speed * 2 * dt);
     m.vx = Math.cos(a) * sp; m.vy = Math.sin(a) * sp;

@@ -24,7 +24,6 @@
     <button id="btn-pause" title="Pause (Space)">❚❚</button>
     <div id="speed" title="Game speed"><button data-speed="0.25">¼</button><button data-speed="0.5">½</button><button data-speed="1" class="on">1×</button><button data-speed="2">2×</button><button data-speed="4">4×</button></div>
     <button id="panel-toggle" title="Toggle panel">☰</button>
-    <button id="btn-logout" hidden data-tip="Sign out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M14 8l4 4-4 4"/><path d="M8 12h10"/></svg></button>
   </div>
 
   <div id="banner"></div>
@@ -57,6 +56,7 @@
   <button id="btn-intro-ok">Got it</button>
 </div><div class="start-weapon"><div class="start-lbl">Difficulty</div><div id="start-diff"></div><div id="start-diff-desc" class="start-wname"></div></div><div class="start-weapon"><div class="start-lbl">Starting weapon</div><div id="start-weapons"></div><div id="start-weapon-name" class="start-wname"></div></div><button id="btn-start">Start the defence</button><div class="start-hint">Space also starts</div></div></div>
   <div id="paused" hidden><div>PAUSED</div><span>Space or ❚❚ to resume</span><small>Upgrades, mounts and skills can be bought while paused</small></div>
+  <div id="ultimates"></div>
   <div id="abilities"></div>
   <div id="left-hud"><div id="cooldowns"></div><div id="effects"></div></div>
   <div id="version"><span id="version-num"></span><button id="version-update" hidden>Update available · reload</button></div>
@@ -66,12 +66,11 @@
   <div id="choice" hidden><div class="ch-title">Threat rising. Choose.</div><div class="ch-cards"></div><div class="ch-hint">Game paused until you pick</div></div>
   <div id="threat-timer"><div class="tt-fill"></div><div class="tt-num">40</div></div>
   <div id="boss-bar" hidden><div id="boss-name"></div><div class="bbar"><div id="boss-fill"></div></div><div id="boss-sub"></div></div>
-  <div id="quick-buy" hidden><div class="aq-title">Ready to upgrade</div><ol></ol></div>
-  <div id="auto-queue" hidden><div class="aq-title">Auto-buy queue</div><ol></ol></div>
-  <div id="loadout" hidden><div class="aq-title">Loadout</div><div id="lo-weapons"></div><div class="aq-title lo-sub">Combos</div><div id="lo-combos"></div></div>
+  <div id="auto-queue" hidden><div class="aq-title">Auto-buy queue</div><div class="aq-hint" hidden>Click to buy. Turn on AUTO for automatic upgrades.</div><ol></ol></div>
+  <div id="loadout" hidden><div class="aq-title">Loadout</div><div id="lo-weapons"></div><div id="lo-pick" hidden><div class="aq-title lo-sub">Mount</div><div id="lo-pick-list"></div></div><div class="aq-title lo-sub">Combos</div><div id="lo-combos"></div></div>
   <div id="combo-banner" hidden><div class="cb-icons"></div><div class="cb-text"><div class="cb-name"></div><div class="cb-pair"></div></div></div>
 
-  <aside id="panel">
+  <aside id="panel" class="hidden">
     <div id="panel-grip" title="Drag to resize"></div>
     <nav id="tabs">
       <button data-tab="tower" class="active" data-tip="Tower&#10;Hardpoints, weapons and combos"></button>

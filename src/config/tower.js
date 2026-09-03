@@ -19,8 +19,8 @@ export const TOWER_UPGRADES = {
   hull:        { name: 'Hull plating',    base: 90, growth: 1.45, add: 100, unit: 'hull' },
 };
 
-export const SLOT_COSTS = [0, 150, 800, 3000, 12000];   // 4 hardpoints normally; the 5th opens at threat 30
-export const SLOT_GATES = { 4: 30 };                    // slot index -> threat level required
+export const SLOT_COSTS = [0, 150, 800, 3000, 12000, 40000];   // 5 hardpoints normally; the 6th opens at threat 30
+export const SLOT_GATES = { 5: 30 };                           // slot index -> threat level required
 
 // Core colour by prestige tier.
 export const CORE_TIERS = [COLORS.cyan, COLORS.green, COLORS.gold, COLORS.orange, COLORS.violet, COLORS.magenta, COLORS.white];

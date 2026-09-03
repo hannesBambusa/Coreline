@@ -25,13 +25,16 @@ function rate(log, now, window) {
 /** Damage dealt per second. Default window is the sustained 20 s figure bosses scale from; the HUD asks for 2 s. */
 export function recentDps(scene, window = DPS_WINDOW) { return rate(scene.dmgLog, scene.state.time, window); }
 
+/** Sustained DPS with the damage dealt during ultimates taken out. */
+export function baseDps(scene) { return Math.max(0, rate(scene.dmgLog, scene.state.time, DPS_WINDOW) - rate(scene.ultDmgLog, scene.state.time, DPS_WINDOW)); }
+
 /** Damage the core took per second, same windows. */
 export function recentTaken(scene, window = DPS_WINDOW) { return rate(scene.takenLog, scene.state.time, window); }
 export function logTaken(scene, amount) { pushBucket(scene.takenLog, Math.floor(scene.state.time), amount); }
 
 export function addDmg(scene, source, amount, crit = false) {
   const st = scene.stats;
-  if (amount > 0) pushBucket(scene.dmgLog, Math.floor(scene.state.time), amount);
+  if (amount > 0) { pushBucket(scene.dmgLog, Math.floor(scene.state.time), amount); if (scene.quads && scene.quads.ult) pushBucket(scene.ultDmgLog, Math.floor(scene.state.time), amount); }
   st.dmg[source] = (st.dmg[source] || 0) + amount;
   st.total += amount;
   if (crit) st.crits[source] = (st.crits[source] || 0) + 1;
@@ -101,9 +104,10 @@ export function hit(scene, m, weapon, x, y, opts = {}) {
   const label = { color: opts.color || (bonus ? '#ffe66d' : '#dbe7ff'), size: opts.size || 12, text: Math.round(d) };
   const st = scene.stats, srcKey = weapon ? weapon.type : (opts.source || 'other');
   st.hits[srcKey] = (st.hits[srcKey] || 0) + 1;
-  if (crit) d = applyCrit(scene, m, weapon, d, srcKey, x, y, label);
+  if (crit) { d = applyCrit(scene, m, weapon, d, srcKey, x, y, label); if (scene.quads) scene.quads.onCrit(weapon); }
   if (superCrit) d = applySuperCrit(scene, m, d, srcKey, label);
   m.lastHit = srcKey;
+  if (scene.quads) scene.quads.onHit(weapon);
   if (m.ultCap !== undefined) { d = Math.max(0, Math.min(d, m.hp - m.ultCap)); if (d <= 0) { m.ultCap = undefined; return 0; } }   // Hive Collapse: bosses lose at most a fixed share
   m.takeDamage(d, x, y, opts.quiet, crit, opts.from || scene.tower);
   addDmg(scene, srcKey, m.lastDealt ?? 0, crit);

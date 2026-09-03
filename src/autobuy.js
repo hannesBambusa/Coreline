@@ -83,22 +83,22 @@ export class AutoBuy {
       switch (key) {
         case 'weapons': {
           let best = null;
-          sim.weapons.forEach((w, i) => { if (!w || w.level >= t.slots[i].maxLevel) return; const c = Math.floor(w.def.cost * Math.pow(w.def.costGrowth, w.level - 1)); if (!best || c < best.cost) best = { cost: c, label: w.name, from: w.level, to: w.level + 1, icon: w.type, color: w.def.color, apply: () => w.level++ }; });
+          sim.weapons.forEach((w, i) => { if (!w || w.level >= t.slots[i].maxLevel) return; const c = Math.floor(w.def.cost * Math.pow(w.def.costGrowth, w.level - 1)); if (!best || c < best.cost) best = { cost: c, id: 'weapon:' + i, label: w.name, from: w.level, to: w.level + 1, icon: w.type, color: w.def.color, apply: () => w.level++ }; });
           return best;
         }
         case 'shieldRegen': case 'shieldMax': case 'hull': {
           if (sim.up[key] >= t.maxUpgrade) return null;
           const c = t.upgradeCostAt(key, sim.up[key]);
-          return { cost: c, label: AUTO_ITEMS[key].name, from: sim.up[key], to: sim.up[key] + 1, icon: key, color: 0x4ff2ff, apply: () => sim.up[key]++ };
+          return { cost: c, id: 'tower:' + key, label: AUTO_ITEMS[key].name, from: sim.up[key], to: sim.up[key] + 1, icon: key, color: 0x4ff2ff, apply: () => sim.up[key]++ };
         }
         case 'slot': {
           const c = t.slotCostAt(sim.slots);
-          return c === null ? null : { cost: c, label: 'Hardpoint', from: sim.slots, to: sim.slots + 1, icon: 'slot', color: 0x4ff2ff, apply: () => sim.slots++ };
+          return c === null ? null : { cost: c, id: 'slot', label: 'Hardpoint', from: sim.slots, to: sim.slots + 1, icon: 'slot', color: 0x4ff2ff, apply: () => sim.slots++ };
         }
         case 'abilities': {
           if (!sim.abilities.length) return null;
           const k = sim.abilities.slice().sort((a, b) => s.abilityCost(a) - s.abilityCost(b))[0];
-          return { cost: s.abilityCost(k), label: k, from: null, to: null, icon: 'ab_' + k, color: 0x9be7ff, apply: () => sim.abilities.splice(sim.abilities.indexOf(k), 1) };
+          return { cost: s.abilityCost(k), id: 'ability:' + k, label: k, from: null, to: null, icon: 'ab_' + k, color: 0x9be7ff, apply: () => sim.abilities.splice(sim.abilities.indexOf(k), 1) };
         }
       }
       return null;
@@ -121,7 +121,7 @@ export class AutoBuy {
       if (!pick) break;
       sim.scrap -= pick.cost;
       pick.apply();
-      out.push({ key: pick.key, label: pick.label, from: pick.from, to: pick.to, cost: pick.cost, now: pick.now, icon: pick.icon, color: pick.color });
+      out.push({ key: pick.key, id: pick.id, label: pick.label, from: pick.from, to: pick.to, cost: pick.cost, now: pick.now, icon: pick.icon, color: pick.color });
     }
     return out;
   }

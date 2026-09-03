@@ -18,8 +18,10 @@ export function tierOf(scene) { return 1 + scene.state.time / SPAWN.tierSeconds;
 /** Surge levels spawn more of a single type; how many more depends on how tough that type is. */
 export function surgeMultiplier(scene) {
   if (!scene.surgeType) return 1;
-  const hp = MOBS[scene.surgeType].hp;
-  return hp <= SPAWN.surgeLightHp ? SPAWN.surgeMul.light : hp <= SPAWN.surgeMediumHp ? SPAWN.surgeMul.medium : SPAWN.surgeMul.heavy;
+  const d = MOBS[scene.surgeType], hp = d.hp, shooter = !!(d.fireRate || d.cooldown);   // ranged ships never get extra numbers: a level of only shooters is hard enough at ×1
+  const full = shooter ? SPAWN.surgeMul.heavy : hp <= SPAWN.surgeLightHp ? SPAWN.surgeMul.light : hp <= SPAWN.surgeMediumHp ? SPAWN.surgeMul.medium : SPAWN.surgeMul.heavy;
+  const f = Math.max(0, Math.min(1, (Math.floor(scene.tier) - SPAWN.surgeEvery) / SPAWN.surgeRampTiers));   // the first surges bring far fewer ships
+  return 1 + (full - 1) * (SPAWN.surgeSoft + (1 - SPAWN.surgeSoft) * f);
 }
 
 export function spawnRate(scene) {
@@ -30,7 +32,8 @@ export function spawnRate(scene) {
 
 /** Pick a surge type among everything unlocked by this tier, excluding bosses and static hazards. */
 export function pickSurge(scene, tierInt) {
-  const pool = Object.keys(MOBS).filter(t => MOBS[t].fromWave <= tierInt && canSurge(t));
+  // a type must have been around for SPAWN.surgeSettle levels before it can surge: a brand-new ship type as a whole level of only that was a wall
+  const pool = Object.keys(MOBS).filter(t => MOBS[t].fromWave <= tierInt - SPAWN.surgeSettle && canSurge(t));
   return pick(pool) || 'drone';
 }
 
@@ -110,7 +113,7 @@ function onNewTier(scene, tierInt) {
   scene.sfx.play('tier');
   if (SLOT_GATES[scene.tower.slots.length] === tierInt) {
     scene.ui.banner('Hardpoint ' + (scene.tower.slots.length + 1) + ' unsealed', false);
-    scene.fx.floater(scene.tower.x, scene.tower.y - 120, 'A fifth hardpoint can be unlocked', '#4ff2ff', 14);
+    scene.fx.floater(scene.tower.x, scene.tower.y - 120, 'A sixth hardpoint can be unlocked', '#4ff2ff', 14);
   }
   if (tierInt % SPAWN.choiceEvery === 0) {
     scene.levelMods = baseLevelMods(); scene.levelChoice = null; scene.ui.removeEffect('choice');

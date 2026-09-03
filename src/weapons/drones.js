@@ -184,7 +184,7 @@ export class DroneBay extends Weapon {
   absorb(b) {
     for (const d of this.drones) {
       if (!d.alive) continue;
-      if (dist(b, d) < d.r + TUNING.hitPad) { this.hurt(d, b.dmg); return true; }
+      if (dist(b, d) < d.r + TUNING.hitPad) { this.hurt(d, b.dmg); if (this.scene.quads) this.scene.quads.onBlock(); return true; }
     }
     return false;
   }

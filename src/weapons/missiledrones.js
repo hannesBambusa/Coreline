@@ -6,8 +6,8 @@ import { dist } from '../utils.js';
 import { onDroneMissile } from '../combos/procs.js';
 
 const TUNING = {
-  launch: 160,           // px/s the missile leaves the drone with
-  scatter: 0.9,          // launch angle jitter, radians
+  launch: 300,           // px/s the missile leaves the drone with
+  scatter: 0.25,         // launch angle jitter, radians, around the line to the target
   life: 3,
   flash: 0.5,
 };
@@ -35,7 +35,8 @@ export class MissileDrones extends DroneBay {
   launch(d, target, n, mul = 1) {
     const sc = this.scene, def = this.def;
     for (let i = 0; i < n; i++) {
-      const a = Math.atan2(d.vy, d.vx) + (Math.random() - 0.5) * TUNING.scatter + (i - (n - 1) / 2) * 0.3;
+      // aim at the target on launch (not along the drone's heading): missiles fly straight in instead of looping round
+      const a = Math.atan2(target.y - d.y, target.x - d.x) + (Math.random() - 0.5) * TUNING.scatter + (i - (n - 1) / 2) * 0.18;
       sc.spawnMissile({
         x: d.x, y: d.y, vx: Math.cos(a) * TUNING.launch, vy: Math.sin(a) * TUNING.launch,
         speed: def.speed, turn: def.turn, dmg: this.dmg * mul, weapon: this, splash: def.splash * (this.lm.missileSplash || 1),

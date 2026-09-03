@@ -1,6 +1,10 @@
 // Wiki tab: every ship with its picture, what it does, and its numbers at threat 1 and at the current threat.
-import { MOBS, SPAWN, hpGrowthAt } from '../config.js';
-import { fmt, hex } from './dom.js';
+import { MOBS, SPAWN, WEAPONS, hpGrowthAt } from '../config.js';
+import { ULTS, MIN_MATCH } from '../combos/quad.js';
+import { ICONS } from '../icons.js';
+import { fmt, hex, attrQuote } from './dom.js';
+
+const DANGER_WORD = { 1: 'low', 2: 'mild', 3: 'serious', 4: 'high', 5: 'extreme' };
 import { row } from './rows.js';
 
 const BOSSES = ['boss', 'warlord', 'pylon', 'titan', 'warden', 'mine'];
@@ -54,13 +58,42 @@ function mobRow(scene, type, d, sub = false) {
   if (d.noSolo) extras.push('never alone');
   const from = d.fromWave && d.fromWave < 999 ? `threat ${d.fromWave}+` : BOSSES.includes(type) ? (d.every ? `every ${d.every}th threat` : 'boss fights') : '';
   const subLine = sub ? ESCORT_NOTE[type] || 'Escort' : [from, d.chance ? `${Math.round(d.chance * 100)} % of spawns` : ''].filter(Boolean).join(' · ');
+  const meter = d.danger ? `<span class="danger d${d.danger}" data-tip="${attrQuote('Danger ' + d.danger + ' of 5\n' + (d.why || ''))}">${'<i></i>'.repeat(5)}<em>${DANGER_WORD[d.danger]}</em></span>` : '';
   return row({
-    cls: sub ? 'wiki-row wiki-sub' : 'wiki-row', style: `--mc:${c}`, lead, name: d.name, sub: subLine,
+    cls: sub ? 'wiki-row wiki-sub' : 'wiki-row', style: `--mc:${c}`, lead, name: d.name, sub: subLine, tag: meter,
     desc: `${d.desc || BLURB[type] || ''}${extras.length ? ` <span class="muted">(${extras.join(', ')})</span>` : ''}<br>${statsLine(d, scene)}`,
   });
 }
 
-export function wikiHtml(scene) {
+const CHARGE_WORD = { droneKills: 'drone kills', crits: 'crits', held: 'seconds of ships held in wells or the chrono field', infections: 'infections and splash hits', blocks: 'reflections, drone absorbs and plate rams', hits: 'hits from its weapons', arcs: 'arcs and reflections', taken: 'shield damage taken (in shields\' worth)' };
+
+/** One ultimate card: weapon group with mounted ones lit, charge source, timings, and whether it is on your bar now. */
+function ultRow(scene, id, u) {
+  const qs = scene.quads, c = hex(u.color), n = u.match.length ? qs.matches(id) : 0, onBar = qs.bar().some(b => b.id === id);
+  const group = u.match.length
+    ? u.match.map(p => `<span class="wg${qs.mounted(p) ? ' on' : ''}" style="--wc:${hex(WEAPONS[p].color)}" data-tip="${attrQuote(WEAPONS[p].name + (qs.mounted(p) ? ' · mounted' : ' · not mounted'))}">${ICONS[p]}</span>`).join('')
+    : `<span class="wg on" style="--wc:${c}">${ICONS.level}</span>`;
+  const rule = u.match.length ? `needs ${MIN_MATCH} of these 4 weapons mounted · ${n} of 4 now` : 'universal · fills the bar when fewer than 2 groups are complete';
+  const stats = `charge: <b>${CHARGE_WORD[u.charge] || u.charge}</b> · needs <b>${qs.need(id)}</b> now (${u.need} +${u.needPerTier} per threat level) · lasts <b>${u.dur} s</b> · cooldown <b>${u.cd} s</b>`;
+  return row({
+    cls: 'wiki-row ult-row' + (onBar ? ' on-bar' : ''), style: `--mc:${c}`, lead: `<div class="icon ult-group">${group}</div>`, name: u.name,
+    sub: rule, tag: onBar ? '<span class="danger d5" style="--dc:' + c + '"><em>on your bar</em></span>' : '',
+    desc: `${u.desc}<br><span class="muted">${stats}</span>`,
+  });
+}
+
+const WIKI_TABS = { ships: 'Ships', ultimates: 'Ultimates' };
+
+export function wikiHtml(scene, tab = 'ships') {
+  const nav = `<div class="subtabs">${Object.entries(WIKI_TABS).map(([k, l]) => `<button data-wiki="${k}" class="${k === tab ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+  if (tab === 'ultimates') {
+    return nav + `<div class="muted" style="margin-bottom:6px">Ultimates are fired by you (Q W E R or click) once their charge is full. The core cannot be hurt while one runs. Bosses lose at most 15 % of max hp to one. At most 4 show on the bar.</div>` +
+      Object.entries(ULTS).map(([id, u]) => ultRow(scene, id, u)).join('');
+  }
+  return nav + shipsHtml(scene);
+}
+
+function shipsHtml(scene) {
   const all = Object.entries(MOBS).filter(([k, d]) => d.name && typeof d.hp === 'number');
   const regular = all.filter(([k]) => !BOSSES.includes(k)).sort((a, b) => (a[1].fromWave || 0) - (b[1].fromWave || 0));
   const bosses = Object.keys(ESCORTS).map(k => [k, MOBS[k]]);

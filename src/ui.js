@@ -12,7 +12,7 @@ import { purchase, isFreeInstall } from './ui/purchases.js';
 import { initSettings, initResize, syncSettings, syncMute } from './ui/settings.js';
 
 const RENDER_MS = 150;
-const TAB_BUILDERS = { tower: renderTowerTab, upgrades: renderUpgradesTab, skills: renderSkillsTab, stats: (ui) => statsHtml(ui.scene), wiki: (ui) => wikiHtml(ui.scene) };
+const TAB_BUILDERS = { tower: renderTowerTab, upgrades: renderUpgradesTab, skills: renderSkillsTab, stats: (ui) => statsHtml(ui.scene), wiki: (ui) => wikiHtml(ui.scene, ui.wikiTab) };
 const TEXT_INPUTS = ['INPUT', 'TEXTAREA'];
 
 export class UI {
@@ -33,6 +33,8 @@ export class UI {
     $('#panel-toggle').onclick = () => { this.panel.classList.toggle('hidden'); this.render(); };
     for (const b of $$('#tabs button')) { b.innerHTML = ICONS['tab_' + b.dataset.tab] || b.dataset.tab; b.onclick = () => this.showTab(b.dataset.tab); }
     fx.bindTips(this, $('#tabs'));
+    this.wikiTab = 'ships';
+    $('#tab-wiki').addEventListener('click', (e) => { const b = e.target.closest('[data-wiki]'); if (b) { this.wikiTab = b.dataset.wiki; this.renderTab('wiki'); } });
     $('#tabs button[data-tab=skills]').hidden = false;
     initSettings(this);
     this.applyPanelWidth = initResize(this);
@@ -70,7 +72,7 @@ export class UI {
     $('#acc-magic').onclick = async () => { const [e] = creds(); if (!e) return msg('Type your email first'); msg('…'); msg(await cloud.magicLink(e)); };
     $('#acc-google').onclick = async () => { msg('…'); msg(await cloud.signInGoogle()); };
     $('#acc-offline').onclick = () => { this.offlineOk = true; this.syncAccount(); };
-    $('#acc-signout').onclick = $('#acc-settings-out').onclick = $('#btn-logout').onclick = async () => msg(await cloud.signOut());
+    $('#acc-signout').onclick = $('#acc-settings-out').onclick = async () => msg(await cloud.signOut());
     $('#acc-pass').onkeydown = (e) => { if (e.key === 'Enter') $('#acc-signin').click(); };
     fx.bindTips(this, $('#topbar'));
     cloud.onChange(() => this.syncAccount());
@@ -98,8 +100,6 @@ export class UI {
     else $('#acc-msg').textContent = 'Progress syncs after every save';
     $('#acc-settings').hidden = !(on && c.status === 'in');
     $('#acc-settings-who').textContent = who;
-    $('#btn-logout').hidden = c.status !== 'in';
-    $('#btn-logout').dataset.tip = who ? `Sign out\n${who}` : 'Sign out';
   }
 
   /** game speed from the top bar: ¼, ½, 1, 2 or 4. Remembered in settings. */
@@ -112,6 +112,8 @@ export class UI {
   onKey(e) {
     const scene = this.scene;
     if (e.code === 'Space' && !TEXT_INPUTS.includes(document.activeElement.tagName)) { e.preventDefault(); scene.setPaused(!scene.paused); }
+    const ultKey = { q: 0, w: 1, e: 2, r: 3 }[e.key.toLowerCase()];
+    if (ultKey !== undefined && !e.ctrlKey && !e.metaKey && !TEXT_INPUTS.includes(document.activeElement.tagName) && !scene.paused && !scene.starting) { const u = scene.quads.bar()[ultKey]; if (u) this.fireUltimate(u.id); }
     if (scene.choosing && (e.key === '1' || e.key === '2')) { const b = $$('#choice .ch-card')[+e.key - 1]; if (b) b.click(); }
   }
 
@@ -122,7 +124,7 @@ export class UI {
     const scene = this.scene;
     hud.renderTopBar(scene);
     hud.renderAbilities(this);
-    hud.renderQuickBuy(this);
+    hud.renderUltimates(this);
     hud.renderBossBar(scene);
     hud.renderThreatTimer(scene);
     hud.renderQueue(this);
@@ -228,7 +230,7 @@ export class UI {
   }
 
   abilityClick(k) { hud.abilityClick(this, k); }
-  renderQuickBuy() { hud.renderQuickBuy(this); }
+  fireUltimate(id) { const ok = this.scene.quads.fireUltimate(id); this.scene.sfx.play(ok ? 'buy' : 'deny'); }
 
   // ---- Delegations --------------------------------------------------------
 

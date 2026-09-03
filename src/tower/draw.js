@@ -71,7 +71,7 @@ function drawShield(tower, g, dt, pulse) {
   const sf = Math.max(0, Math.min(1, tower.shield / tower.shieldMax));
   const lit = sf * SEGMENTS, full = Math.floor(lit), partial = lit - full;
   const regenerating = tower.regenDelay <= 0 && tower.shield < tower.shieldMax;
-  const hit = tower.hitTimer > 0;
+  const hit = tower.hitTimer > 0, invuln = !!(tower.scene.quads && tower.scene.quads.ult);
   const regenSpeed = tower.calm ? 2.2 : 1;
   tower.regenPhase += dt * regenSpeed;
 
@@ -81,6 +81,8 @@ function drawShield(tower, g, dt, pulse) {
   g.lineStyle(SEG_WIDTH, sf > 0 ? COLORS.cyan : COLORS.red, 0.10);
   for (let i = 0; i < SEGMENTS; i++) seg(g, x, y, R, i);
 
+  // invulnerable (ultimate running): every segment lit gold, whatever the shield holds
+  if (invuln) { g.lineStyle(SEG_WIDTH + 2, COLORS.gold, 0.85 + 0.15 * pulse); for (let i = 0; i < SEGMENTS; i++) seg(g, x, y, R, i); }
   // lit segments
   if (full > 0) {
     g.lineStyle(SEG_WIDTH, hit ? COLORS.white : COLORS.cyan, hit ? 1 : 0.75 + 0.15 * pulse);

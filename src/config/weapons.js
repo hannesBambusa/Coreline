@@ -130,7 +130,7 @@ export const WEAPONS = {
     name: 'Missile drones', install: 850,
     support: true,   // not offered as a starting weapon: runs start with a turret
     desc: 'Interceptor drones with mini missile pods: homing missiles that explode on impact. Higher levels fire salvos.',
-    dmg: 18, rate: 0.7, range: 640, speed: 380, turn: 5, splash: 55, fireRange: 230, salvoAt: [8, 16],
+    dmg: 18, rate: 0.7, range: 640, speed: 380, turn: 9, splash: 55, fireRange: 230, salvoAt: [8, 16],
     drones: 3, dronePerLevels: 4, maxDrones: 6, droneHp: 120, droneHpMul: 1.15, droneSpeed: 230, respawn: 6,
     dmgMul: 1.14, rateMul: 1.02,
     cost: 130, costGrowth: 1.42,
@@ -151,8 +151,9 @@ export const WEAPONS = {
   mirrors: {
     name: 'Mirrors', install: 800,
     support: true,   // not offered as a starting weapon: it does not shoot on its own
-    desc: 'Reflector plates orbiting just outside the shield. Enemy shots that hit a plate fly back at whoever fired them, harder than they came. Ships that crash into a plate die but damage it, and shots wear it down a little; a broken plate rebuilds in a few seconds. Plates turn to face incoming fire, and more plates come with levels.',
+    desc: 'Reflector plates orbiting just outside the shield. Enemy shots that hit a plate fly back at whoever fired them, harder than they came, and take a share of the shooter’s own hull with them. Ships that crash into a plate die but damage it, and shots wear it down a little; a broken plate rebuilds in a few seconds. Plates turn to face incoming fire, and more plates come with levels.',
     dmg: 1, rate: 1, range: 0, arc: 1.0, arcPerLevel: 0.03, arcMax: 1.7, mul: 1.5, mulPerLevel: 0.12, platesAt: [8, 16],
+    hpFrac: 0.08, hpFracPerLevel: 0.005, bossFrac: 0.2,   // a reflected shot also takes this share of the shooter's max hp (bosses a fifth of it), so mirrors keep up with ship hp
     plateHp: 220, plateHpMul: 1.14, reflectWear: 0.08, rebuild: 10, noJam: true,   // plates have no electronics to jam   // a plate has hp: rams hit it for their damage, each reflect costs wear × the shot's damage; dead plates rebuild
     dmgMul: 1.0, rateMul: 1.0,
     cost: 100, costGrowth: 1.4,

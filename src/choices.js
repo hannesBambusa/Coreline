@@ -4,7 +4,14 @@
 import { MOBS, WEAPONS } from './config.js';
 
 const LIGHT_HP = 35;              // hunts of ships at or under this HP also multiply spawn numbers
-const HUNT = { scrap: 4, hp: 1.8, lightSpawn: 2.5 };
+const HUNT = { scrap: 4, hp: [1.2, 1.8], lightSpawn: [1.5, 2.5] };   // [at the card's first tier, fully ramped]
+
+// ---- threat ramp: the harsh cards start soft and reach full strength RAMP_SPAN tiers after they unlock ----
+export const RAMP_SPAN = 20;
+export const ramp = (tier, from) => Math.max(0, Math.min(1, (tier - from) / RAMP_SPAN));
+export const lerp = (a, b, f) => a + (b - a) * f;
+/** pick a value from a [soft, full] pair for this tier */
+export const scaled = (pair, tier, from) => Array.isArray(pair) ? lerp(pair[0], pair[1], ramp(tier, from)) : pair;
 const NO_HUNT = new Set(['boss', 'titan', 'mine', 'warden', 'warlord', 'pylon']);
 
 export const CHOICES = {
@@ -14,8 +21,8 @@ export const CHOICES = {
   bloodMoney:  { name: 'Blood money',      good: '+150% scrap',                   bad: 'ships 60% tougher, +40% spawns',   fromTier: 4 },
   fragRun:     { name: 'Fragment lure',    good: '+50% fragments',                bad: 'ships 50% tougher',                fromTier: 4 },
   fragFever:   { name: 'Fragment fever',   good: 'double fragments',              bad: 'spawn rate ×2, ships 30% faster',  fromTier: 10 },
-  bounty:      { name: 'Bounty board',     good: 'elites drop 6× scrap',          bad: 'elite chance ×4',                  fromTier: 5 },
-  swarmStorm:  { name: 'Swarm storm',      good: 'swarm drops ×5 scrap',          bad: '200+ swarm arrive now, then swarm only, ×5 spawn rate', fromTier: 4 },
+  bounty:      { name: 'Bounty board',     good: 'elites drop 6× scrap',          bad: 'elite chance up to ×4, scaling with threat', fromTier: 5 },
+  swarmStorm:  { name: 'Swarm storm',      good: 'swarm drops ×5 scrap',          bad: 'a swarm flood arrives now, then swarm only at up to ×5 spawn rate, scaling with threat', fromTier: 4 },
   parade:      { name: 'Elite parade',     good: 'elites drop 3× scrap',          bad: 'every ship is an elite',           fromTier: 8 },
   // ---- offense and defense ----
   critHigh:    { name: 'Overtuned optics', good: '+25% crit chance',              bad: 'no shield regen',                  fromTier: 2 },
@@ -44,27 +51,27 @@ for (const [type, d] of Object.entries(MOBS)) {
   CHOICES['hunt_' + type] = {
     name: `${d.name} hunt`, hunt: type, fromTier: Math.max(1, d.fromWave + 1),
     good: `only ${d.name.toLowerCase()}s, ×${HUNT.scrap} scrap`,
-    bad: `×${HUNT.hp} HP${light ? `, ×${HUNT.lightSpawn} numbers` : ''}`,
+    bad: `up to ×${HUNT.hp[1]} HP${light ? `, up to ×${HUNT.lightSpawn[1]} numbers` : ''}, scaling with threat`,
   };
 }
 
 // how each choice changes the level. m = mods object for the level.
-export function applyChoice(id, m) {
-  const c = CHOICES[id];
+export function applyChoice(id, m, tier = 99) {
+  const c = CHOICES[id], from = c ? c.fromTier : 1, at = (pair) => scaled(pair, tier, from);   // harsh numbers ramp from the card's first tier
   if (c && c.hunt) {
-    m.force = c.hunt; m.typeScrap[c.hunt] = HUNT.scrap; m.mobHp *= HUNT.hp;
-    if (MOBS[c.hunt].hp <= LIGHT_HP) m.spawn *= HUNT.lightSpawn;
+    m.force = c.hunt; m.typeScrap[c.hunt] = HUNT.scrap; m.mobHp *= at(HUNT.hp);
+    if (MOBS[c.hunt].hp <= LIGHT_HP) m.spawn *= at(HUNT.lightSpawn);
     return m;
   }
   switch (id) {
     case 'scrapFast':  m.scrap *= 1.8; m.mobSpeed *= 1.35; break;
     case 'scrapCalm':  m.spawn *= 0.6; m.scrap *= 0.5; break;
-    case 'bloodMoney': m.scrap *= 2.5; m.mobHp *= 1.6; m.spawn *= 1.4; break;
+    case 'bloodMoney': m.scrap *= 2.5; m.mobHp *= at([1.3, 1.6]); m.spawn *= at([1.2, 1.4]); break;
     case 'fragRun':    m.fragments *= 1.5; m.mobHp *= 1.5; break;
-    case 'fragFever':  m.fragments *= 2; m.spawn *= 2; m.mobSpeed *= 1.3; break;
-    case 'bounty':     m.eliteScrap *= 6; m.elite *= 4; break;
+    case 'fragFever':  m.fragments *= 2; m.spawn *= at([1.5, 2]); m.mobSpeed *= 1.3; break;
+    case 'bounty':     m.eliteScrap *= 6; m.elite *= at([2, 4]); break;
     case 'parade':     m.eliteScrap *= 3; m.allElite = true; break;
-    case 'swarmStorm': m.swarmScrap *= 5; m.force = 'swarm'; m.spawn *= 5; m.cap *= 2.5; break;
+    case 'swarmStorm': m.swarmScrap *= 5; m.force = 'swarm'; m.spawn *= at([2, 5]); m.cap *= at([1.5, 2.5]); break;
     case 'critHigh':   m.crit += 0.25; m.shieldRegen = 0; break;
     case 'glass':      m.dmg *= 1.6; m.shieldMax *= 0.4; break;
     case 'allIn':      m.dmg *= 2; m.scrap *= 1.5; m.shieldMax *= 0.25; m.shieldRegen = 0; break;

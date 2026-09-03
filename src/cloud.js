@@ -9,6 +9,7 @@ import { askConfirm } from './ui/dom.js';
 const progress = (d) => d && d.profile ? (d.profile.prestige || 0) * 1000 + (d.profile.fragments || 0) + Object.keys(d.profile.tree || {}).length * 10 + (d.profile.totalKills || 0) / 100 + (d.profile.bestTime || 0) / 60 : 0;
 const FRESH = 20;   // below this a save counts as a fresh profile
 const BACKUP_KEY = 'core-defence-backup';   // the local save is copied here before a cloud save replaces it (last 3)
+const OWNER_KEY = 'core-defence-owner';     // user id of the account the local save belongs to
 
 /** keep the previous local save before it is replaced, so nothing is ever lost without a copy */
 export function backupLocal(reason) {
@@ -176,6 +177,7 @@ export class Cloud {
     this.user = null; this.status = 'out';
     this.scene.saves.suspend = true;   // the autosave must not write the old run back
     this.scene.saves.clear();
+    localStorage.removeItem(OWNER_KEY);
     location.reload();
     return 'Signed out';
   }
@@ -217,15 +219,18 @@ export class Cloud {
     const remote = data && data.data;
     const lp = progress(local), rp = progress(remote);
     this.remoteProgress = rp;
+    const owner = localStorage.getItem(OWNER_KEY);   // which account wrote the local save
     let useCloud;
-    if (!remote || rp < FRESH) useCloud = false;                 // nothing real in the cloud: keep this device
-    else if (!local || lp < FRESH) useCloud = true;               // this device is fresh: take the cloud
-    else if (JSON.stringify(local.profile) === JSON.stringify(remote.profile)) useCloud = (remote.savedAt || 0) > (local.savedAt || 0);   // same profile, newer run wins
+    if (!remote) useCloud = false;                                                    // nothing in the cloud: keep this device
+    else if (owner === this.user.id) useCloud = (remote.savedAt || 0) > (local && local.savedAt || 0);   // same account: newest wins, no questions
+    else if (!local || lp < FRESH) useCloud = true;                                   // this device is fresh: take the cloud
+    else if (rp < FRESH) useCloud = false;                                            // cloud is fresh: keep this device
     else {
-      useCloud = await askConfirm('Which save do you want to keep?',
+      useCloud = await askConfirm('Which save do you want to keep?',                  // real progress on both sides, from different accounts
         `Cloud: ${describe(remote)}.\nThis device: ${describe(local)}.\nThe other one is replaced.`,
         { okLabel: 'Use cloud save', cancelLabel: 'Keep this device', danger: false });
     }
+    localStorage.setItem(OWNER_KEY, this.user.id);
     if (useCloud) {
       this.scene.saves.suspend = true;
       backupLocal('replaced by cloud save');

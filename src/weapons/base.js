@@ -44,7 +44,7 @@ export class Weapon {
     this.jamSlow = 0;     // fire-rate multiplier while a Jammer holds a lock (0 = none)
   }
   /** overcharge and jammer effects on fire rate */
-  get effectiveRateMul() { return this.scene.abilities.rateMul * (this.jamSlow ? this.jamSlow : 1); }
+  get effectiveRateMul() { return this.scene.abilities.rateMul * (this.scene.quads ? this.scene.quads.rateMul : 1) * (this.jamSlow ? this.jamSlow : 1); }
   get mods() { return this.scene.tree.mods; }
   get wm() { return this.mods.w[this.type]; }
   get lm() { return this.scene.levelMods; }

@@ -94,6 +94,8 @@ export class Tower {
   /** `source` is the ship type that dealt it, for the damage-taken stats */
   takeDamage(amount, hx, hy, quiet = false, source = 'other') {
     if (!Number.isFinite(amount) || amount <= 0) return;
+    if (this.scene.quads) this.scene.quads.onTaken(amount);
+    if (this.scene.quads && this.scene.quads.ult) { this.hitTimer = 0.25; this.hitAngle = Phaser.Math.Angle.Between(this.x, this.y, hx, hy); return; }   // invulnerable while an ultimate runs
     const st = this.scene.stats;
     if (st) { st.taken += amount; if (!st.takenBy) st.takenBy = {}; st.takenBy[source] = (st.takenBy[source] || 0) + amount; }
     if (this.scene.takenLog) this.scene.logTaken(amount);

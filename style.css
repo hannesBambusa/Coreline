@@ -55,10 +55,6 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 #speed button:hover { color: var(--text); }
 #speed button.on { color: var(--cyan); background: rgba(79,242,255,0.18); }
 #btn-pause.on { background: rgba(79,242,255,0.2); box-shadow: 0 0 12px rgba(79,242,255,0.4); }
-#btn-logout { margin-left: 6px; pointer-events: auto; background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; width: 34px; height: 30px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: color 0.12s, border-color 0.12s; }
-#btn-logout svg { width: 18px; height: 18px; }
-#btn-logout:hover { color: var(--red); border-color: var(--red); }
-#btn-logout[hidden] { display: none; }
 #panel-toggle { margin-left: 10px; pointer-events: auto; background: none; border: 1px solid var(--line); color: var(--cyan); border-radius: 6px; width: 34px; height: 30px; cursor: pointer; }
 
 
@@ -369,6 +365,11 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 .fx-item.ending { animation: fxblink 0.3s ease-in-out infinite alternate; }
 /* crit proc: gold frame, brighter glow, the name flickers in briefly */
 /* the pulsing halo lives on a pseudo-element with its own animation, so the card's own pop / ending animations never restart or replace it */
+.fx-item.ult { border-color: rgba(255,209,102,0.7); background: linear-gradient(90deg, rgba(255,209,102,0.10), rgba(10,14,28,0.9)); }
+.fx-item.ult .fx-icon svg { width: 11px; height: 11px; }
+.fx-item.ult .fx-icon { display: flex; flex-wrap: wrap; width: 24px; justify-content: center; }
+.fx-item.ult.ready { box-shadow: 0 0 18px rgba(255,209,102,0.45); }
+.fx-item.ult .fx-sub { letter-spacing: 1px; }
 .fx-item.crit { --fx: #ffb703; border-color: rgba(255,183,3,0.9); background: linear-gradient(90deg, rgba(255,183,3,0.14), rgba(10,14,28,0.9)); position: relative; }
 .fx-item.crit::after { content: ''; position: absolute; inset: -2px; border-radius: 12px; pointer-events: none; animation: fxgold 1.6s ease-in-out infinite; }
 @keyframes fxgold {
@@ -406,6 +407,23 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 /* ==========================================================================
    Abilities bar
    ========================================================================== */
+#ultimates { position: fixed; left: 50%; bottom: 100px; transform: translateX(-50%); display: flex; gap: 10px; z-index: 5; }
+/* same footprint as an ability button; the charge fills it from the bottom */
+.ult-btn { --uc: #ffd166; position: relative; width: 76px; height: 76px; border-radius: 12px; overflow: hidden; cursor: pointer; background: rgba(10,14,28,0.85); border: 1px solid color-mix(in srgb, var(--uc) 45%, transparent); color: var(--uc); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; font-family: var(--font-body); transition: box-shadow 0.15s, border-color 0.15s, transform 0.1s; }
+.ult-btn .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(0deg, color-mix(in srgb, var(--uc) 30%, transparent), color-mix(in srgb, var(--uc) 8%, transparent)); transition: height 0.25s linear; }
+.ult-btn .icons { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; width: 28px; filter: drop-shadow(0 0 5px color-mix(in srgb, var(--uc) 60%, transparent)); }
+.ult-btn .icons.one { grid-template-columns: 1fr; width: 26px; } .ult-btn .icons.one svg { width: 24px; height: 24px; }
+.ult-btn .icons svg { width: 13px; height: 13px; }
+.ult-btn .txt { position: relative; display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.ult-btn .nm { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; white-space: nowrap; }
+.ult-btn .st { font-size: 9px; color: var(--muted); white-space: nowrap; }
+.ult-btn .key { position: absolute; top: 3px; left: 6px; font-size: 10px; color: var(--muted); font-family: var(--font-head); }
+.ult-btn.ready { border-color: var(--uc); box-shadow: 0 0 22px color-mix(in srgb, var(--uc) 55%, transparent); animation: ultpulse 1.2s ease-in-out infinite alternate; }
+.ult-btn.ready .st { color: #fff; } .ult-btn.ready .key { color: var(--uc); }
+.ult-btn.ready:hover { transform: translateY(-2px); }
+.ult-btn.firing { border-color: #fff; box-shadow: 0 0 30px rgba(255,255,255,0.6); }
+.ult-btn.blocked { opacity: 0.5; cursor: default; }
+@keyframes ultpulse { from { box-shadow: 0 0 14px color-mix(in srgb, var(--uc) 35%, transparent); } to { box-shadow: 0 0 32px color-mix(in srgb, var(--uc) 85%, transparent); } }
 #abilities { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; gap: 10px; z-index: 5; }
 .ab {
   position: relative; width: 76px; height: 76px; border-radius: 12px; overflow: hidden; cursor: pointer;
@@ -427,9 +445,9 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 .ab.active { border-color: #ff9f43; box-shadow: 0 0 22px rgba(255,159,67,0.6); color: #ff9f43; }
 
 /* ==========================================================================
-   Auto-buy queue and quick-buy list (right side, panel collapsed)
+   Auto-buy queue and loadout card (right side, panel collapsed)
    ========================================================================== */
-#auto-queue { position: fixed; right: 12px; top: 70px; z-index: 6; pointer-events: none; width: 270px; }
+#auto-queue { position: fixed; right: 12px; bottom: 16px; z-index: 6; pointer-events: none; width: 270px; }
 #auto-queue[hidden] { display: none; }
 #auto-queue .aq-title { font-family: var(--font-head); font-size: 10px; letter-spacing: 2px; color: var(--gold); text-transform: uppercase; margin: 0 0 8px 8px; opacity: 0.8; }
 #auto-queue ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -446,36 +464,42 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 #auto-queue li.now .l { color: var(--cyan); text-shadow: 0 0 8px rgba(79,242,255,0.6); }
 #auto-queue li:not(:first-child) { opacity: 0.85; }
 #auto-queue { width: var(--panel-w, 320px); max-width: 320px; }
+#auto-queue .aq-hint { font-size: 11px; color: var(--muted); margin: -4px 0 8px 8px; }
+#auto-queue.manual { pointer-events: auto; }
+#auto-queue.manual .aq-title { color: var(--cyan); }
+#auto-queue.manual li.can { cursor: pointer; border-radius: 10px; padding: 4px 8px; border: 1px solid transparent; transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s; }
+#auto-queue.manual li.can:hover { transform: translateX(-4px); border-color: var(--qc); box-shadow: 0 0 14px color-mix(in srgb, var(--qc) 45%, transparent); }
+#auto-queue.manual li.can:active { transform: scale(0.97); }
+#auto-queue.manual li:not(.can) { opacity: 0.55; }
 
 #loadout { position: fixed; right: 12px; top: 70px; z-index: 6; width: 270px; pointer-events: none; }
 #loadout[hidden] { display: none; }
 #loadout .aq-title { font-family: var(--font-head); font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin: 0 0 6px 8px; opacity: 0.8; }
 #loadout .lo-sub { margin-top: 10px; }
-#lo-weapons, #lo-combos { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 8px; }
-.lo-w { position: relative; width: 44px; height: 44px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--lc) 60%, transparent); background: rgba(10,14,28,0.85); display: flex; align-items: center; justify-content: center; color: var(--lc); pointer-events: auto; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--lc) 60%, transparent)); }
-.lo-w svg { width: 26px; height: 26px; }
-.lo-w .lv { position: absolute; right: -4px; bottom: -6px; font-family: var(--font-head); font-size: 10px; padding: 1px 5px; border-radius: 6px; background: var(--lc); color: #05060d; font-weight: 700; }
+#lo-weapons, #lo-combos { display: flex; flex-wrap: wrap; gap: 10px; padding: 0 8px; }
+.lo-w { position: relative; width: 60px; height: 60px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--lc) 60%, transparent); background: rgba(10,14,28,0.85); display: flex; align-items: center; justify-content: center; color: var(--lc); pointer-events: auto; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--lc) 60%, transparent)); }
+.lo-w svg { width: 36px; height: 36px; }
+.lo-w .lv { position: absolute; right: -5px; bottom: -7px; font-family: var(--font-head); font-size: 11px; padding: 1px 5px; border-radius: 6px; background: var(--lc); color: #05060d; font-weight: 700; }
 .lo-w.jam { border-color: var(--red); color: var(--red); }
+.lo-w.can { cursor: pointer; }
+.lo-w.can:hover { transform: translateY(-2px); box-shadow: 0 0 14px color-mix(in srgb, var(--lc) 70%, transparent); }
+.lo-w.can:active { transform: scale(0.95); }
+.lo-w.up { border-color: var(--gold); box-shadow: 0 0 12px rgba(255,209,102,0.45); animation: lo-up 1.6s ease-in-out infinite; }
+.lo-w.up::after { content: '▲'; position: absolute; top: -8px; right: -6px; font-size: 10px; color: #05060d; background: var(--gold); border-radius: 6px; padding: 1px 4px; font-weight: 700; }
+@keyframes lo-up { 0%, 100% { box-shadow: 0 0 8px rgba(255,209,102,0.3); } 50% { box-shadow: 0 0 18px rgba(255,209,102,0.7); } }
+.lo-w.empty, .lo-w.lock { --lc: var(--cyan); border-style: dashed; cursor: pointer; filter: none; opacity: 0.8; }
+.lo-w.empty:hover, .lo-w.open { opacity: 1; border-style: solid; box-shadow: 0 0 12px rgba(79,242,255,0.4); }
+.lo-w.lock .lv { background: rgba(10,14,28,0.95); color: var(--gold); border: 1px solid var(--gold); }
+.lo-w.lock:not(.can) { cursor: default; opacity: 0.5; }
+.lo-w.gated { opacity: 0.35; cursor: default; }
+.lo-w.pick .lv { background: rgba(10,14,28,0.95); color: var(--gold); border: 1px solid var(--lc); }
+#lo-pick-list { display: flex; flex-wrap: wrap; gap: 10px; padding: 0 8px; }
 .lo-c { display: flex; align-items: center; gap: 2px; padding: 4px 6px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(10,14,28,0.85); pointer-events: auto; }
-.lo-c svg { width: 20px; height: 20px; }
+.lo-c svg { width: 26px; height: 26px; }
 .lo-c .plus { color: var(--muted); font-size: 11px; margin: 0 1px; }
 .lo-c.cd { opacity: 0.4; }
 .lo-c.active { border-color: var(--gold); box-shadow: 0 0 10px rgba(255,209,102,0.5); }
-#quick-buy { position: fixed; right: 12px; top: 70px; z-index: 6; width: 270px; max-height: calc(100vh - 70px); overflow-y: auto; }
-#quick-buy[hidden] { display: none; }
-#quick-buy .aq-title { font-family: var(--font-head); font-size: 10px; letter-spacing: 2px; color: var(--cyan); text-transform: uppercase; margin: 0 0 8px 8px; opacity: 0.8; }
-#quick-buy ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-#quick-buy li { --qc: var(--cyan); display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; cursor: pointer;
   background: rgba(10,14,28,0.85); border: 1px solid color-mix(in srgb, var(--qc) 45%, transparent); transition: transform 0.1s, box-shadow 0.15s; }
-#quick-buy li:hover { transform: translateX(-4px); box-shadow: 0 0 16px color-mix(in srgb, var(--qc) 50%, transparent); border-color: var(--qc); }
-#quick-buy li:active { transform: scale(0.97); }
-#quick-buy li.empty { cursor: default; color: var(--muted); font-size: 12px; justify-content: center; border-style: dashed; }
-#quick-buy li .ic { width: 36px; height: 36px; display: flex; color: var(--qc); filter: drop-shadow(0 0 8px currentColor); flex: none; }
-#quick-buy li .ic svg { width: 36px; height: 36px; }
-#quick-buy li .txt { display: flex; flex-direction: column; flex: 1; line-height: 1.15; }
-#quick-buy li .l { color: var(--text); font-size: 14px; font-weight: 600; }
-#quick-buy li .lv { color: var(--muted); font-size: 12px; } #quick-buy li .lv b { color: var(--qc); }
-#quick-buy li .c { color: var(--gold); font-family: var(--font-head); font-size: 13px; font-variant-numeric: tabular-nums; }
 
 /* ==========================================================================
    Tooltip
@@ -508,7 +532,7 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 #start { z-index: 5; }
 /* the login screen is a blank slate: solid backdrop, and the HUD, panel and canvas are hidden underneath it */
 #login { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 9; background: radial-gradient(circle at 50% 40%, #0b1030, #05060d 70%); }
-body.login #game, body.login #topbar, body.login #panel, body.login #left-hud, body.login #abilities, body.login #threat-timer, body.login #saved-toast, body.login #panel-toggle, body.login #auto-queue, body.login #quick-buy, body.login #transmission { visibility: hidden; }
+body.login #game, body.login #topbar, body.login #panel, body.login #left-hud, body.login #abilities, body.login #threat-timer, body.login #saved-toast, body.login #panel-toggle, body.login #auto-queue, body.login #transmission { visibility: hidden; }
 #login[hidden] { display: none; }
 #login-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 #login .start-card { position: relative; background: rgba(10,14,28,0.78); backdrop-filter: blur(6px); }
@@ -553,3 +577,23 @@ body.starting #btn-pause { opacity: 0.25; pointer-events: none; }
 #confirm .row button { flex: none; min-width: 130px; padding: 10px 16px; }
 #confirm .row button.danger { border-color: var(--red); color: var(--red); background: rgba(255,77,109,0.1); }
 #opt-perf { background: rgba(255,255,255,0.05); color: var(--text); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; padding: 3px 6px; font-family: var(--font-body); margin-left: 6px; }
+
+/* danger meter on wiki cards: five bars, filled count = danger 1..5 */
+.danger { display: inline-flex; align-items: center; gap: 2px; margin-left: 8px; vertical-align: middle; cursor: default; }
+.danger i { width: 5px; height: 9px; border-radius: 1px; background: rgba(255,255,255,0.12); }
+.danger em { font-style: normal; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; margin-left: 5px; color: var(--muted); }
+.danger.d1 i:nth-child(-n+1), .danger.d2 i:nth-child(-n+2), .danger.d3 i:nth-child(-n+3), .danger.d4 i:nth-child(-n+4), .danger.d5 i:nth-child(-n+5) { background: var(--dc); }
+.danger.d1 { --dc: #4ade80; } .danger.d2 { --dc: #a3e635; } .danger.d3 { --dc: #ffd166; } .danger.d4 { --dc: #ff9f43; } .danger.d5 { --dc: #ff4d6d; }
+.danger.d4 em, .danger.d5 em { color: var(--dc); }
+
+/* wiki sub tabs */
+.subtabs { display: flex; gap: 6px; margin: 0 0 10px; }
+.subtabs button { flex: 1; padding: 6px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 8px; color: var(--muted); font-family: var(--font-head); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; }
+.subtabs button:hover { color: var(--text); }
+.subtabs button.on { color: var(--cyan); border-color: var(--cyan); background: rgba(79,242,255,0.08); }
+/* ultimate cards: 2×2 weapon group, mounted ones lit */
+.ult-group { display: grid !important; grid-template-columns: 1fr 1fr; gap: 2px; place-items: center; }
+.ult-group .wg { color: var(--wc); opacity: 0.25; display: inline-flex; }
+.ult-group .wg.on { opacity: 1; filter: drop-shadow(0 0 4px var(--wc)); }
+.ult-group .wg svg { width: 13px; height: 13px; }
+.ult-row.on-bar { border-color: color-mix(in srgb, var(--mc) 70%, transparent); box-shadow: inset 0 0 18px color-mix(in srgb, var(--mc) 12%, transparent); }

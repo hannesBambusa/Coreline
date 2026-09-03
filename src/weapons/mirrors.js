@@ -8,6 +8,7 @@ import { dist, angleTo, TAU } from '../utils.js';
 import { onReflect } from '../combos/procs.js';
 
 const NO_CRASH = ['boss', 'warlord', 'titan', 'warden', 'pylon'];   // bosses do not die on a plate
+const BOSS = ['boss', 'warlord', 'titan', 'warden'];
 const REFLECT_COLOR = 0xffd166;   // every reflected shot turns gold, whatever colour it arrived in
 
 const TUNING = {
@@ -42,7 +43,7 @@ export class Mirrors extends Weapon {
   get dps() { return 0; }
   text(level) {
     const n = this.platesAt(level), cover = Math.round(n * this.arcAt(level) / TAU * 100);
-    const parts = [`<b>${n}</b> plate${n > 1 ? 's' : ''}`, `<b>${cover}%</b> of the ring`, `reflect <b>×${this.mulAt(level).toFixed(2)}</b>`, `<b>${Math.round(this.def.plateHp * Math.pow(this.def.plateHpMul, level - 1))}</b> hp each`];
+    const parts = [`<b>${n}</b> plate${n > 1 ? 's' : ''}`, `<b>${cover}%</b> of the ring`, `reflect <b>×${this.mulAt(level).toFixed(2)}</b>`, `+<b>${Math.round((this.def.hpFrac + this.def.hpFracPerLevel * (level - 1)) * 100)}%</b> of shooter hp`, `<b>${Math.round(this.def.plateHp * Math.pow(this.def.plateHpMul, level - 1))}</b> hp each`];
     const next = this.def.platesAt.find(l => l > level);
     if (level === this.level && next) parts.push(`Lv ${next}: +plate`);
     return formatStats({ extra: parts });
@@ -66,8 +67,8 @@ export class Mirrors extends Weapon {
   }
   /** is world angle `a` (from the core) inside plate `i`? */
   onPlate(a, i) { return Math.abs(wrap(a - this.plateAngle(i))) <= this.arc / 2; }
-  /** index of the live plate at world angle `a`, or -1 */
-  plateAt(a) { for (let i = 0; i < this.plates; i++) if (this.plateState[i] && this.plateState[i].alive && this.onPlate(a, i)) return i; return -1; }
+  /** index of the live plate at world angle `a`, or -1. Fortress: every angle counts as plate 0 */
+  plateAt(a) { if (this.fortress) return 0; for (let i = 0; i < this.plates; i++) if (this.plateState[i] && this.plateState[i].alive && this.onPlate(a, i)) return i; return -1; }
 
   update(dt, mobs) {
     if (this.jammed > 0) { this.jammed -= dt; return; }
@@ -105,6 +106,12 @@ export class Mirrors extends Weapon {
     this.angle = this.ang;
   }
 
+  /** the shot's own damage × the plate multiplier, plus a share of the shooter's max hp so the bounce scales with the threat */
+  reflectDmg(b, owner) {
+    const d = this.def, frac = (d.hpFrac + d.hpFracPerLevel * (this.level - 1)) * (owner && BOSS.includes(owner.type) ? d.bossFrac : 1);
+    return b.dmg * this.mul + (owner ? owner.hpMax * frac * this.mods.dmg * this.wm.dmg * this.lm.dmg * this.lw.dmg : 0);
+  }
+
   /** called by projectiles for every enemy shot after it moved; true when the shot was reflected */
   reflect(b, prevD) {
     const t = this.tower, R = this.ringR, d = dist(t, b);
@@ -117,12 +124,13 @@ export class Mirrors extends Weapon {
     const back = owner ? angleTo(b, owner) : Math.atan2(-b.vy, -b.vx);
     const shot = {
       x: t.x + Math.cos(a) * (R + 4), y: t.y + Math.sin(a) * (R + 4), vx: Math.cos(back) * sp, vy: Math.sin(back) * sp,
-      dmg: b.dmg * this.mul, weapon: this, color: REFLECT_COLOR, life: 1.6, target: owner, reflected: true,
+      dmg: this.reflectDmg(b, owner), weapon: this, color: REFLECT_COLOR, life: 1.6, target: owner, reflected: true,
     };
     onReflect(this, b, shot);
     sc.spawnBullet(shot);
     this.flash[i] = TUNING.flashT;
     this.reflected++;
+    if (sc.quads) sc.quads.onBlock();
     this.wear(i, b.dmg * this.def.reflectWear);
     // make the bounce readable: a bright line back along the return path, a flash on the plate and a callout
     const ex = owner ? owner.x : shot.x + Math.cos(back) * 700, ey = owner ? owner.y : shot.y + Math.sin(back) * 700;

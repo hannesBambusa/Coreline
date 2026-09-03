@@ -46,6 +46,7 @@ export class GameScene extends Phaser.Scene {
     this.stats = this.freshStats();
     this.scrapLog = [];
     this.dmgLog = [];          // [second, amount] buckets for recentDps
+    this.ultDmgLog = [];       // the share of dmgLog dealt while an ultimate ran (ultimates scale from DPS without it)
     this.takenLog = [];        // same, for damage the core took
     this.seen = {};                    // mob types already announced this session
 
@@ -172,6 +173,7 @@ export class GameScene extends Phaser.Scene {
     this.profile.seenIntro = true;
     this.saves.save();
     document.body.classList.remove('starting');
+    this.ui.panel.classList.add('hidden');   // runs start with the sidebar closed: the HUD and auto-buy cover upgrades
     if (this.ui.activeTab === 'skills') this.ui.showTab('tower');
     document.getElementById('start').hidden = true;
     this.setPaused(false);
@@ -230,7 +232,7 @@ export class GameScene extends Phaser.Scene {
     this.stats.kills[m.type] = (this.stats.kills[m.type] || 0) + 1;
     const src = m.lastHit || 'other';
     this.stats.killsBy[src] = (this.stats.killsBy[src] || 0) + 1;
-    if (['drones', 'beamdrones', 'missiledrones', 'kamikaze'].includes(src)) this.quads.onDroneKill();
+    this.quads.onKill(m, src);
     const lm = this.levelMods;
     const scrap = Math.round(m.scrap * this.tree.mods.scrap * lm.scrap * this.diff.scrap * (m.type === 'swarm' ? lm.swarmScrap : 1) * (lm.typeScrap[m.type] || 1) * (m.elite ? lm.eliteScrap : 1));
     this.state.scrap += scrap;
@@ -264,11 +266,11 @@ export class GameScene extends Phaser.Scene {
     this.tower = new Tower(this, this.scale.width / 2, this.scale.height / 2);
     this.state.scrap = SPAWN.startScrap + this.tree.mods.startScrap; this.state.time = 0; this.state.tier = 1; this.state.kills = 0; this.state.swapsUsed = 0;
     this.showStart();
-    this.spawnTimer = 2; this.scrapLog = []; this.dmgLog = []; this.takenLog = []; this.warlord = null; this.siege = null; this.siegesCleared = 0; this.surgeType = null; this.ui.removeEffect('surge');
+    this.spawnTimer = 2; this.scrapLog = []; this.dmgLog = []; this.ultDmgLog = []; this.takenLog = []; this.warlord = null; this.siege = null; this.siegesCleared = 0; this.surgeType = null; this.ui.removeEffect('surge');
     this.stats = this.freshStats();
     this.levelMods = baseLevelMods(); this.levelChoice = null; this.choice = null; this.choosing = false; this.ui.hideChoice();
     this.combos.cd = {}; this.combos.count = 0;
-    this.quads.ult = null; this.quads.swarmT = 0; this.quads.ultCd = 0; this.screenFlash.setAlpha(0);
+    this.quads.ult = null; this.quads.swarmT = 0; this.quads.cd = {}; this.quads.charge = {}; this.quads.overdriveT = 0; this.quads.tempKz = null; this.screenFlash.setAlpha(0);
     this.slowTimer = 0; this.timeScale = 1; this.afterglow = 0;
     this.autobuy.lastBuy = null;
     this.ui.clearEffects();
@@ -369,6 +371,8 @@ export class GameScene extends Phaser.Scene {
   freshStats() { return damage.freshStats(); }
   addDmg(source, amount, crit = false) { damage.addDmg(this, source, amount, crit); }
   recentDps(window) { return damage.recentDps(this, window); }
+  /** DPS from the weapons alone: ultimates scale from this so their own damage never feeds the next one */
+  baseDps() { return damage.baseDps(this); }
   recentTaken(window) { return damage.recentTaken(this, window); }
   logTaken(amount) { damage.logTaken(this, amount); }
   hit(m, weapon, x, y, opts = {}) { return damage.hit(this, m, weapon, x, y, opts); }

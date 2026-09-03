@@ -58,6 +58,7 @@ export class ReplicatorSwarm extends Weapon {
     if (m.infect && m.infect.dps >= dps) { m.infect.left = this.def.dur; return; }
     m.infect = { dps, gen, left: this.def.dur };
     this.hosts.add(m);
+    if (this.scene.quads) this.scene.quads.onInfect();
     this.scene.fx.ripple(m.x, m.y, this.color, m.r, m.r + 14);
   }
   /** nanites leave a dying host for the nearest healthy ships */

@@ -228,7 +228,8 @@ function drawTurret(g, w, mx, my, a, c, recoil) {
       g.fillStyle(c, 1); g.fillCircle(mx, my, 3);
       break;
     }
-    case 'railgun': {  // long barrel, two side rails, muzzle brake
+    case 'railgun': {  // long barrel, two side rails, muzzle brake; the barrel glows gold while the heavy slug is loaded
+      if (w.heavyNext) { g.lineStyle(9, 0xffd166, 0.35); line(g, mx, my, a, 0, 0, 22 + k, 0); }
       g.lineStyle(5, BODY, 1); line(g, mx, my, a, 0, 0, 22 + k, 0);
       g.lineStyle(2.5, c, 1); line(g, mx, my, a, 0, 0, 22 + k, 0);
       g.lineStyle(1, c, 0.8); line(g, mx, my, a, 4, -4, 14 + k, -4); line(g, mx, my, a, 4, 4, 14 + k, 4);

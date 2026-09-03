@@ -19,7 +19,7 @@ const QUICK_BUY_TOWER_KEYS = ['shieldRegen', 'shieldMax', 'hull'];
 // Elements read every frame, looked up once.
 let els = null;
 const topEls = () => els || (els = {
-  scrap: $('#scrap'), fragments: $('#fragments'), time: $('#time'), tier: $('#tier'), kills: $('#kills'), diff: $('#hud-diff'), dps: $('#hud-dps'), dtaken: $('#hud-dtaken'),
+  scrap: $('#scrap'), fragments: $('#fragments'), time: $('#time'), tier: $('#tier'), kills: $('#kills'), diff: $('#hud-diff'), dps: $('#hud-dps'), dtaken: $('#hud-dtaken'), regen: $('#hud-regen'),
   threat: $('#threat-timer'), threatFill: $('#threat-timer .tt-fill'), threatNum: $('#threat-timer .tt-num'),
   boss: $('#boss-bar'), bossFill: $('#boss-fill'), bossName: $('#boss-name'), bossSub: $('#boss-sub'),
 });
@@ -33,6 +33,8 @@ export function renderTopBar(scene) {
   e.time.textContent = fmtTime(s.time);
   e.tier.textContent = s.tier;
   e.kills.textContent = fmt(s.kills);
+  const t = scene.tower, rg = t.regenNow();
+  e.regen.textContent = `${fmt(rg)}/s`; e.regen.style.color = t.regenDelay > 0 ? 'var(--red)' : t.calm ? '#fff' : '';
   e.dps.textContent = fmt(scene.recentDps(HUD_DPS_WINDOW)); e.dtaken.textContent = fmt(scene.recentTaken(HUD_DPS_WINDOW));
   const d = scene.diff; if (e.diff.textContent !== d.name) { e.diff.textContent = d.name; e.diff.style.color = d.color; }
 }
@@ -44,14 +46,14 @@ export function renderThreatTimer(scene) {
   const e = topEls(), T = SPAWN.tierSeconds;
   if (scene.siege) {
     e.threat.classList.add('siege');
-    e.threatNum.textContent = 'SIEGE';
+    e.threatNum.textContent = 'SIEGE · time frozen';
     e.threatFill.style.transform = 'scaleX(1)';
     return;
   }
   e.threat.classList.remove('siege');
   const left = T - scene.state.time % T;
-  e.threatFill.style.transform = `scaleX(${left / T})`;
-  e.threatNum.textContent = Math.ceil(left);
+  e.threatFill.style.transform = `scaleX(${left / T})`;   // shrinks from both edges into the centre as the level runs out
+  e.threatNum.textContent = `THREAT ${scene.state.tier + 1} IN ${Math.ceil(left)} S`;
   e.threat.classList.toggle('soon', left < THREAT_SOON_S);
 }
 

@@ -3,7 +3,7 @@
 import { DroneBay } from './drones.js';
 import { formatStats } from './base.js';
 import { COLORS } from '../config.js';
-import { dist } from '../utils.js';
+import { dist, targetable } from '../utils.js';
 import { onBeamTick } from '../combos/procs.js';
 
 const TUNING = {
@@ -42,7 +42,7 @@ export class BeamDrones extends DroneBay {
     d.beams.push(t);
     const n = this.splits;
     if (n > 0) {
-      const extra = mobs.filter(o => !o.dead && o !== t && dist(o, t) <= this.def.splitRange).sort((p, q) => dist(t, p) - dist(t, q)).slice(0, n);
+      const extra = mobs.filter(o => targetable(o) && o !== t && dist(o, t) <= this.def.splitRange).sort((p, q) => dist(t, p) - dist(t, q)).slice(0, n);
       for (const o of extra) { this.beam(o, this.dmgVs(o) * this.def.splitDmg * mul * dt); d.beams.push(o); }
     }
     if (Math.random() < dt * TUNING.sparkRate) sc.fx.spark(t.x, t.y, this.color, 1);

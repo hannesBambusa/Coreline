@@ -106,6 +106,7 @@ function startSurge(scene, tierInt) {
 /** Everything that happens the moment the integer threat level ticks over. Order matters for banners. */
 function onNewTier(scene, tierInt) {
   scene.state.tier = tierInt;
+  scene.noteTier(tierInt);
   scene.sfx.play('tier');
   if (SLOT_GATES[scene.tower.slots.length] === tierInt) {
     scene.ui.banner('Hardpoint ' + (scene.tower.slots.length + 1) + ' unsealed', false);

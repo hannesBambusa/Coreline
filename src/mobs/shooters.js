@@ -231,7 +231,7 @@ export class Jammer extends Mob {
   }
   /** pick a random un-jammed weapon and lock onto it */
   lockOn() {
-    const ws = this.tower.weapons.filter(w => !w.jamSlow);
+    const ws = this.tower.weapons.filter(w => !w.jamSlow && !w.def.noJam);
     if (!ws.length) return;
     this.slot = pick(ws);
     this.scene.fx.bolt(this.x, this.y, this.slot.mount().x, this.slot.mount().y, this.def.color);

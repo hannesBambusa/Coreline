@@ -1,12 +1,12 @@
-import { Weapon, formatStats } from './base.js';
+import { Weapon, formatStats, isEscort } from './base.js';
 import { CRIT, COLORS } from '../config.js';
-import { dist, angleTo, maxBy, TAU } from '../utils.js';
+import { dist, angleTo, maxBy, targetable, TAU } from '../utils.js';
 import { onLaserTick } from '../combos/procs.js';
 
 const TUNING = {
   overloadMul: 2.5,        // ramp multiplier while the Overload combo (railgun hit on the laser target) is active
   sweepRecharge: 0.5,      // sweep cooldown refills at half speed while the beam is below full ramp
-  paintDur: 3,             // Paint combo (with a drone bay): seconds drones stay pinned to the beam target
+  paintDur: 10,            // Paint combo (with a drone bay): seconds drones stay pinned to the beam target
   critTick: 0.5,           // the beam rolls for a crit this often
   critBurst: 0.5,          // crit burst = this fraction of a second of beam damage, times (critMul - 1)
   sparkRate: 8,            // sparks per second on the target
@@ -52,7 +52,7 @@ export class LaserBeam extends Weapon {
   selectFrom(list) { return maxBy(list, m => dist(this.tower, m)); }
   update(dt, mobs) {
     if (this.jammed > 0) { this.jammed -= dt; this.target = null; return; }
-    if (!this.target || this.target.dead || dist(this.tower, this.target) > this.range) {
+    if (!this.target || !targetable(this.target) || dist(this.tower, this.target) > this.range || (!isEscort(this.target) && this.escortNear(mobs))) {
       this.target = this.pickTarget(mobs);
     }
     // new target keeps part of the ramp (all of it while overloaded)
@@ -71,7 +71,7 @@ export class LaserBeam extends Weapon {
     // Target paint: drones pile on the laser target
     const bay = tw.weapons.find(w => w.type === 'drones');
     if (bay && !this.target.marked && sc.combos.roll('paint')) {
-      this.target.marked = TUNING.paintDur;
+      this.target.marked = sc.combos.dur(TUNING.paintDur);
       for (const d of bay.drones) d.target = this.target;
       sc.fx.ripple(this.target.x, this.target.y, COLORS.magenta, this.target.r, this.target.r + 40);
     }
@@ -80,7 +80,7 @@ export class LaserBeam extends Weapon {
     this.forkTargets = [];
     if (this.held >= this.rampTime * this.def.forkRamp) {
       // forks only reach ships within forkRange of the beam's target
-      const others = mobs.filter(o => !o.dead && o !== this.target && dist(tw, o) <= this.range && dist(this.target, o) <= this.def.forkRange)
+      const others = mobs.filter(o => targetable(o) && o !== this.target && dist(tw, o) <= this.range && dist(this.target, o) <= this.def.forkRange)
         .sort((a, b) => dist(this.target, a) - dist(this.target, b)).slice(0, this.forks);
       for (const o of others) {
         this.beamDamage(o, this.dmgVs(o) * ramp * this.def.forkDmg * dt * this.effectiveRateMul);

@@ -35,7 +35,7 @@ const secondsText = (t) => (t >= WHOLE_SECONDS_FROM_S ? Math.ceil(t) : t.toFixed
 
 // ---- Effect tray ----------------------------------------------------------
 
-export function addEffect(ui, id, { name, icon, color, dur, sub, tip }) {
+export function addEffect(ui, id, { name, icon, color, dur, sub, tip, crit = false }) {
   let e = ui.effects[id];
   if (!e) {
     const el = document.createElement('div');
@@ -46,6 +46,7 @@ export function addEffect(ui, id, { name, icon, color, dur, sub, tip }) {
     requestAnimationFrame(() => el.classList.add('show'));
   }
   e.dur = dur; e.left = dur; e.name = name;
+  e.el.classList.toggle('crit', crit);
   e.el.style.setProperty('--fx', typeof color === 'number' ? hex(color) : color);
   e.icon.innerHTML = icon;
   e.nameEl.textContent = name;
@@ -206,14 +207,20 @@ const choiceCard = (id) => {
     `${c.bad ? `<div class="ch-bad">${c.bad}</div>` : ''}</button>`;
 };
 
+/** the auto-assigned modifier: a clean notice, not a card to click */
+const modNote = (id) => {
+  const c = CHOICES[id];
+  return `<div class="mod-note"><div class="mn-kicker">New modifier · next 3 threat levels</div><div class="mn-name">${c.name}</div>` +
+    `<div class="mn-line good"><span>▲</span>${c.good}</div>${c.bad ? `<div class="mn-line bad"><span>▼</span>${c.bad}</div>` : ''}</div>`;
+};
+
 export function showChoice(ui, ch) {
   const el = $('#choice');
-  el.querySelector('.ch-cards').innerHTML = ch.opts.map(choiceCard).join('');
-  el.querySelector('.ch-title').textContent = ch.auto ? 'Threat rising · modifier assigned' : 'Threat rising. Choose.';
-  el.querySelector('.ch-hint').textContent = ch.auto ? 'lasts 3 threat levels' : 'Game paused until you pick';
   el.classList.toggle('auto', !!ch.auto);
-  if (ch.auto) { for (const b of $$('.ch-card', el)) b.classList.add('picked'); }
-  else for (const b of $$('.ch-card', el)) b.onclick = () => ui.scene.pickChoice(b.dataset.choice);
+  el.querySelector('.ch-title').textContent = ch.auto ? '' : 'Threat rising. Choose.';
+  el.querySelector('.ch-hint').textContent = ch.auto ? '' : 'Game paused until you pick';
+  el.querySelector('.ch-cards').innerHTML = ch.auto ? modNote(ch.opts[0]) : ch.opts.map(choiceCard).join('');
+  if (!ch.auto) for (const b of $$('.ch-card', el)) b.onclick = () => ui.scene.pickChoice(b.dataset.choice);
   el.hidden = false;
   restartAnimation(el, 'show');
   clearTimeout(ui.choiceTimer);

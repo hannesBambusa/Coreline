@@ -1,6 +1,6 @@
-import { Weapon, formatStats } from './base.js';
+import { Weapon, formatStats, isEscort } from './base.js';
 import { COLORS } from '../config.js';
-import { dist, angleTo, maxBy, nearest, TAU } from '../utils.js';
+import { dist, angleTo, maxBy, nearest, targetable, TAU } from '../utils.js';
 
 const TUNING = {
   size: 7,                          // drone collision radius
@@ -131,17 +131,18 @@ export class DroneBay extends Weapon {
     claim(d.target, -1);   // its own target never counts as taken for itself
     const nearestTo = (from, avoid) => nearest(mobs, from.x, from.y, Infinity, m => inReach(m) && !(avoid && isTaken(m)));
     const farOut = (avoid) => maxBy(
-      mobs.filter(m => !m.dead && dist(t, m) > gunRange && inReach(m) && !(avoid && isTaken(m))),
+      mobs.filter(m => targetable(m) && dist(t, m) > gunRange && inReach(m) && !(avoid && isTaken(m))),
       m => dist(t, m),
     );
-    const pick = (avoid, wasEngaged) => (wasEngaged ? null : farOut(avoid)) || nearestTo(d, avoid) || (avoid ? nearestTo(d, false) : null);
+    const escort = () => nearest(mobs, d.x, d.y, Infinity, m => inReach(m) && isEscort(m));
+    const pick = (avoid, wasEngaged) => escort() || (wasEngaged ? null : farOut(avoid)) || nearestTo(d, avoid) || (avoid ? nearestTo(d, false) : null);
     if (this.focus) {
       const engaged = !!this.shared;
-      if (!this.shared || this.shared.dead || !inReach(this.shared)) this.shared = pick(false, engaged && this.shared && this.shared.dead);
+      if (!this.shared || !targetable(this.shared) || !inReach(this.shared) || (!isEscort(this.shared) && escort())) this.shared = pick(false, engaged && this.shared && this.shared.dead);
       d.target = this.shared;
     } else {
       const engaged = !!d.target;
-      if (!d.target || d.target.dead || !inReach(d.target)) d.target = pick(true, engaged && d.target && d.target.dead);
+      if (!d.target || !targetable(d.target) || !inReach(d.target) || (!isEscort(d.target) && escort())) d.target = pick(true, engaged && d.target && d.target.dead);
     }
     claim(d.target, 1);
   }

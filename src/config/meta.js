@@ -19,11 +19,12 @@ export const LEVELS = {
 // harder runs pay more scrap and fragments. `color` is the label colour.
 export const DIFFICULTY = {
 // cap = alive-ship cap multiplier, speed = ship speed, elite = elite chance multiplier.
+  // unlock: reach `tier` on difficulty `on` (any run) before this level shows on the start screen
   easy:    { name: 'Easy',        hp: 0.7, dmg: 0.7, spawn: 0.8, cap: 0.8, speed: 0.9, elite: 0.7, scrap: 0.9,  frag: 0.5,  color: '#7ee787' },
   normal:  { name: 'Normal',      hp: 1,   dmg: 1,   spawn: 1,   cap: 1,   speed: 1,   elite: 1,   scrap: 1,    frag: 1,    color: '#4ff2ff' },
-  hard:    { name: 'Hard',        hp: 1.5, dmg: 1.4, spawn: 1.3, cap: 1.1, speed: 1.05, elite: 1.3, scrap: 1.15, frag: 1.2,  color: '#ffd166' },
-  brutal:  { name: 'Really hard', hp: 2.2, dmg: 1.9, spawn: 1.6, cap: 1.3, speed: 1.1, elite: 1.7, scrap: 1.3,  frag: 1.4,  color: '#ff8c42' },
-  insane:  { name: 'Insane',      hp: 5,   dmg: 4,   spawn: 4,   cap: 2,   speed: 1.25, elite: 3, scrap: 0.6,  frag: 1.75, color: '#ff4d6d' },
+  hard:    { name: 'Hard',        hp: 1.5, dmg: 1.4, spawn: 1.3, cap: 1.1, speed: 1.05, elite: 1.3, scrap: 1.15, frag: 1.2,  color: '#ffd166', unlock: { on: 'normal', tier: 15 } },
+  brutal:  { name: 'Really hard', hp: 2.2, dmg: 1.9, spawn: 1.6, cap: 1.3, speed: 1.1, elite: 1.7, scrap: 1.3,  frag: 1.4,  color: '#ff8c42', unlock: { on: 'hard', tier: 20 } },
+  insane:  { name: 'Insane',      hp: 5,   dmg: 4,   spawn: 4,   cap: 2,   speed: 1.25, elite: 3, scrap: 0.6,  frag: 1.75, color: '#ff4d6d', unlock: { on: 'brutal', tier: 25 } },
 };
 
 export const CRIT = { chance: 0.06, mul: 2.2, superChance: 0.04, superMul: 3 };   // a crit can crit again: super crit, ×3 on top

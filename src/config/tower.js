@@ -9,7 +9,7 @@ export const TOWER = {
   regenDelay: 1.0,       // seconds after last hit before regen resumes
   calmAfter: 4,          // seconds without damage before out-of-combat regen
   calmRegenMul: 3,       // regen multiplier when out of combat
-  underFireRegen: 0.4,   // regen multiplier during the delay right after a hit
+  underFireRegen: 0.65,  // regen multiplier during the delay right after a hit
 };
 
 // Scrap upgrades on the tower itself. cost = base * growth^level

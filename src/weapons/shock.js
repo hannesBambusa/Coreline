@@ -12,7 +12,7 @@ const TUNING = {
   // Collapse combo: a gravity well caught in the wave implodes
   collapse: { reach: 0.5, pull: 0.85, radius: 0.6, dmgMul: 6, shake: 0.01, shakeMs: 300 },
   // Scramble combo (with a drone bay): drones get a speed boost and a kick outward
-  scramble: { boost: 3, kick: 400, flash: 0.8 },
+  scramble: { boost: 10, kick: 400, flash: 0.8 },
   ring: { ease: 0.25, fade: 0.06 },   // expanding ring animation: approach rate and alpha loss per frame
   flash: 2.5, shake: { amount: 0.0025, ms: 100 },
 };
@@ -21,6 +21,7 @@ export class ShockEmitter extends Weapon {
   constructor(...a) {
     super(...a);
     this.ring = null;   // expanding ring animation state after a pulse
+    this.flakT = 0;     // seconds left of the Flak burst combo window
   }
   get push() { return this.def.push + this.def.pushPerLevel * (this.level - 1); }
   get cooldown() { return 1 / this.rate; }
@@ -33,6 +34,7 @@ export class ShockEmitter extends Weapon {
   update(dt, mobs) {
     if (this.jammed > 0) { this.jammed -= dt; return; }
     this.cd -= dt * this.effectiveRateMul;
+    this.flakT = Math.max(0, this.flakT - dt);
     this.angle += dt * TUNING.spin;
     this.target = null;
     if (this.cd <= 0 && this.inRange(mobs).length) {
@@ -109,7 +111,7 @@ export class ShockEmitter extends Weapon {
     const t = this.tower, sc = this.scene, S = TUNING.scramble;
     const bay = t.weapons.find(w => w.type === 'drones');
     if (!bay || !sc.combos.roll('scramble')) return;
-    bay.boost = S.boost;
+    bay.boost = sc.combos.dur(S.boost);
     for (const d of bay.drones) {
       if (!d.alive) continue;
       const a = angleTo(t, d);

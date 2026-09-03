@@ -38,6 +38,8 @@ export class UI {
     hud.buildAbilityBar(this);
     $('#btn-offline-ok').onclick = () => { $('#offline').hidden = true; };
     $('#btn-start').onclick = () => scene.beginRun();
+    $('#btn-intro-ok').onclick = () => { $('#intro').hidden = true; scene.profile.seenIntro = true; };
+    $('#btn-intro-show').onclick = () => { $('#intro').hidden = false; };
     $('#start-weapons').onclick = (e) => { const b = e.target.closest('[data-start]'); if (b) scene.setStartWeapon(b.dataset.start); };
     $('#start-diff').onclick = (e) => { const b = e.target.closest('[data-diff]'); if (b) scene.setDifficulty(b.dataset.diff); };
     $('#btn-pause').onclick = () => scene.setPaused(!scene.paused);
@@ -102,12 +104,17 @@ export class UI {
     $('#start-weapons').innerHTML = html;
     $('#start-weapon-name').textContent = WEAPONS[cur].name + ' · ' + WEAPONS[cur].desc;
     const dk = scene.state.difficulty, d = scene.diff, x = (v) => '×' + v;
-    $('#start-diff').innerHTML = Object.entries(DIFFICULTY).map(([k, o]) =>
-      `<button class="diff-btn ${k === dk ? 'cur' : ''}" data-diff="${k}" style="color:${o.color}">${o.name}</button>`).join('');
+    $('#start-diff').innerHTML = Object.entries(DIFFICULTY).map(([k, o]) => {
+      const locked = !scene.diffUnlocked(k), u = o.unlock;
+      const tip = locked ? `Locked&#10;Reach threat ${u.tier} on ${DIFFICULTY[u.on].name} to unlock` : `${o.name}&#10;Ship HP ×${o.hp}, damage ×${o.dmg}, spawns ×${o.spawn}`;
+      return `<button class="diff-btn ${k === dk ? 'cur' : ''} ${locked ? 'locked' : ''}" data-diff="${k}" style="color:${o.color}" data-tip="${tip}">${locked ? '🔒 ' : ''}${o.name}</button>`;
+    }).join('');
+    fx.bindTips(this, $('#start-diff'));
     $('#start-diff-desc').innerHTML = `Ship HP ${x(d.hp)} · damage ${x(d.dmg)} · spawns ${x(d.spawn)} · ship cap ${x(d.cap)} · speed ${x(d.speed)} · elites ${x(d.elite)}<br><span style="color:${d.color}">scrap ${x(d.scrap)}, fragments ${x(d.frag)}</span>`;
   }
 
   showTab(name) {
+    if ((name === 'tower' || name === 'upgrades') && this.scene.starting) return;   // Tower and Upgrades are for a running game
     this.activeTab = name;
     for (const b of $$('#tabs button')) b.classList.toggle('active', b.dataset.tab === name);
     for (const t of $$('.tab')) t.classList.toggle('active', t.id === 'tab-' + name);

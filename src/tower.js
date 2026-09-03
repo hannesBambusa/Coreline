@@ -37,6 +37,13 @@ export class Tower {
   get maxUpgrade() { return LEVELS.capBase + LEVELS.capPerPrestige * (this.scene.profile ? this.scene.profile.prestige : 0); }
   atCap(key) { return this.upgrades[key] >= this.maxUpgrade; }
 
+  /** shield regen per second right now: base × under-fire / calm multiplier × this level's modifier */
+  regenNow() {
+    const tm = this.scene.tree.mods, lm = this.lm;
+    const mul = this.regenDelay > 0 ? TOWER.underFireRegen : this.calm ? TOWER.calmRegenMul + tm.calmMul : 1;
+    return this.shieldRegen * mul * (lm ? lm.shieldRegen : 1);
+  }
+
   recompute() {
     const m = this.scene.tree ? this.scene.tree.mods : { hull: 1, shieldMax: 1, shieldRegen: 1 };
     const lm = this.lm;

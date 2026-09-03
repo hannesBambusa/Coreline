@@ -4,6 +4,9 @@ import { fmt, hex } from './dom.js';
 import { row } from './rows.js';
 
 const BOSSES = ['boss', 'warlord', 'pylon', 'titan', 'warden', 'mine'];
+// boss -> the ships that only appear with it, shown as sub cards under the boss
+const ESCORTS = { boss: [], warlord: ['pylon'], titan: ['warden', 'mine'] };
+const ESCORT_NOTE = { pylon: 'Escort · summoned at 66 % and 33 % hp', warden: 'Escort · arrives with the Dreadnought', mine: 'Escort · dropped by the Dreadnought' };
 const pics = {};   // mob type -> data url of its ship texture, rendered once
 
 /** what each ship does, for the ones whose config has no desc */
@@ -38,7 +41,7 @@ function statsLine(d, scene) {
     `<span class="muted">Now at threat ${Math.floor(tier)}: HP <b>${fmt(hpNow)}</b> · dmg <b>${dmgNow.toFixed(1)}</b> · scrap <b>${fmt(scrapNow)}</b></span>`;
 }
 
-function mobRow(scene, type, d) {
+function mobRow(scene, type, d, sub = false) {
   const pic = picOf(scene, type), c = hex(d.color);
   const lead = pic
     ? `<div class="icon wiki-pic" style="--pic:url('${pic}');--mc:${c}"><span></span></div>`
@@ -50,9 +53,9 @@ function mobRow(scene, type, d) {
   if (d.group) extras.push(`packs of ${d.group[0]}–${d.group[1]}`);
   if (d.noSolo) extras.push('never alone');
   const from = d.fromWave && d.fromWave < 999 ? `threat ${d.fromWave}+` : BOSSES.includes(type) ? (d.every ? `every ${d.every}th threat` : 'boss fights') : '';
-  const sub = [from, d.chance ? `${Math.round(d.chance * 100)} % of spawns` : ''].filter(Boolean).join(' · ');
+  const subLine = sub ? ESCORT_NOTE[type] || 'Escort' : [from, d.chance ? `${Math.round(d.chance * 100)} % of spawns` : ''].filter(Boolean).join(' · ');
   return row({
-    cls: 'wiki-row', style: `--mc:${c}`, lead, name: d.name, sub,
+    cls: sub ? 'wiki-row wiki-sub' : 'wiki-row', style: `--mc:${c}`, lead, name: d.name, sub: subLine,
     desc: `${d.desc || BLURB[type] || ''}${extras.length ? ` <span class="muted">(${extras.join(', ')})</span>` : ''}<br>${statsLine(d, scene)}`,
   });
 }
@@ -60,9 +63,9 @@ function mobRow(scene, type, d) {
 export function wikiHtml(scene) {
   const all = Object.entries(MOBS).filter(([k, d]) => d.name && typeof d.hp === 'number');
   const regular = all.filter(([k]) => !BOSSES.includes(k)).sort((a, b) => (a[1].fromWave || 0) - (b[1].fromWave || 0));
-  const bosses = all.filter(([k]) => BOSSES.includes(k));
+  const bosses = Object.keys(ESCORTS).map(k => [k, MOBS[k]]);
   let html = `<div class="muted" style="margin-bottom:6px">Base numbers are threat 1 on Normal. Ship HP grows ×${SPAWN.hpGrowth} and damage ×${SPAWN.dmgGrowth} per threat level, then difficulty multiplies.</div>`;
   html += '<h3>Ships</h3>' + regular.map(([k, d]) => mobRow(scene, k, d)).join('');
-  html += '<h3>Bosses and their escorts</h3>' + bosses.map(([k, d]) => mobRow(scene, k, d)).join('');
+  html += '<h3>Bosses and their escorts</h3>' + bosses.map(([k, d]) => mobRow(scene, k, d) + ESCORTS[k].map(e => mobRow(scene, e, MOBS[e], true)).join('')).join('');
   return html;
 }

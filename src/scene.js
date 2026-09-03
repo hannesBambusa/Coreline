@@ -38,7 +38,7 @@ export class GameScene extends Phaser.Scene {
 
     // run + meta state
     this.state = { scrap: 0, fragments: 0, time: 0, tier: 1, kills: 0, bestTime: 0, swapsUsed: 0, difficulty: 'normal' };
-    this.profile = { totalKills: 0, prestige: 0 };
+    this.profile = { totalKills: 0, prestige: 0, bestTiers: {}, seenIntro: false };   // bestTiers: difficulty -> highest threat reached
     this.settings = { shake: true, sound: true, volume: 0.7, music: true, transmissions: true };
     this.speed = 1;            // game speed multiplier, set from the top bar (SPEEDS in ui/hud.js)
     this.stats = this.freshStats();
@@ -118,9 +118,19 @@ export class GameScene extends Phaser.Scene {
   // Fresh run: hold everything until the player presses start, so skills and weapons can be set up first.
   // the start screen lets the player pick the slot-1 weapon from what the tree has unlocked
   get diff() { return DIFFICULTY[this.state.difficulty] || DIFFICULTY.normal; }
+  /** a difficulty is unlocked when its `unlock` rule is met on the profile's best threat per difficulty */
+  diffUnlocked(key) {
+    const u = DIFFICULTY[key] && DIFFICULTY[key].unlock;
+    return !u || ((this.profile.bestTiers || {})[u.on] || 0) >= u.tier;
+  }
+  /** called by the spawner on every new threat level */
+  noteTier(tierInt) {
+    const bt = this.profile.bestTiers || (this.profile.bestTiers = {}), k = this.state.difficulty;
+    if (tierInt > (bt[k] || 0)) bt[k] = tierInt;
+  }
   /** difficulty can only change on the start screen; the pick sticks for the next runs */
   setDifficulty(key) {
-    if (!this.starting || !DIFFICULTY[key]) return;
+    if (!this.starting || !DIFFICULTY[key] || !this.diffUnlocked(key)) return;
     this.state.difficulty = key;
     this.ui.renderStartWeapons();
   }
@@ -135,7 +145,14 @@ export class GameScene extends Phaser.Scene {
   showStart() {
     this.starting = true;
     this.paused = true;
+    if (!this.diffUnlocked(this.state.difficulty)) this.state.difficulty = 'normal';
+    const first = this.tower.slots[0];
+    if (!first || WEAPONS[first.type].support) this.tower.installWeapon(0, 'pulse');   // the starting weapon must shoot
     this.ui.renderStartWeapons();
+    // the panel stays usable on the start screen (skills, wiki, settings); the Tower tab is for a running game
+    document.body.classList.add('starting');
+    if (this.ui.activeTab === 'tower' || this.ui.activeTab === 'upgrades') this.ui.showTab('skills');
+    document.getElementById('intro').hidden = !!this.profile.seenIntro;
     document.getElementById('start').hidden = false;
     document.getElementById('paused').hidden = true;
     document.getElementById('btn-pause').classList.add('on');
@@ -144,6 +161,9 @@ export class GameScene extends Phaser.Scene {
   beginRun() {
     if (!this.starting) return;
     this.starting = false;
+    this.profile.seenIntro = true;
+    document.body.classList.remove('starting');
+    if (this.ui.activeTab === 'skills') this.ui.showTab('tower');
     document.getElementById('start').hidden = true;
     this.setPaused(false);
     this.ui.banner('Hold the line', false);
@@ -154,6 +174,7 @@ export class GameScene extends Phaser.Scene {
     if (this.choosing) return;   // a choice is open: pick a card to continue
     if (this.starting) { if (!v) this.beginRun(); return; }
     this.paused = v;
+    this.sfx.setPaused(v);
     this.sfx.play(v ? 'pause' : 'unpause');
     if (v) this.sfx.laserHum(false);
     document.getElementById('paused').hidden = !v;
@@ -214,7 +235,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOver = true;
     this.fx.explode(this.tower.x, this.tower.y, COLORS.cyan, 60);
     this.fx.shake(0.02, 600);
-    this.sfx.play('death'); this.sfx.bossHum(false);
+    this.sfx.play('death'); this.sfx.stopLoops();
     this.tx.say('death', 0);
     this.saves.save();
     this.time.delayedCall(700, () => this.ui.showGameOver());
@@ -222,9 +243,13 @@ export class GameScene extends Phaser.Scene {
 
   resetRun() {
     this.time.removeAllEvents();   // drop everything the old run scheduled (storm waves, boss arrivals, the game-over screen)
+    this.sfx.stopLoops();
     for (const m of this.mobs) if (!m.dead) m.die(false);
     this.mobs = []; this.bullets = []; this.enemyBullets = [];
     this.missiles = []; this.wellShots = []; this.wells = [];
+    // the start screen is paused, so nothing redraws: wipe the last frame's rings, shots, bolts and particles by hand
+    this.mobGfx.clear(); this.bulletGfx.clear(); this.fx.gfx.clear(); this.fx.lines = []; this.fx.ripples = [];
+    for (const e of [this.fx.burst, this.fx.sparks, this.fx.trail]) e.killAll();
     this.tower.gfx.destroy(); this.tower.glow.destroy();
     this.tower = new Tower(this, this.scale.width / 2, this.scale.height / 2);
     this.state.scrap = this.tree.mods.startScrap; this.state.time = 0; this.state.tier = 1; this.state.kills = 0; this.state.swapsUsed = 0;
@@ -251,7 +276,7 @@ export class GameScene extends Phaser.Scene {
       this.slowTimer -= dt;
       dt *= this.slowTimer > 0 ? this.timeScale : 1;
     }
-    if (this.gameOver) { this.fx.update(dt); return; }
+    if (this.gameOver) { this.fx.update(dt); this.music.setState(this.musicState(true)); return; }
     if (this.paused) { this.saves.update(dt); this.tower.draw(0); this.music.setState(this.musicState(true)); return; }
     this.perf.update(dt); this.saves.update(dt);   // real time: frame-rate watch and autosave
     // game speed: slow speeds shrink the step, fast speeds run whole extra steps so physics stays accurate

@@ -101,8 +101,8 @@ export function statsHtml(scene, compact = false) {
   if (!sources.length) html += '<div class="muted">No damage yet.</div>';
   for (const [src, v] of sources) html += sourceRow(st, src, v, total, compact);
 
-  const procs = byCount(st.procs);
-  html += '<h3>Combo procs</h3>';
+  const procs = byCount(st.procs), critProcs = st.critProcs || 0;
+  html += `<h3>Combo procs${critProcs ? ` <span class="crit">· ${fmt(critProcs)} crit</span>` : ''}</h3>`;
   if (!procs.length) html += '<div class="muted">No combos yet.</div>';
   else html += grid(procs.map(([id, n]) => { const c = COMBOS[id] || { name: id, color: 0x7d8bb0 }; return gridCell(hex(c.color), c.name, n); }));
 

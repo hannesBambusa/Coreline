@@ -53,7 +53,9 @@ export class SFXEngine {
       this.master = c.createGain(); this.master.gain.value = this.enabled ? this.volume * MASTER_TRIM : 0;
       this.comp = c.createDynamicsCompressor();
       this.comp.threshold.value = -24; this.comp.ratio.value = 4; this.comp.attack.value = 0.003; this.comp.release.value = 0.2;
-      this.master.connect(this.comp); this.comp.connect(c.destination);
+      // pause duck sits after the master: pausing mutes every sound in flight (tails, loops, music) without touching volume
+      this.duck = c.createGain(); this.duck.gain.value = 1;
+      this.master.connect(this.duck); this.duck.connect(this.comp); this.comp.connect(c.destination);
       // reverb send
       this.verb = c.createConvolver(); this.verb.buffer = this.impulse(1.6, 2.2);
       this.verbGain = c.createGain(); this.verbGain.gain.value = 0.35;
@@ -247,7 +249,17 @@ export class SFXEngine {
     }
   }
 
-  setEnabled(v) { this.enabled = v; this.applyVolume(); if (!v) { this.bossHum(false); this.laserHum(false); } }
+  /** pause: fade everything out in 120 ms; unpause: fade back in. The pause blip itself is played before the fade lands. */
+  setPaused(v) {
+    if (!this.ctx || !this.duck) return;
+    this.duck.gain.cancelScheduledValues(this.ctx.currentTime);
+    this.duck.gain.setTargetAtTime(v ? 0 : 1, this.ctx.currentTime + (v ? 0.12 : 0), 0.04);
+  }
+
+  /** silence every continuous sound (run ended or reset) */
+  stopLoops() { this.bossHum(false); this.laserHum(false); }
+
+  setEnabled(v) { this.enabled = v; this.applyVolume(); if (!v) this.stopLoops(); }
   setVolume(v) { this.volume = v; this.applyVolume(); }
   applyVolume() {
     if (!this.master) return;

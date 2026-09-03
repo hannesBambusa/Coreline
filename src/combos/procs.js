@@ -7,31 +7,31 @@ const DEAD_AGE = 999;
 const T = {
   sabot: { count: 6, spread: 0.12, dmgMul: 1.5, speedMul: 1.3 },
   orbital: { count: 8, dmgMul: 2 },
-  flak: { count: 16, dmgMul: 1.2 },
+  flak: { count: 16, dmgMul: 1.2, dur: 10 },
   gunrun: { burst: 3, spread: 0.15 },
   slingshot: { dpsMul: 2 },
-  spotter: { markDur: 4 },
+  spotter: { markDur: 10 },
   ionwarhead: { reach: 200, count: 4, dmgMul: 0.8 },
   guided: { dmgMul: 2 },
-  concussion: { splashMul: 2 },
+  concussion: { splashMul: 2, volley: 12, dmgMul: 1.5 },
   conductor: { chains: 3, dmgMul: 2 },
   lensing: { dur: 3, dmgMul: 0.5 },
   relay: { reach: 160, dmgMul: 0.7 },
-  orbitstrike: { markDur: 3, boost: 3 },
-  dilation: { boost: 4, rollPerSec: 0.5 },
+  orbitstrike: { markDur: 10, boost: 10 },
+  dilation: { boost: 10, rollPerSec: 0.5 },
   staticfield: { stun: 1 },
   spore: { gen: 1 },
-  accretion: { boost: 4 },
+  accretion: { boost: 10 },
   collapsar: { count: 3, dmgMul: 3 },
-  prism: { dur: 4 },
+  prism: { dur: 10 },
   lattice: { dmgMul: 0.8 },
   thunderhead: { dmgMul: 0.9 },
   downburst: { dmgMul: 4 },
   seekers: { dmgMul: 2 },
-  painted: { markDur: 3 },
+  painted: { markDur: 10 },
   escortvolley: { burst: 3, spread: 0.15 },
   laserguided: { dmgMul: 2, turnMul: 3 },
-  wingmen: { boost: 3, burst: 3 },
+  wingmen: { boost: 10, burst: 3, spread: 0.15 },
   targetlock: { dmgMul: 2 },
   chainblast: { salvo: 2 },
   prismcannon: { dmgMul: 3 },
@@ -86,7 +86,7 @@ export function onRailShot(w, target, mobs, a, m) {
   // Spotter: the target is marked and every drone goes for it
   const bay = anyBay(tw);
   if (bay && !target.dead && sc.combos.roll('spotter')) {
-    target.marked = Math.max(target.marked || 0, T.spotter.markDur);
+    target.marked = Math.max(target.marked || 0, sc.combos.dur(T.spotter.markDur));
     for (const d of liveDrones(bay)) d.target = target;
     sc.fx.ripple(target.x, target.y, COLORS.sky, target.r, target.r + 30);
   }
@@ -171,19 +171,43 @@ export function onTeslaChain(w, hitSet, mobs) {
 // ---- shock pulse ----
 export function onShockPulse(w, mobs) {
   const sc = w.scene, tw = w.tower, t = tw;
-  // Flak burst: pulse bullets in every direction
+  // Flak burst: while active, every pulse throws pulse rounds in every direction (the roll only starts the window)
   const pulse = mounted(tw, 'pulse');
-  if (pulse && sc.combos.roll('flak')) {
-    for (let i = 0; i < T.flak.count; i++) { const a = i * TAU / T.flak.count; bullet(sc, pulse, t.x + Math.cos(a) * t.r, t.y + Math.sin(a) * t.r, a, pulse.dmg * T.flak.dmgMul); }
+  if (pulse) {
+    if (w.flakT <= 0 && sc.combos.roll('flak')) w.flakT = sc.combos.dur(T.flak.dur);
+    if (w.flakT > 0) for (let i = 0; i < T.flak.count; i++) { const a = i * TAU / T.flak.count; bullet(sc, pulse, t.x + Math.cos(a) * t.r, t.y + Math.sin(a) * t.r, a, pulse.dmg * T.flak.dmgMul); }
   }
-  // Concussion: every missile in flight detonates where it is, with a bigger splash
+  // Concussion: every missile in flight detonates where it is with a bigger splash, and the pod answers the pulse
+  // with a volley at the ships it just threw back
   const pod = mounted(tw, 'missile');
-  if (pod && sc.missiles.length && sc.combos.roll('concussion')) {
+  if (pod && sc.combos.roll('concussion')) {
+    // missiles inside the wave pop as the front reaches them, so the detonations ripple outward with the pulse
+    const R = w.range, waveT = 0.35;
     for (const m of sc.missiles) {
       if (m.age >= DEAD_AGE) continue;
-      sc.damageRadius(m.x, m.y, m.splash * T.concussion.splashMul, m.dmg, m.color, m.weapon);
-      sc.fx.explode(m.x, m.y, m.color, 12); m.age = DEAD_AGE;
+      const d = dist(t, m); if (d > R + 40) continue;
+      const splash = m.splash * T.concussion.splashMul, dmg = m.dmg, color = m.color, weapon = m.weapon;
+      m.age = DEAD_AGE;   // gone from flight now; the bang lands when the wave gets there
+      sc.time.delayedCall(Math.min(1, d / R) * waveT * 1000, () => {
+        if (sc.gameOver) return;
+        sc.damageRadius(m.x, m.y, splash, dmg, color, weapon);
+        sc.fx.explode(m.x, m.y, color, 26); sc.fx.explode(m.x, m.y, 0xffffff, 8);
+        sc.fx.ripple(m.x, m.y, color, 6, splash);
+        sc.fx.flash(m.x, m.y, color, 1.4);
+        sc.sfx.play('explode', 12, m.x);
+      });
     }
+    // a ring of heavy missiles out of the pulse, one per nearest ship
+    const pool = mobs.filter(o => !o.dead && dist(t, o) <= pod.range).sort((p, q) => dist(t, p) - dist(t, q));
+    const n = Math.min(T.concussion.volley, Math.max(pool.length, 1));
+    for (let i = 0; i < n; i++) {
+      const a = i * TAU / n, tg = pool.length ? pool[i % pool.length] : null;
+      sc.spawnMissile({ x: t.x + Math.cos(a) * t.r, y: t.y + Math.sin(a) * t.r, vx: Math.cos(a) * 260, vy: Math.sin(a) * 260,
+        speed: pod.def.speed * 1.3, turn: pod.def.turn * 1.5, dmg: pod.dmg * T.concussion.dmgMul, weapon: pod,
+        splash: pod.def.splash * pod.wm.splash * (pod.lm.missileSplash || 1) * 1.3, color: 0xff9f43, life: 4, target: tg });
+    }
+    sc.fx.ripple(t.x, t.y, 0xff9f43, t.shieldR, pod.range * 0.5);
+    sc.sfx.shot('missile', t.x);
   }
   // Cluster drop: every missile drone dumps a salvo
   const md = mounted(tw, 'missiledrones'), mds = liveDrones(md).filter(d => d.target && !d.target.dead);
@@ -198,7 +222,7 @@ export function onLaserTick(w, dt, mobs) {
   const sc = w.scene, tw = w.tower;
   // Prism: a fully ramped laser sharpens the drone beams
   const bd = mounted(tw, 'beamdrones');
-  if (bd && w.held >= w.rampTime * 0.8 && bd.prismT <= 0 && Math.random() < dt * 2 && sc.combos.roll('prism')) bd.prismT = T.prism.dur;
+  if (bd && w.held >= w.rampTime * 0.8 && bd.prismT <= 0 && Math.random() < dt * 2 && sc.combos.roll('prism')) bd.prismT = sc.combos.dur(T.prism.dur);
   // Lensing: the beam through a well refracts onto every ship the well holds
   if (w.lensT > 0) {
     w.lensT -= dt;
@@ -229,9 +253,9 @@ export function onWellLand(scene, well) {
   if (!bay) return;
   const inside = scene.mobs.filter(o => !o.dead && dist(o, well) <= well.r);
   if (!inside.length || !scene.combos.roll('orbitstrike')) return;
-  for (const o of inside) o.marked = Math.max(o.marked || 0, T.orbitstrike.markDur);
+  for (const o of inside) o.marked = Math.max(o.marked || 0, scene.combos.dur(T.orbitstrike.markDur));
   for (const d of liveDrones(bay)) d.target = minBy(inside, o => dist(d, o));
-  bay.boost = Math.max(bay.boost, T.orbitstrike.boost);
+  bay.boost = Math.max(bay.boost, scene.combos.dur(T.orbitstrike.boost));
   scene.fx.ripple(well.x, well.y, COLORS.sky, well.r, well.r * 0.3);
 }
 
@@ -239,7 +263,7 @@ export function onWellLand(scene, well) {
 export function onChronoTick(w, dt) {
   const sc = w.scene, bay = anyBay(w.tower);
   // Time dilation: drones run on tower time, everything else crawls
-  if (bay && liveDrones(bay).length && Math.random() < dt * T.dilation.rollPerSec && sc.combos.roll('dilation')) bay.boost = Math.max(bay.boost, T.dilation.boost);
+  if (bay && liveDrones(bay).length && Math.random() < dt * T.dilation.rollPerSec && sc.combos.roll('dilation')) bay.boost = Math.max(bay.boost, sc.combos.dur(T.dilation.boost));
 }
 
 // ---- nanite shot ----
@@ -257,7 +281,7 @@ export function onSingularityBlast(w, mobs) {
   const bay = anyBay(tw);
   if (bay && bay.drones.some(d => !d.alive) && sc.combos.roll('accretion')) {
     for (const d of bay.drones) if (!d.alive) { d.alive = true; d.hp = bay.droneHp; d.respawnT = 0; d.x = t.x; d.y = t.y; sc.fx.flash(t.x, t.y, bay.color, 0.8); }
-    bay.boost = Math.max(bay.boost, T.accretion.boost);
+    bay.boost = Math.max(bay.boost, sc.combos.dur(T.accretion.boost));
   }
   // Collapsar rounds: the three biggest ships in range each eat a triple railgun hit
   const rail = mounted(tw, 'railgun');
@@ -272,7 +296,7 @@ export function onBeamTick(w, d, target) {
   const sc = w.scene, bay = mounted(w.tower, 'drones');
   // Painted targets: the beamed ship is marked and the interceptors dive on it
   if (bay && sc.combos.roll('painted')) {
-    target.marked = Math.max(target.marked || 0, T.painted.markDur);
+    target.marked = Math.max(target.marked || 0, sc.combos.dur(T.painted.markDur));
     for (const o of liveDrones(bay)) o.target = target;
     sc.fx.ripple(target.x, target.y, w.color, target.r, target.r + 24);
   }
@@ -305,8 +329,8 @@ export function onKamikazeBlast(w, d, mobs) {
   // Wingmen: interceptors surge and burst the nearest survivor
   const bay = mounted(tw, 'drones'), ds = liveDrones(bay);
   if (ds.length && sc.combos.roll('wingmen')) {
-    bay.boost = Math.max(bay.boost, T.wingmen.boost);
-    for (const o of ds) { const tg = nearest(mobs, d.x, d.y, R * 2); if (!tg) break; const a = angleTo(o, tg); for (let i = 0; i < T.wingmen.burst; i++) bullet(sc, bay, o.x, o.y, a + (i - 1) * 0.15, bay.dmg, bay.def.speed, tg); }
+    bay.boost = Math.max(bay.boost, sc.combos.dur(T.wingmen.boost));
+    for (const o of ds) { const tg = nearest(mobs, d.x, d.y, R * 2); if (!tg) break; const a = angleTo(o, tg); for (let i = 0; i < T.wingmen.burst; i++) bullet(sc, bay, o.x, o.y, a + (i - 1) * T.wingmen.spread, bay.dmg, bay.def.speed, tg); }
   }
   // Chain detonation: missile drones salvo everything the blast caught
   const md = mounted(tw, 'missiledrones'), mds = liveDrones(md);

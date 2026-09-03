@@ -18,7 +18,7 @@
     <div class="stat red"><span class="lbl">Threat</span><span id="tier">1</span></div>
     <div class="stat"><span class="lbl">Kills</span><span id="kills">0</span></div>
     <div class="stat diff"><span class="lbl">Mode</span><span id="hud-diff">Normal</span></div>
-    <div id="dps-hud"><div class="stat cyan"><span class="lbl">DPS out</span><span id="hud-dps">0</span></div><div class="stat red"><span class="lbl">DPS in</span><span id="hud-dtaken">0</span></div></div>
+    <div id="dps-hud"><div class="stat cyan"><span class="lbl">Regen</span><span id="hud-regen">0</span></div><div class="stat cyan"><span class="lbl">DPS out</span><span id="hud-dps">0</span></div><div class="stat red"><span class="lbl">DPS in</span><span id="hud-dtaken">0</span></div></div>
     <div id="vol"><button id="btn-mute" title="Mute">🔊</button><input type="range" id="vol-slider" min="0" max="100" value="70" title="Volume"></div>
     <button id="btn-auto" title="Auto-buy upgrades (order in Upgrades tab)">AUTO</button>
     <button id="btn-pause" title="Pause (Space)">❚❚</button>
@@ -27,7 +27,20 @@
   </div>
 
   <div id="banner"></div>
-  <div id="start" hidden><div class="start-card"><div class="start-title">CORELINE</div><div class="start-sub">The fleet is inbound. Spend fragments in Skills, mount your weapons, then hold the line.</div><div class="start-weapon"><div class="start-lbl">Difficulty</div><div id="start-diff"></div><div id="start-diff-desc" class="start-wname"></div></div><div class="start-weapon"><div class="start-lbl">Starting weapon</div><div id="start-weapons"></div><div id="start-weapon-name" class="start-wname"></div></div><button id="btn-start">Start the defence</button><div class="start-hint">Space also starts</div></div></div>
+  <div id="start" hidden><div class="start-card"><div class="start-title">CORELINE</div><div class="start-sub">The fleet is inbound. Spend fragments in Skills, mount your weapons, then hold the line. <button id="btn-intro-show" class="link">How does it work?</button></div>
+<div id="intro" hidden>
+  <div class="intro-title">How it works</div>
+  <ol class="intro-list">
+    <li><b>The core</b> is you. Ships arrive from every side; if the hull hits zero the run ends.</li>
+    <li><b>Threat</b> rises one level every 40 s. Ships get tougher, new types join, bosses come every 5th and 10th level, sieges at 30 and 60.</li>
+    <li><b>Scrap</b> drops from kills. Spend it in the panel on weapon levels, hardpoints and core upgrades, or let auto-buy do it.</li>
+    <li><b>Weapons</b> sit in hardpoints. Two mounted weapons can trigger <b>combos</b>; the Tower tab lists which.</li>
+    <li>Every 3rd threat level a random <b>modifier</b> lands for three levels: a bonus and a cost.</li>
+    <li><b>Fragments</b> come from bosses and from how far you got when the run ends. They buy permanent <b>skills</b>, including new weapons. The Skills tab is open right now.</li>
+    <li>Harder difficulties unlock by reaching a threat level on the one below.</li>
+  </ol>
+  <button id="btn-intro-ok">Got it</button>
+</div><div class="start-weapon"><div class="start-lbl">Difficulty</div><div id="start-diff"></div><div id="start-diff-desc" class="start-wname"></div></div><div class="start-weapon"><div class="start-lbl">Starting weapon</div><div id="start-weapons"></div><div id="start-weapon-name" class="start-wname"></div></div><button id="btn-start">Start the defence</button><div class="start-hint">Space also starts</div></div></div>
   <div id="paused" hidden><div>PAUSED</div><span>Space or ❚❚ to resume</span><small>Upgrades, mounts and skills can be bought while paused</small></div>
   <div id="abilities"></div>
   <div id="left-hud"><div id="cooldowns"></div><div id="effects"></div></div>

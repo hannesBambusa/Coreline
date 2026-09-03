@@ -7,6 +7,8 @@ import { makeElite, eliteTick, drawElite, spawnSplit } from './elite.js';
 export const DODGE_IMPULSE = 320;
 /** per-second decay factor for dodge / launch impulses: v *= DRIFT_DECAY^dt */
 const DRIFT_DECAY = 0.02;
+/** tint while infected by nanites */
+const INFECT_TINT = 0x7dffc8;
 /** tint while stunned */
 const STUN_TINT = 0x9be7ff;
 
@@ -189,7 +191,7 @@ export class Mob {
 
   update(dt) {
     this.hitFlash = Math.max(0, this.hitFlash - dt);
-    const tint = this.hitFlash > 0 ? 0xffffff : this.stun > 0 ? STUN_TINT : this.def.color;
+    const tint = this.hitFlash > 0 ? 0xffffff : this.stun > 0 ? STUN_TINT : this.infect ? INFECT_TINT : this.def.color;
     this.sprite.setPosition(this.x, this.y).setTint(tint);
     this.glow.setPosition(this.x, this.y);
     if (this.elite) this.eliteTick(dt);

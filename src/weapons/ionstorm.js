@@ -3,7 +3,7 @@
 // eaten. The cloud never comes closer than `minDist` to the core.
 import { Weapon, formatStats } from './base.js';
 import { COLORS } from '../config.js';
-import { dist, angleTo, TAU } from '../utils.js';
+import { dist, angleTo, targetable, TAU } from '../utils.js';
 
 const TUNING = {
   packRadius: 140,       // cluster measure when choosing where to drift
@@ -91,7 +91,7 @@ export class IonStorm extends Weapon {
   /** one tick: bolts from the cloud into up to `arcs` ships inside it */
   strike(c, mobs) {
     const sc = this.scene, R = this.cloudRadius;
-    const inside = mobs.filter(m => !m.dead && this.inside(c, m));
+    const inside = mobs.filter(m => targetable(m) && this.inside(c, m));
     if (!inside.length) { if (Math.random() < 0.3) { const a = Math.random() * TAU; sc.fx.bolt(c.x, c.y, c.x + Math.cos(a) * R * 0.6, c.y + Math.sin(a) * R * 0.6, this.color); } return; }
     inside.sort(() => Math.random() - 0.5);
     for (const m of inside.slice(0, this.def.arcs)) {

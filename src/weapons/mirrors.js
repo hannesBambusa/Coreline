@@ -8,11 +8,12 @@ import { dist, angleTo, TAU } from '../utils.js';
 import { onReflect } from '../combos/procs.js';
 
 const NO_CRASH = ['boss', 'warlord', 'titan', 'warden', 'pylon'];   // bosses do not die on a plate
+const REFLECT_COLOR = 0xffd166;   // every reflected shot turns gold, whatever colour it arrived in
 
 const TUNING = {
   ringOffset: 40,        // px outside the shield ring: past the point where rammers touch the core (shieldR + tower.r + ship radius)
-  spin: 0.35,            // rad/s idle rotation
-  faceRate: 2.5,         // rad/s the plates turn toward incoming fire
+  spin: 0.15,            // rad/s idle rotation
+  faceRate: 1.2,         // rad/s the plates turn toward incoming fire
   sampleRange: 420,      // enemy shots inside this range steer the facing
   shipRange: 300, shipWeight: 0.6,   // ships inside this range steer it too, weaker and by closeness
   flashT: 0.15,
@@ -116,14 +117,20 @@ export class Mirrors extends Weapon {
     const back = owner ? angleTo(b, owner) : Math.atan2(-b.vy, -b.vx);
     const shot = {
       x: t.x + Math.cos(a) * (R + 4), y: t.y + Math.sin(a) * (R + 4), vx: Math.cos(back) * sp, vy: Math.sin(back) * sp,
-      dmg: b.dmg * this.mul, weapon: this, color: this.color, life: 1.6, target: owner, reflected: true,
+      dmg: b.dmg * this.mul, weapon: this, color: REFLECT_COLOR, life: 1.6, target: owner, reflected: true,
     };
     onReflect(this, b, shot);
     sc.spawnBullet(shot);
     this.flash[i] = TUNING.flashT;
     this.reflected++;
     this.wear(i, b.dmg * this.def.reflectWear);
-    sc.fx.spark(shot.x, shot.y, this.color, 4);
+    // make the bounce readable: a bright line back along the return path, a flash on the plate and a callout
+    const ex = owner ? owner.x : shot.x + Math.cos(back) * 700, ey = owner ? owner.y : shot.y + Math.sin(back) * 700;
+    sc.fx.line(shot.x, shot.y, ex, ey, COLORS.white, 3, 0.22);
+    sc.fx.line(shot.x, shot.y, ex, ey, REFLECT_COLOR, 8, 0.18);
+    sc.fx.flash(shot.x, shot.y, COLORS.white, 1.6);
+    sc.fx.spark(shot.x, shot.y, this.color, 8);
+    sc.fx.floater(shot.x, shot.y - 16, 'REFLECTED', '#ffd166', 12);
     sc.sfx.play('shieldHit', null, shot.x);
     return true;
   }

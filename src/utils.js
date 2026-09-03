@@ -28,10 +28,13 @@ export function maxBy(list, score) {
 }
 
 /** nearest live object to (x, y) within maxDist, optionally filtered */
+/** a ship that can currently be shot at: alive and not covered by a shoal-mate in front of it */
+export const targetable = (o) => !o.dead && !(o.cover && !o.cover.dead);
+
 export function nearest(list, x, y, maxDist = Infinity, filter = null) {
   let best = null, bd = maxDist;
   for (const o of list) {
-    if (o.dead || (filter && !filter(o))) continue;
+    if (!targetable(o) || (filter && !filter(o))) continue;
     const d = distXY(x, y, o.x, o.y);
     if (d < bd) { bd = d; best = o; }
   }

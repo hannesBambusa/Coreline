@@ -1,7 +1,10 @@
 import { WEAPONS, COLORS, LEVELS } from '../config.js';
-import { dist, angleTo, minBy } from '../utils.js';
+import { dist, angleTo, minBy, targetable } from '../utils.js';
 
 const NO_LW = { dmg: 1, rate: 1 };
+/** boss escorts every weapon goes for first: wardens heal the Dreadnought, pylons shield the Warlord */
+export const ESCORTS = ['warden', 'pylon'];
+export const isEscort = (m) => ESCORTS.includes(m.type);
 
 const TUNING = {
   turnSpeed: 12,        // turret tracking, rad/s
@@ -76,17 +79,21 @@ export class Weapon {
   statLine() { return formatStats({ dmg: this.dmg, rate: this.rate, dps: this.dps }); }
   nextLine() { return formatStats(this.statsAt(this.level + 1)); }
 
-  inRange(mobs) { return mobs.filter(m => !m.dead && dist(this.tower, m) <= this.range); }
+  inRange(mobs) { return mobs.filter(m => targetable(m) && dist(this.tower, m) <= this.range); }
   prefers(mob) { return this.def.prefer.includes(mob.type); }
   dmgVs(mob) { return this.dmg * (this.prefers(mob) ? this.def.bonus : 1); }
 
-  // preferred mob types first, then the weapon's own rule within that pool
+  // boss escorts first, then preferred mob types, then the weapon's own rule within that pool
   pickTarget(mobs) {
     const list = this.inRange(mobs);
     if (!list.length) return null;
+    const esc = list.filter(isEscort);
+    if (esc.length) return this.selectFrom(esc);   // escorts first, whatever the weapon's own rule
     const pref = list.filter(m => this.prefers(m));
     return this.selectFrom(pref.length ? pref : list);
   }
+  /** an escort inside range that this weapon is not already shooting at */
+  escortNear(mobs) { return mobs.some(m => isEscort(m) && targetable(m) && dist(this.tower, m) <= this.range); }
   // default: nearest to the tower
   selectFrom(list) { return minBy(list, m => dist(this.tower, m)); }
 
@@ -111,7 +118,7 @@ export class Weapon {
       return;
     }
     this.cd -= dt * this.effectiveRateMul;
-    if (!this.target || this.target.dead || dist(this.tower, this.target) > this.range) {
+    if (!this.target || !targetable(this.target) || dist(this.tower, this.target) > this.range || (!isEscort(this.target) && this.escortNear(mobs))) {
       this.target = this.pickTarget(mobs);
     }
     if (this.target) {

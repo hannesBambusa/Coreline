@@ -1,4 +1,4 @@
-import { OFFLINE, SIEGE, SLOT_COSTS } from './config.js';
+import { OFFLINE, SIEGE, SLOT_COSTS, SPAWN } from './config.js';
 import { CHOICES, applyChoice, baseLevelMods } from './choices.js';
 import { sumWindow } from './utils.js';
 
@@ -39,7 +39,7 @@ export class SaveSystem {
       },
       profile: {
         fragments: s.state.fragments, bestTime: s.state.bestTime, totalKills: (s.profile.totalKills || 0),
-        prestige: s.profile.prestige || 0, tree: s.tree.serialize(),
+        prestige: s.profile.prestige || 0, tree: s.tree.serialize(), bestTiers: s.profile.bestTiers || {}, seenIntro: !!s.profile.seenIntro,
       },
       settings: { ...s.settings },
     };
@@ -82,6 +82,12 @@ export class SaveSystem {
     s.state.bestTime = data.profile?.bestTime || 0;
     s.profile.totalKills = data.profile?.totalKills || 0;
     s.profile.prestige = data.profile?.prestige || 0;
+    s.profile.seenIntro = data.profile?.seenIntro ?? true;   // an old save has played before: no intro
+    if (data.profile?.bestTiers && Object.keys(data.profile.bestTiers).length) s.profile.bestTiers = data.profile.bestTiers;
+    else {   // save from before difficulty unlocks: credit the best run to every tier so nothing already reachable is taken away
+      const t = Math.floor(1 + (data.profile?.bestTime || 0) / SPAWN.tierSeconds);
+      s.profile.bestTiers = { normal: t, hard: t, brutal: t };
+    }
     s.tree.restore(data.profile?.tree);
     if (data.settings) { Object.assign(s.settings, data.settings); s.sfx.setEnabled(s.settings.sound !== false); }
     if (r.gameOver) return { offline: null };

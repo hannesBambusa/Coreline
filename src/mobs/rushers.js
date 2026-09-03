@@ -50,7 +50,7 @@ export class Shoal extends Mob {
     if (this.cover && !this.cover.dead) {
       this.lastDealt = 0;
       this.coverText = Math.max(0, this.coverText - 0.0001);
-      if (!quiet && Math.random() < 0.15) this.scene.fx.floater(hx, hy - 6, 'covered', '#60a5fa', 9);
+      if (!quiet && Math.random() < 0.08) this.scene.fx.floater(hx, hy - 6, 'covered', '#60a5fa', 9);
       return false;
     }
     return super.takeDamage(amount, hx, hy, quiet);

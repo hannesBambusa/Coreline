@@ -379,3 +379,21 @@ Top bar: "DPS out" and "DPS in" next to the volume control, both 2 s rolling ave
 Mirror plates sit 40 px outside the shield ring (outside the ram contact distance) and have hp (220 × 1.14 per level). A non-boss ship that reaches the ring on a live plate dies on it and deals its contact damage to the plate; each reflection costs `reflectWear` (8 %) of the shot's damage. A plate at 0 hp is gone for 10 s (dashed outline fills as it rebuilds), and shots and ships pass through its gap meanwhile. The tray card shows plates alive and the rebuild timer.
 
 A brand-new profile (no save in localStorage) starts with `FRESH_START_FRAGMENTS` (4) so the first run can unlock a weapon in Skills. Existing saves are untouched.
+
+## First-run UX
+
+- The start screen no longer greys out the panel (`#start` sits below it). Skills, Upgrades, Stats, Wiki and Settings are usable before starting; the Tower tab is disabled while starting (`body.starting`) and the panel opens on Skills.
+- A fresh profile sees a "How it works" block on the start card (7 lines: core, threat, scrap, weapons and combos, modifiers, fragments and skills, difficulty unlocks). "Got it" hides it, "How does it work?" reopens it; `profile.seenIntro` remembers. Old saves never see it unprompted.
+- Difficulties unlock by progress (`DIFFICULTY[key].unlock`): Hard needs threat 15 on Normal, Really hard threat 20 on Hard, Insane threat 25 on Really hard. `profile.bestTiers` records the best threat per difficulty (`scene.noteTier`). Locked levels show a padlock and a tooltip with the requirement.
+
+Shoal cover is now respected by targeting, not only by damage: `targetable(o)` in utils (alive and not covered) gates `nearest`, every weapon's `inRange`, drone picks, laser forks, beam-drone splits and ion storm arcs, and a held target is dropped the moment it becomes covered. Covered ships still take no damage from any source (area, arcs, infection) because `Shoal.takeDamage` is the single entry point. When the lead dies the next-closest ship has no cover and becomes the lead.
+
+Combo procs can crit (same chance as a hit: base + Weak-point scanner + level modifier). A crit proc doubles every timed effect (10 s → 20 s) via `combos.dur()`, which every timed call site uses, and the tray card gets a gold frame, "CRIT PROC" / "CRIT · active" and a pop animation; counted as `stats.critProcs` in the Stats tab. Pausing ducks all audio to silence through a gain after the master (`sfx.setPaused`), so tails, loops and music stop with the game.
+
+Combo pacing: every base cooldown doubled (14–24 s), and for timed combos the cooldown only starts once the effect (10 s, 20 s on a crit) has run out. So a timed combo is up for 10 s, then off for at least its cooldown, then rolls again per shot.
+
+Targeting: every weapon (and every drone) goes for boss escorts first, Wardens and Relay pylons, and switches to one the moment it enters range (`isEscort`, `Weapon.pickTarget`, `escortNear`). The weapon's own rule then picks among the escorts.
+
+Railgun buffed into a real option: base damage 70 → 85, rate growth 1.03 → 1.04, a crater at the first ship the beam meets (70 px +2/level, 60 % of the shot's damage to everything else in it), and every 4th shot is a heavy slug (×2 damage, ×1.6 crater, gold beam, the barrel glows gold while it is loaded). Stat line shows crater and slug cadence.
+
+Railgun retuned as a slow cannon: 150 damage every 2.5 s (was 85 at 0.6/s), damage growth ×1.19, crater 80 px at 75 % of the shot, heavy slug ×2.5 with a ×1.8 crater, crit 15 % at ×3.5. Same dps as before at the trigger, roughly, but each shot lands about twice as hard.

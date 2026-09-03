@@ -149,7 +149,9 @@ export function updateBullets(scene, dt) {
 
 // ---------- missiles and wells ----------
 /** A missile detonating inside a gravity well can collapse the well into a singularity (combo) instead of a plain splash. */
-function detonateMissile(scene, m) {
+function detonateMissile(scene, m, hitShip = null) {
+  if (m.onImpact && hitShip) m.onImpact(hitShip);
+  if (!m.splash) { if (hitShip) scene.hit(hitShip, m.weapon, m.x, m.y, { dmg: m.dmg }); m.age = DEAD_AGE; onMissileImpact(scene, m); return; }   // no splash: a direct hit only
   const well = scene.wells.find(w => distXY(w.x, w.y, m.x, m.y) <= w.r);
   if (well && scene.combos.roll('singularity')) {
     scene.damageRadius(well.x, well.y, well.r * 1.3, m.dmg * 3, 0xc084fc, m.weapon);
@@ -178,7 +180,7 @@ function updateHomingMissiles(scene, dt) {
     scene.fx.trailAt(m.x, m.y, m.color);
     for (const o of scene.mobs) {
       if (o.dead) continue;
-      if (distXY(m.x, m.y, o.x, o.y) < o.r + 5) { detonateMissile(scene, m); break; }
+      if (distXY(m.x, m.y, o.x, o.y) < o.r + 5) { detonateMissile(scene, m, o); break; }
     }
     if (m.age >= m.life && m.age < DEAD_AGE) { scene.damageRadius(m.x, m.y, m.splash, m.dmg, m.color, m.weapon); onMissileImpact(scene, m); m.age = DEAD_AGE; }
   }
@@ -247,10 +249,11 @@ function drawWell(g, w) {
 export function drawBullets(scene) {
   const g = scene.bulletGfx; g.clear();
   for (const b of scene.bullets) {
-    const l = 10, a = Math.atan2(b.vy, b.vx);
+    const l = b.reflected ? 30 : 10, a = Math.atan2(b.vy, b.vx);
+    if (b.reflected) { g.lineStyle(7, b.color, 0.35); g.lineBetween(b.x - Math.cos(a) * l, b.y - Math.sin(a) * l, b.x, b.y); }   // reflected shots read as a bright bolt
     g.lineStyle(3, b.color, 1);
     g.lineBetween(b.x - Math.cos(a) * l, b.y - Math.sin(a) * l, b.x, b.y);
-    g.fillStyle(0xffffff, 1); g.fillCircle(b.x, b.y, 2);
+    g.fillStyle(0xffffff, 1); g.fillCircle(b.x, b.y, b.reflected ? 3 : 2);
   }
   for (const b of scene.enemyBullets) {
     g.fillStyle(b.color, 0.9); g.fillCircle(b.x, b.y, 3.5);

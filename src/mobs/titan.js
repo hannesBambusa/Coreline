@@ -194,7 +194,7 @@ export class Titan extends Mob {
   updateJam(dt) {
     if (this.level < 2) return;
     if (!this.tickTimer('jamCd', dt, this.def.jamEvery)) return;
-    const ws = this.tower.weapons.filter(w => !w.jammed);
+    const ws = this.tower.weapons.filter(w => !w.jammed && !w.def.noJam);
     if (!ws.length) return;
     const w = pick(ws);
     w.jammed = this.def.jamDur;

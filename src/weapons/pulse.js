@@ -6,7 +6,7 @@ import { dist, angleTo } from '../utils.js';
 const TUNING = {
   barrelSpread: 0.09,                 // radians between barrels in a multi-barrel volley
   flashBase: 0.5, flashPerBarrel: 0.15,
-  chargedDur: 3,                      // seconds the Charged combo (with a tesla mounted) electrifies bolts
+  chargedDur: 10,                     // seconds the Charged combo (with a tesla mounted) electrifies bolts
   // Barrage combo (with a missile pod mounted): a fan of mini-missiles alongside the volley
   barrage: { count: 5, spread: 0.35, launch: 200, speedMul: 1.2, turnMul: 1.5, dmgMul: 0.5, splashMul: 0.7, life: 3 },
 };
@@ -50,7 +50,7 @@ export class PulseCannon extends Weapon {
     this.charged = Math.max(0, this.charged - (1 / this.rate));
     onPulseShot(this, target, this.scene.mobs);
     const hasTesla = this.tower.weapons.some(w => w.type === 'tesla');
-    if (hasTesla && !this.charged && this.scene.combos.roll('charged')) this.charged = TUNING.chargedDur;
+    if (hasTesla && !this.charged && this.scene.combos.roll('charged')) this.charged = this.scene.combos.dur(TUNING.chargedDur);
     if (this.scene.combos.roll('barrage')) {
       const pod = this.tower.weapons.find(w => w.type === 'missile'), B = TUNING.barrage;
       for (let i = 0; i < B.count; i++) {

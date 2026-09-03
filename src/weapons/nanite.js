@@ -37,10 +37,11 @@ export class ReplicatorSwarm extends Weapon {
   }
   fire(target) {
     const m = this.muzzle(), a = Math.atan2(target.y - m.y, target.x - m.x), sc = this.scene;
-    sc.spawnBullet({
-      x: m.x, y: m.y, vx: Math.cos(a) * this.def.speed, vy: Math.sin(a) * this.def.speed,
-      dmg: this.dmg, weapon: this, color: this.color, life: this.range / this.def.speed + TUNING.bulletLife, target,
-      onHit: (mob) => this.infect(mob, 0),
+    // a homing pod: it turns hard and always finds its ship (no splash, the payload is the infection)
+    sc.spawnMissile({
+      x: m.x, y: m.y, vx: Math.cos(a) * this.def.speed * 0.6, vy: Math.sin(a) * this.def.speed * 0.6,
+      speed: this.def.speed, turn: this.def.turn, dmg: this.dmg, weapon: this, splash: 0, color: this.color, life: 4, target,
+      onImpact: (mob) => this.infect(mob, 0),
     });
     sc.fx.flash(m.x, m.y, this.color, 0.6);
     onNaniteShot(this);
@@ -74,6 +75,7 @@ export class ReplicatorSwarm extends Weapon {
     sc.stats.procs.replicate = (sc.stats.procs.replicate || 0) + 1;
   }
   update(dt, mobs) {
+    if (this.target && this.target.infect) this.target = null;   // once a ship is infected, seed the next healthy one
     super.update(dt, mobs);
     const sc = this.scene;
     for (const m of this.hosts) {
@@ -89,10 +91,18 @@ export class ReplicatorSwarm extends Weapon {
     }
   }
   draw(g) {
+    const now = this.scene.time.now;
     for (const m of this.hosts) {
       if (m.dead || !m.infect) continue;
-      const k = 0.5 + 0.5 * Math.sin(this.scene.time.now / 120 + m.x);
-      g.lineStyle(1.5, this.color, 0.35 + 0.4 * k); g.strokeCircle(m.x, m.y, m.r + 3);
+      const k = 0.5 + 0.5 * Math.sin(now / 120 + m.x), left = m.infect.left / this.def.dur, gen = m.infect.gen;
+      // sick glow: filled disc, thick pulsing ring, and a swarm of motes crawling on the hull
+      g.fillStyle(this.color, 0.10 + 0.12 * k); g.fillCircle(m.x, m.y, m.r + 6);
+      g.lineStyle(3, this.color, 0.55 + 0.4 * k); g.strokeCircle(m.x, m.y, m.r + 5);
+      g.lineStyle(1, this.color, 0.9); g.beginPath(); g.arc(m.x, m.y, m.r + 9, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * left, false); g.strokePath();
+      for (let i = 0; i < 4 + Math.min(gen, 4); i++) {
+        const a = now / 300 * (i % 2 ? 1 : -1) + i * 1.7, rr = m.r * (0.4 + 0.5 * ((i * 7) % 5) / 5);
+        g.fillStyle(0xffffff, 0.8); g.fillCircle(m.x + Math.cos(a) * rr, m.y + Math.sin(a) * rr, 1.4);
+      }
     }
   }
 }

@@ -31,4 +31,6 @@ export const CRIT = { chance: 0.06, mul: 2.2, superChance: 0.04, superMul: 3 }; 
 export const OFFLINE = { threshold: 30, rate: 0.5, capHours: 8 };
 
 // Prestige: fragments earned from a run = floor((tier / divisor) ^ power). Manual prestige from minTier.
+export const FRESH_START_FRAGMENTS = 4;   // a brand-new profile (no save at all) starts with these to unlock a first weapon
+
 export const PRESTIGE = { divisor: 8, power: 1.4, minTier: 10 };   // threat 20 → 3, 40 → 9, 60 → 16

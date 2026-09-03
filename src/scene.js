@@ -1,7 +1,7 @@
 // The one Phaser scene. Owns the run state and the game objects; the mechanics live in ./scene/*.js as
 // plain functions that take the scene first. The thin methods at the bottom keep the old `scene.x()` API
 // for everything else in the game (mobs, weapons, ui, saves).
-import { COLORS, PRESTIGE, ABILITIES, DIFFICULTY, WEAPONS } from './config.js';
+import { COLORS, PRESTIGE, ABILITIES, DIFFICULTY, WEAPONS, FRESH_START_FRAGMENTS } from './config.js';
 import { Tree } from './tree.js';
 import { Abilities } from './abilities.js';
 import { SFX } from './sfx.js';
@@ -97,6 +97,10 @@ export class GameScene extends Phaser.Scene {
       const res = this.saves.apply(data);
       this.ui.syncSettings();
       if (res.offline) this.ui.showOffline(res.offline);
+    } else {
+      // completely fresh profile: a few fragments so the first run can unlock a weapon in Skills
+      this.state.fragments = FRESH_START_FRAGMENTS;
+      this.ui.banner(`Welcome · ${FRESH_START_FRAGMENTS} fragments to spend in Skills`, false);
     }
     if (this.state.time < 1) this.showStart();
   }

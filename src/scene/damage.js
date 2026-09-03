@@ -104,6 +104,7 @@ export function hit(scene, m, weapon, x, y, opts = {}) {
   if (crit) d = applyCrit(scene, m, weapon, d, srcKey, x, y, label);
   if (superCrit) d = applySuperCrit(scene, m, d, srcKey, label);
   m.lastHit = srcKey;
+  if (m.ultCap !== undefined) { d = Math.max(0, Math.min(d, m.hp - m.ultCap)); if (d <= 0) { m.ultCap = undefined; return 0; } }   // Hive Collapse: bosses lose at most a fixed share
   m.takeDamage(d, x, y, opts.quiet, crit, opts.from || scene.tower);
   addDmg(scene, srcKey, m.lastDealt ?? 0, crit);
   showNumber(scene, m, label, crit, superCrit, opts);

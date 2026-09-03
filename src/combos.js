@@ -1,5 +1,6 @@
 import { ICONS } from './icons.js';
 import { WEAPONS, CRIT } from './config.js';
+import { QUADS } from './combos/quad.js';
 const WEAPON_COLORS = Object.fromEntries(Object.entries(WEAPONS).map(([k, v]) => [k, v.color]));
 
 // Weapon combos: when two specific weapons are mounted, a shot from one has a small
@@ -118,6 +119,9 @@ export const COMBOS = {
                  desc: 'The blast lands a triple railgun hit on the three biggest ships in range.' },
 };
 
+// quad combos (four weapons) live in combos/quad.js and share the roll / cooldown / card machinery
+for (const [id, q] of Object.entries(QUADS)) { COMBOS[id] = { name: q.name, pair: q.pair, chance: q.chance, cd: q.cd, color: q.color, effectDur: q.effectDur, desc: q.desc, quad: true }; COMBOS[q.ultimate.id] = { name: q.ultimate.name, pair: q.pair, chance: 0, cd: 0, color: q.ultimate.color, intrinsic: true, desc: q.ultDesc }; }
+
 // intrinsic procs that show up in stats alongside combos
 COMBOS.rewind = { name: 'Rewind', pair: ['chrono', 'chrono'], chance: 0, cd: 0, color: 0x9be7ff, intrinsic: true, desc: 'Chrono field Lv 10+: every ship inside jumps back 3 s every 20 s.' };
 COMBOS.replicate = { name: 'Replicate', pair: ['nanite', 'nanite'], chance: 0, cd: 0, color: 0x5eead4, intrinsic: true, desc: 'Nanites jump to nearby ships when a host dies.' };
@@ -132,7 +136,7 @@ export class Combos {
   }
 
   mounted(type) { return this.scene.tower.weapons.some(w => w.type === type); }
-  available(id) { const c = COMBOS[id]; return this.mounted(c.pair[0]) && this.mounted(c.pair[1]); }
+  available(id) { return COMBOS[id].pair.every(p => this.mounted(p)); }
 
   // returns true when the combo fires this time
   roll(id) {

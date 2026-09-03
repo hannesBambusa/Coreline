@@ -121,13 +121,31 @@ export class Cloud {
     return 'Google signed you in, but ' + why;
   }
 
+  /** live channel on the player's own row: an admin push installs itself and restarts the page */
+  listen() {
+    if (this.channel) { this.client.removeChannel(this.channel); this.channel = null; }
+    if (!this.user) return;
+    this.channel = this.client.channel('save-' + this.user.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: CLOUD.table, filter: `user_id=eq.${this.user.id}` }, (payload) => {
+        const remote = payload.new && payload.new.data;
+        if (!remote || !remote.adminPush || remote.adminPush === this.seenAdminPush) return;   // our own pushes carry no adminPush stamp
+        this.seenAdminPush = remote.adminPush;
+        this.scene.saves.suspend = true;
+        backupLocal('replaced by an admin push');
+        localStorage.setItem(SAVE_KEY, JSON.stringify(remote));
+        this.scene.ui.banner('Your save was updated by the admin · reloading', true);
+        setTimeout(() => location.reload(), 1500);
+      })
+      .subscribe();
+  }
+
   setUser(user, fresh) {
     const was = this.user && this.user.id;
     this.user = user;
     this.status = user ? 'in' : 'out';
     this.emit();
-    if (user && user.id !== was) this.pullThenPush();
-    else if (!user) this.scene.ui.render();
+    if (user && user.id !== was) { this.listen(); this.pullThenPush(); }
+    else if (!user) { this.listen(); this.scene.ui.render(); }
   }
 
   // ---- auth ----
@@ -176,6 +194,7 @@ export class Cloud {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return;
     const data = JSON.parse(raw), lp = progress(data);
+    delete data.adminPush;
     // never quietly replace real cloud progress with a far poorer save (a wiped device, a stale tab): keep the cloud, tell the player
     if ((this.remoteProgress || 0) >= FRESH && lp < (this.remoteProgress || 0) * 0.5) {
       console.warn('Coreline cloud: push refused, this device has far less progress than the cloud', { local: lp, cloud: this.remoteProgress });

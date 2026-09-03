@@ -447,6 +447,20 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 #auto-queue li:not(:first-child) { opacity: 0.85; }
 #auto-queue { width: var(--panel-w, 320px); max-width: 320px; }
 
+#loadout { position: fixed; right: 12px; top: 70px; z-index: 6; width: 270px; pointer-events: none; }
+#loadout[hidden] { display: none; }
+#loadout .aq-title { font-family: var(--font-head); font-size: 10px; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; margin: 0 0 6px 8px; opacity: 0.8; }
+#loadout .lo-sub { margin-top: 10px; }
+#lo-weapons, #lo-combos { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 8px; }
+.lo-w { position: relative; width: 44px; height: 44px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--lc) 60%, transparent); background: rgba(10,14,28,0.85); display: flex; align-items: center; justify-content: center; color: var(--lc); pointer-events: auto; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--lc) 60%, transparent)); }
+.lo-w svg { width: 26px; height: 26px; }
+.lo-w .lv { position: absolute; right: -4px; bottom: -6px; font-family: var(--font-head); font-size: 10px; padding: 1px 5px; border-radius: 6px; background: var(--lc); color: #05060d; font-weight: 700; }
+.lo-w.jam { border-color: var(--red); color: var(--red); }
+.lo-c { display: flex; align-items: center; gap: 2px; padding: 4px 6px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(10,14,28,0.85); pointer-events: auto; }
+.lo-c svg { width: 20px; height: 20px; }
+.lo-c .plus { color: var(--muted); font-size: 11px; margin: 0 1px; }
+.lo-c.cd { opacity: 0.4; }
+.lo-c.active { border-color: var(--gold); box-shadow: 0 0 10px rgba(255,209,102,0.5); }
 #quick-buy { position: fixed; right: 12px; top: 70px; z-index: 6; width: 270px; max-height: calc(100vh - 70px); overflow-y: auto; }
 #quick-buy[hidden] { display: none; }
 #quick-buy .aq-title { font-family: var(--font-head); font-size: 10px; letter-spacing: 2px; color: var(--cyan); text-transform: uppercase; margin: 0 0 8px 8px; opacity: 0.8; }

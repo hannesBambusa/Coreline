@@ -40,6 +40,7 @@ export function drawTower(tower, g, dt) {
   drawHullPlates(tower, g);
   drawHardpoints(tower, g);
   for (const w of tower.weapons) w.draw(g);
+  if (scene.quads) scene.quads.draw(g);
   drawCore(tower, g, pulse);
 }
 

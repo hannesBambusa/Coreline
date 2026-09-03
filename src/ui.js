@@ -126,6 +126,7 @@ export class UI {
     hud.renderBossBar(scene);
     hud.renderThreatTimer(scene);
     hud.renderQueue(this);
+    hud.renderLoadout(this);
     if (this.panelHidden()) return;
     if (this.activeTab === 'settings') { const el = $('#perf-now'); if (el.textContent !== scene.perf.label) el.textContent = scene.perf.label; }
     this.renderTab(this.activeTab);

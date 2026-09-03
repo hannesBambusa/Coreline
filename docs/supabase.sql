@@ -41,3 +41,7 @@ create trigger saves_history before update on public.saves for each row execute 
 alter table public.save_history enable row level security;
 drop policy if exists "own history: read" on public.save_history;
 create policy "own history: read" on public.save_history for select using (auth.uid() = user_id);
+
+-- ---- live admin pushes: the game listens for changes to its own row ----
+-- Run once. (Database → Publications must include the saves table; this statement does that.)
+alter publication supabase_realtime add table public.saves;

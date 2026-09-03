@@ -2,8 +2,9 @@
 // the ability bar, the auto-buy queue and the quick-buy list.
 import { WEAPONS, ABILITIES, SPAWN } from '../config.js';
 import { ICONS } from '../icons.js';
+import { bindTips } from './effects.js';
 import { AUTO_ITEMS } from '../autobuy.js';
-import { $, $$, fmt, fmtTime, hex, swapHtml, restartAnimation, bindBuy } from './dom.js';
+import { $, $$, fmt, fmtTime, hex, swapHtml, restartAnimation, bindBuy, attrQuote } from './dom.js';
 import { queueItem } from './rows.js';
 import { QUEUE_LEN } from './panel.js';
 
@@ -151,6 +152,27 @@ export function abilityClick(ui, k) {
 // ---- Auto-buy queue and quick-buy list ------------------------------------
 
 /** Vertical queue shown on the right when the panel is collapsed and auto-buy is on. */
+/** Right side while the panel is hidden: the mounted weapons with their levels, then every available combo as its icon pair. */
+export function renderLoadout(ui) {
+  const el = $('#loadout'), scene = ui.scene;
+  const show = ui.panelHidden() && !scene.starting && !scene.gameOver;
+  el.hidden = !show;
+  if (!show) return;
+  // sit under whatever is showing above it (the auto-buy queue or the quick-buy list)
+  const above = [$('#auto-queue'), $('#quick-buy')].find(x => !x.hidden);
+  el.style.top = (above ? above.getBoundingClientRect().bottom + 14 : 70) + 'px';
+  const strip = (html) => html.replace(/<[^>]+>/g, '');
+  const weapons = scene.tower.weapons.map(w =>
+    `<div class="lo-w ${w.jammed > 0 ? 'jam' : ''}" style="--lc:${hex(w.color)}" data-tip="${attrQuote(w.def.name + '\nLv ' + w.level + ' · ' + strip(w.statLine()))}">${ICONS[w.type]}<span class="lv">${w.level}</span></div>`).join('');
+  const combos = scene.combos.list().filter(c => c.available).map(c => {
+    const fx = ui.effects['combo:' + c.id], active = fx && fx.left > 0 && c.effectDur;
+    return `<div class="lo-c ${active ? 'active' : c.cd > 0 ? 'cd' : ''}" data-tip="${attrQuote(c.name + '\n' + c.desc + (c.cd > 0 ? '\ncooldown ' + Math.ceil(c.cd) + ' s' : '\nready'))}">` +
+      c.pair.map(p => `<span style="color:${hex(WEAPONS[p].color)}">${ICONS[p]}</span>`).join('<span class="plus">+</span>') + '</div>';
+  }).join('');
+  swapHtml($('#lo-weapons'), weapons || '<span class="muted" style="font-size:12px">no weapons</span>', (root) => bindTips(ui, root));
+  swapHtml($('#lo-combos'), combos || '<span class="muted" style="font-size:12px">none with this loadout</span>', (root) => bindTips(ui, root));
+}
+
 export function renderQueue(ui) {
   const el = $('#auto-queue'), ab = ui.scene.autobuy;
   const q = ab.on && ui.panelHidden() ? ab.queue(QUEUE_LEN) : [];

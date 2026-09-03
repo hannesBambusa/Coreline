@@ -19,6 +19,7 @@ import * as spawner from './scene/spawner.js';
 import * as siege from './scene/siege.js';
 import { Perf } from './perf.js';
 import { Cloud } from './cloud.js';
+import { Quads } from './combos/quad.js';
 import { pushBucket } from './utils.js';
 import * as choices from './scene/choices.js';
 import * as damage from './scene/damage.js';
@@ -81,6 +82,7 @@ export class GameScene extends Phaser.Scene {
     this.bg = this.add.rectangle(0, 0, width, height, BG_COLOR).setOrigin(0).setDepth(-1);
     makeStarfield(this, width, height);
     this.perf = new Perf(this);
+    this.quads = new Quads(this);
     this.fx = new FX(this);
     this.tower = new Tower(this, width / 2, height / 2);
     this.tree.recompute();
@@ -228,6 +230,7 @@ export class GameScene extends Phaser.Scene {
     this.stats.kills[m.type] = (this.stats.kills[m.type] || 0) + 1;
     const src = m.lastHit || 'other';
     this.stats.killsBy[src] = (this.stats.killsBy[src] || 0) + 1;
+    if (['drones', 'beamdrones', 'missiledrones', 'kamikaze'].includes(src)) this.quads.onDroneKill();
     const lm = this.levelMods;
     const scrap = Math.round(m.scrap * this.tree.mods.scrap * lm.scrap * this.diff.scrap * (m.type === 'swarm' ? lm.swarmScrap : 1) * (lm.typeScrap[m.type] || 1) * (m.elite ? lm.eliteScrap : 1));
     this.state.scrap += scrap;
@@ -265,6 +268,7 @@ export class GameScene extends Phaser.Scene {
     this.stats = this.freshStats();
     this.levelMods = baseLevelMods(); this.levelChoice = null; this.choice = null; this.choosing = false; this.ui.hideChoice();
     this.combos.cd = {}; this.combos.count = 0;
+    this.quads.ult = null; this.quads.swarmT = 0; this.quads.ultCd = 0; this.screenFlash.setAlpha(0);
     this.slowTimer = 0; this.timeScale = 1; this.afterglow = 0;
     this.autobuy.lastBuy = null;
     this.ui.clearEffects();
@@ -299,6 +303,7 @@ export class GameScene extends Phaser.Scene {
     this.autobuy.update(dt);
     this.updateMusic(dt);
     this.combos.update(dt);
+    this.quads.update(dt, this.mobs);
     this.afterglow = Math.max(0, (this.afterglow || 0) - dt);
     this.tower.update(dt, this.mobs);
     for (const m of this.mobs) if (!m.dead) { if (m.marked > 0) m.marked -= dt; if (m.stun > 0) m.stunned(dt); else m.update(dt); }

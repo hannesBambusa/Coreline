@@ -42,19 +42,7 @@
     <div id="login-version" class="muted"></div>
   </div></div>
   <div id="start" hidden><div class="start-card"><div class="start-title">CORELINE</div><div class="start-sub">The fleet is inbound. Spend fragments in Skills, mount your weapons, then hold the line. <button id="btn-intro-show" class="link">How does it work?</button></div>
-<div id="intro" hidden>
-  <div class="intro-title">How it works</div>
-  <ol class="intro-list">
-    <li><b>The core</b> is you. Ships arrive from every side; if the hull hits zero the run ends.</li>
-    <li><b>Threat</b> rises one level every 40 s. Ships get tougher, new types join, bosses come every 5th and 10th level, sieges at 30 and 60.</li>
-    <li><b>Scrap</b> drops from kills. Spend it in the panel on weapon levels, hardpoints and core upgrades, or let auto-buy do it.</li>
-    <li><b>Weapons</b> sit in hardpoints. Two mounted weapons can trigger <b>combos</b>; the Tower tab lists which.</li>
-    <li>Every 3rd threat level a random <b>modifier</b> lands for three levels: a bonus and a cost.</li>
-    <li><b>Fragments</b> come from bosses and from how far you got when the run ends. They buy permanent <b>skills</b>, including new weapons. The Skills tab is open right now.</li>
-    <li>Harder difficulties unlock by reaching a threat level on the one below.</li>
-  </ol>
-  <button id="btn-intro-ok">Got it</button>
-</div><div class="start-weapon"><div class="start-lbl">Difficulty</div><div id="start-diff"></div><div id="start-diff-desc" class="start-wname"></div></div><div class="start-weapon"><div class="start-lbl">Starting weapon</div><div id="start-weapons"></div><div id="start-weapon-name" class="start-wname"></div></div><button id="btn-start">Start the defence</button><div class="start-hint">Space also starts</div></div></div>
+<div class="start-weapon"><div class="start-lbl">Difficulty</div><div id="start-diff"></div><div id="start-diff-desc" class="start-wname"></div></div><div class="start-weapon"><div class="start-lbl">Starting weapon</div><div id="start-weapons"></div><div id="start-weapon-name" class="start-wname"></div></div><button id="btn-start">Start the defence</button><div class="start-hint">Space also starts</div></div></div>
   <div id="paused" hidden><div>PAUSED</div><span>Space or ❚❚ to resume</span><small>Upgrades, mounts and skills can be bought while paused</small></div>
   <div id="ultimates"></div>
   <div id="abilities"></div>
@@ -100,6 +88,7 @@
       <p class="muted">Auto-buy never spends below this amount. Order and toggles are in the Upgrades tab.</p>
       <h3>About</h3>
       <p class="muted">Coreline <b id="version-settings"></b></p>
+      <button id="btn-guide" class="buy">Player guide</button>
       <h3>Save</h3>
       <p class="muted">Autosaves every 10 s. Offline: 50 % of your recent scrap rate, up to 8 h.</p>
       <p id="acc-settings" class="muted" hidden>Cloud: <b id="acc-settings-who"></b> <button id="acc-settings-out" class="link">sign out</button></p>
@@ -127,6 +116,7 @@
     </div>
   </div>
 
+  <div id="guide" hidden></div>
   <div id="confirm" hidden>
     <div class="card cyan">
       <h2 id="confirm-title">Are you sure?</h2>

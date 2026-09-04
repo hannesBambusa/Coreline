@@ -160,7 +160,6 @@ export class GameScene extends Phaser.Scene {
     // the panel stays usable on the start screen (skills, wiki, settings); the Tower tab is for a running game
     document.body.classList.add('starting');
     if (this.ui.activeTab === 'tower' || this.ui.activeTab === 'upgrades') this.ui.showTab('skills');
-    document.getElementById('intro').hidden = !!this.profile.seenIntro;
     document.getElementById('start').hidden = false;
     this.ui.syncAccount();   // shows the login screen instead when not signed in
     document.getElementById('paused').hidden = true;

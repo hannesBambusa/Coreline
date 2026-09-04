@@ -2,6 +2,7 @@
 import { hex, $, $$, swapHtml, bindBuy, askConfirm } from './ui/dom.js';
 import { WEAPONS, DIFFICULTY } from './config.js';
 import { ICONS } from './icons.js';
+import { Guide } from './ui/guide.js';
 import * as hud from './ui/hud.js';
 import * as fx from './ui/effects.js';
 import { renderTowerTab, renderUpgradesTab, renderSkillsTab } from './ui/panel.js';
@@ -41,8 +42,9 @@ export class UI {
     hud.buildAbilityBar(this);
     $('#btn-offline-ok').onclick = () => { $('#offline').hidden = true; };
     $('#btn-start').onclick = () => scene.beginRun();
-    $('#btn-intro-ok').onclick = () => { $('#intro').hidden = true; scene.profile.seenIntro = true; };
-    $('#btn-intro-show').onclick = () => { $('#intro').hidden = false; };
+    this.guide = new Guide(this);
+    $('#btn-intro-show').onclick = () => this.guide.show();
+    $('#btn-guide').onclick = () => this.guide.show();
     $('#start-weapons').onclick = (e) => { const b = e.target.closest('[data-start]'); if (b) scene.setStartWeapon(b.dataset.start); };
     $('#start-diff').onclick = (e) => { const b = e.target.closest('[data-diff]'); if (b) scene.setDifficulty(b.dataset.diff); };
     $('#btn-pause').onclick = () => { if (!scene.starting) scene.setPaused(!scene.paused); };
@@ -89,6 +91,7 @@ export class UI {
     $('#login').hidden = !gate;
     document.body.classList.toggle('login', gate);
     $('#start').hidden = !scene.starting || gate;
+    if (scene.starting && !gate && !scene.profile.seenIntro && !this.guide.open) this.guide.show();   // brand-new player: the guide first
     $('#acc-offline').hidden = c.status !== 'error';
     $('#account-out').hidden = c.status === 'in';
     $('#account-in').hidden = c.status !== 'in';

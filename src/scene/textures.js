@@ -210,7 +210,7 @@ export function makeTextures(scene) {
 export function makeStarfield(scene, w, h) {
   scene.starLayers = [];
   const nebulas = [[COLORS.violet, 0.10], [COLORS.blue, 0.08], [COLORS.magenta, 0.05]];
-  const ng = scene.add.graphics().setDepth(0);
+  const ng = scene.nebula = scene.add.graphics().setDepth(0);
   for (const [c, a] of nebulas) {
     const nx = Math.random() * w, ny = Math.random() * h, R = rnd(NEBULA_RADIUS_MIN, NEBULA_RADIUS_MAX);
     // stack translucent discs from large to small so the centre ends up brightest

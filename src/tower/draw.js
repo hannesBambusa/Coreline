@@ -44,7 +44,7 @@ export function drawTower(tower, g, dt) {
   drawCore(tower, g, pulse);
 }
 
-function drawRangeAura(tower, g, pulse) {
+export function drawRangeAura(tower, g, pulse) {
   const { x, y } = tower;
   const maxRange = tower.maxRange();
   if (maxRange <= 0) return;
@@ -66,7 +66,7 @@ function seg(g, x, y, R, i, from = 0, to = 1) {
 
 // Shield: SEGMENTS arc segments around shieldR. Lit segments = capacity. While charging, the next segment fills up
 // like a progress bar and motes race around an inner track (faster = more regen, doubled when calm).
-function drawShield(tower, g, dt, pulse) {
+export function drawShield(tower, g, dt, pulse) {
   const { x, y, shieldR: R } = tower;
   const sf = Math.max(0, Math.min(1, tower.shield / tower.shieldMax));
   const lit = sf * SEGMENTS, full = Math.floor(lit), partial = lit - full;
@@ -192,7 +192,7 @@ const P = (mx, my, a, f, s) => [mx + Math.cos(a) * f - Math.sin(a) * s, my + Mat
 function poly(g, pts) { g.beginPath(); pts.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py)); g.closePath(); }
 function line(g, mx, my, a, f0, s0, f1, s1) { const [ax, ay] = P(mx, my, a, f0, s0), [bx, by] = P(mx, my, a, f1, s1); g.lineBetween(ax, ay, bx, by); }
 
-function drawHardpoints(tower, g) {
+export function drawHardpoints(tower, g) {
   const { x, y, r } = tower;
   tower.slots.forEach((w, i) => {
     const sa = tower.slotAngle(i);
@@ -330,7 +330,7 @@ function drawTurret(g, w, mx, my, a, c, recoil) {
 }
 
 // core (colour = prestige tier) with one orbiting mote per prestige level (max 6) and a slow reticle
-function drawCore(tower, g, pulse) {
+export function drawCore(tower, g, pulse) {
   const { x, y } = tower;
   const pc = tower.coreColor, pl = tower.scene.profile ? tower.scene.profile.prestige : 0;
   g.lineStyle(1, pc, 0.5);

@@ -1,6 +1,6 @@
 // The scene talks to `scene.ui`; this class wires the DOM once and delegates the work to src/ui/*.js.
 import { hex, $, $$, swapHtml, bindBuy, askConfirm } from './ui/dom.js';
-import { WEAPONS, DIFFICULTY } from './config.js';
+import { WEAPONS, DIFFICULTY, MODES } from './config.js';
 import { ICONS } from './icons.js';
 import { Guide } from './ui/guide.js';
 import * as hud from './ui/hud.js';
@@ -47,6 +47,7 @@ export class UI {
     $('#btn-guide').onclick = () => this.guide.show();
     $('#start-weapons').onclick = (e) => { const b = e.target.closest('[data-start]'); if (b) scene.setStartWeapon(b.dataset.start); };
     $('#start-diff').onclick = (e) => { const b = e.target.closest('[data-diff]'); if (b) scene.setDifficulty(b.dataset.diff); };
+    $('#start-mode').onclick = (e) => { const b = e.target.closest('[data-mode]'); if (b) scene.setMode(b.dataset.mode); };
     $('#btn-pause').onclick = () => { if (!scene.starting) scene.setPaused(!scene.paused); };
     $('#speed').onclick = (e) => { const b = e.target.closest('[data-speed]'); if (b) this.setSpeed(+b.dataset.speed); };
     $('#btn-auto').onclick = () => this.toggleAuto(true);
@@ -115,7 +116,8 @@ export class UI {
   onKey(e) {
     const scene = this.scene;
     if (e.code === 'Space' && !TEXT_INPUTS.includes(document.activeElement.tagName)) { e.preventDefault(); scene.setPaused(!scene.paused); }
-    const ultKey = { q: 0, w: 1, e: 2, r: 3 }[e.key.toLowerCase()];
+    // W is movement in drift mode, so the second ultimate sits on F there (see quad.js ultKeys)
+    const ultKey = (scene.mode === 'drift' ? { q: 0, e: 1, r: 2, f: 3 } : { q: 0, w: 1, e: 2, r: 3 })[e.key.toLowerCase()];
     if (ultKey !== undefined && !e.ctrlKey && !e.metaKey && !TEXT_INPUTS.includes(document.activeElement.tagName) && !scene.paused && !scene.starting) { const u = scene.quads.bar()[ultKey]; if (u) this.fireUltimate(u.id); }
     if (scene.choosing && (e.key === '1' || e.key === '2')) { const b = $$('#choice .ch-card')[+e.key - 1]; if (b) b.click(); }
   }
@@ -151,6 +153,9 @@ export class UI {
   // icon row on the start screen: every unlocked weapon type, current slot-1 weapon highlighted
   renderStartWeapons() {
     const scene = this.scene, cur = scene.tower.slots[0] ? scene.tower.slots[0].type : 'pulse';
+    $('#start-mode').innerHTML = Object.entries(MODES).map(([k, m]) =>
+      `<button class="mode-btn ${k === scene.mode ? 'cur' : ''}" data-mode="${k}">${m.name}</button>`).join('');
+    $('#start-mode-desc').textContent = MODES[scene.mode].sub;
     const html = Object.entries(WEAPONS).filter(([type, d]) => scene.tree.unlocked(type) && !d.support).map(([type, d]) =>
       `<button class="swap-ic ${type === cur ? 'cur' : ''}" data-start="${type}" style="color:${hex(d.color)}" title="${d.name}">${ICONS[type]}</button>`).join('');
     $('#start-weapons').innerHTML = html;

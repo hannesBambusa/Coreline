@@ -8,6 +8,7 @@ import { isMounted } from './purchases.js';
 import { $, $$, fmt, fmtTime, hex, swapHtml, restartAnimation, bindBuy, attrQuote } from './dom.js';
 import { queueItem } from './rows.js';
 import { QUEUE_LEN } from './panel.js';
+import { wreckValue } from '../scene/pickups.js';
 
 const BANNER_MS = 1800;
 const COMBO_BANNER_MS = 1600;
@@ -20,6 +21,7 @@ const ABILITY_COLOR = 0x9be7ff;
 let els = null;
 const topEls = () => els || (els = {
   scrap: $('#scrap'), fragments: $('#fragments'), time: $('#time'), tier: $('#tier'), kills: $('#kills'), diff: $('#hud-diff'), dps: $('#hud-dps'), dtaken: $('#hud-dtaken'), regen: $('#hud-regen'),
+  field: $('#stat-field'), fieldScrap: $('#field-scrap'),
   threat: $('#threat-timer'), threatFill: $('#threat-timer .tt-fill'), threatNum: $('#threat-timer .tt-num'),
   boss: $('#boss-bar'), bossFill: $('#boss-fill'), bossName: $('#boss-name'), bossSub: $('#boss-sub'),
 });
@@ -37,6 +39,10 @@ export function renderTopBar(scene) {
   e.regen.textContent = `${fmt(rg)}/s`; e.regen.style.color = t.regenDelay > 0 ? 'var(--red)' : t.calm ? '#fff' : '';
   e.dps.textContent = fmt(scene.recentDps(HUD_DPS_WINDOW)); e.dtaken.textContent = fmt(scene.recentTaken(HUD_DPS_WINDOW));
   const d = scene.diff; if (e.diff.textContent !== d.name) { e.diff.textContent = d.name; e.diff.style.color = d.color; }
+  // drift mode: how much scrap is still lying around waiting to be swallowed
+  const drift = scene.mode === 'drift';
+  e.field.hidden = !drift;
+  if (drift) e.fieldScrap.textContent = fmt(wreckValue(scene));
 }
 
 
@@ -131,7 +137,7 @@ export function renderUltimates(ui) {
   if (scene.starting || scene.gameOver) { bar.hidden = true; return; }
   bar.hidden = false;
   const list = qs.bar();
-  const key = list.map(u => u.id + ':' + qs.matches(u.id)).join(',');
+  const key = list.map(u => u.id + ':' + u.key + ':' + qs.matches(u.id)).join(',');
   if (bar.dataset.key !== key) {
     bar.dataset.key = key;
     bar.innerHTML = list.map(u => {

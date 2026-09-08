@@ -160,6 +160,19 @@ export const RECIPES = {
       burst({ dur: 0.3, peak: 0.03, f0: 3000, f1: 1500, type: 'bandpass', q: 3, wet: 0.5 }),
     ],
   },
+  blink: {
+    always: [burst({ dur: 0.18, peak: 0.1, f0: 6000, f1: 400, type: 'bandpass', q: 2, pan: PAN, wet: 0.5 })],
+    sample: { key: 'laserRetro', peak: 0.1, pan: PAN, rate: R(0.5, 0.7), wet: 0.5, dur: 0.3 },
+    synth: [
+      tone({ type: 'sine', f0: 200, f1: 1500, dur: 0.12, peak: 0.09, pan: PAN, wet: 0.4 }),
+      tone({ type: 'sine', f0: 1500, f1: 300, dur: 0.18, peak: 0.06, pan: PAN, wet: 0.6, delay: 0.1 }),
+    ],
+  },
+  pickup: {
+    gate: 40,
+    sample: { key: 'computer', peak: 0.06, pan: PAN, rate: R(2.0, 2.6), wet: 0.2, dur: 0.12 },
+    synth: [tone({ type: 'sine', f0: R(900, 1200), f1: R(1600, 2000), dur: 0.07, peak: 0.05, pan: PAN, wet: 0.3 })],
+  },
   buy: {
     sample: { key: 'computer', peak: 0.12, rate: 1.6, wet: 0.3, dur: 0.25 },
     synth: [

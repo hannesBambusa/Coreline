@@ -1,5 +1,6 @@
 import { ABILITIES, COLORS } from './config.js';
 import { ICONS } from './icons.js';
+import { magnetAll } from './scene/pickups.js';
 
 export class Abilities {
   constructor(scene) {
@@ -42,6 +43,7 @@ export class Abilities {
       sc.fx.ripple(t.x, t.y, COLORS.cyan, t.shieldR, def.radius);
       sc.fx.flash(t.x, t.y, COLORS.cyan, 3);
       sc.fx.shake(0.006, 200);
+      if (sc.mode === 'drift') magnetAll(sc, def.radius);   // the pulse also drags in the wrecks it reaches
     } else if (k === 'nuke') {
       const R = t.maxRange();
       const dmg = def.dmg * Math.pow(1.12, sc.tier - 1);

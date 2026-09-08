@@ -1,6 +1,7 @@
 import { OFFLINE, SIEGE, SLOT_COSTS, SPAWN } from './config.js';
 import { CHOICES, applyChoice, baseLevelMods } from './choices.js';
 import { sumWindow } from './utils.js';
+import { spawnWreck } from './scene/pickups.js';
 
 const AUTOSAVE_EVERY = 1;   // seconds between local autosaves (a few KB of JSON; the cloud push is debounced separately in config/cloud.js)
 
@@ -22,6 +23,7 @@ export class SaveSystem {
       lastTick: Date.now(),
       savedAt: Date.now(),   // cloud sync: the newer of local and cloud wins
       run: {
+        mode: s.mode || 'tower',
         difficulty: s.state.difficulty || 'normal', scrap: s.state.scrap, time: s.state.time, tier: s.state.tier, kills: s.state.kills, swapsUsed: s.state.swapsUsed || 0,
         hull: t.hull, shield: t.shield, upgrades: { ...t.upgrades },
         slots: t.slots.map(w => w ? { type: w.type, level: w.level, focus: w.focus || false } : null),
@@ -37,6 +39,7 @@ export class SaveSystem {
           e: m.elite || undefined, g: m.gen || undefined, tier: m.tierAtSpawn,
         })),
         drones: t.weapons.filter(w => Array.isArray(w.drones)).map(w => ({ slot: w.slot, d: w.drones.map(d => ({ alive: d.alive, hp: Math.round(d.hp), r: +d.respawnT.toFixed(1) })) })),
+        wrecks: s.mode === 'drift' ? s.wrecks.slice(0, 200).map(w => ({ x: Math.round(w.x - t.x), y: Math.round(w.y - t.y), a: w.amount, s: +w.size.toFixed(2) })) : undefined,
         scrapRate: this.scrapRate(),
         gameOver: s.gameOver,
       },
@@ -103,6 +106,7 @@ export class SaveSystem {
     s.tree.restore(data.profile?.tree);
     if (data.settings) { Object.assign(s.settings, data.settings); s.sfx.setEnabled(s.settings.sound !== false); }
     if (r.gameOver) return { offline: null };
+    if (r.mode && r.mode !== s.mode) { s.mode = r.mode; s.applyMode(); }
     s.state.difficulty = r.difficulty || 'normal'; s.state.scrap = r.scrap || 0; s.state.time = r.time || 0; s.state.tier = r.tier || 1; s.state.kills = r.kills || 0; s.state.swapsUsed = r.swapsUsed || 0;
     if (r.upgrades) { Object.assign(t.upgrades, r.upgrades); t.recompute(); }
     t.hull = Number.isFinite(r.hull) ? Math.min(t.hullMax, r.hull) : t.hullMax;
@@ -129,6 +133,10 @@ export class SaveSystem {
           if (m.sh !== undefined && mob.shieldMax) mob.shield = Math.min(mob.shieldMax, m.sh);
         } catch (e) { /* unknown type from an older save */ }
       }
+    }
+    if (s.mode === 'drift' && Array.isArray(r.wrecks)) for (const w of r.wrecks) {
+      spawnWreck(s, t.x + w.x, t.y + w.y, w.a);
+      if (w.s) s.wrecks[s.wrecks.length - 1].size = w.s;
     }
     if (Array.isArray(r.drones)) for (const b of r.drones) {
       const w = t.slots[b.slot]; if (!w || !Array.isArray(w.drones)) continue;

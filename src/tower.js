@@ -1,6 +1,8 @@
-import { TOWER, TOWER_UPGRADES, COLORS, SLOT_COSTS, SLOT_GATES, CORE_TIERS, LEVELS } from './config.js';
+import { TOWER, TOWER_UPGRADES, COLORS, SLOT_COSTS, SLOT_GATES, CORE_TIERS, LEVELS, DRIFT } from './config.js';
 import { createWeapon } from './weapons.js';
 import { drawTower } from './tower/draw.js';
+import { drawBlob } from './tower/blob.js';
+import { tickBlink } from './drift/blink.js';
 
 export class Tower {
   constructor(scene, x, y) {
@@ -15,6 +17,9 @@ export class Tower {
     this.sinceHit = 99;
     this.spin = 0;
     this.calm = false;
+    this.vx = 0; this.vy = 0;      // drift mode: current swim velocity
+    this.absorbT = 0;             // drift mode: countdown of the bulge after swallowing a wreck
+    this.blinkCd = 0;             // drift mode: seconds until the blink is ready again
     this.regenPhase = 0;
     this.recompute();
     this.hull = this.hullMax;
@@ -47,10 +52,11 @@ export class Tower {
   recompute() {
     const m = this.scene.tree ? this.scene.tree.mods : { hull: 1, shieldMax: 1, shieldRegen: 1 };
     const lm = this.lm;
-    this.hullMax = Math.round((TOWER.hullMax + this.upgradeBonus('hull')) * m.hull);
+    const drift = this.scene.mode === 'drift';
+    this.hullMax = Math.round((TOWER.hullMax + this.upgradeBonus('hull')) * m.hull * (drift ? DRIFT.hullMul : 1));
     const shieldBase = TOWER.shieldMax + this.upgradeBonus('shieldMax');
     this.shieldMax = Math.round(shieldBase * m.shieldMax * (lm ? lm.shieldMax : 1));
-    this.shieldRegen = (TOWER.shieldRegen + this.upgradeBonus('shieldRegen')) * m.shieldRegen;
+    this.shieldRegen = (TOWER.shieldRegen + this.upgradeBonus('shieldRegen')) * m.shieldRegen * (drift ? DRIFT.shieldRegenMul : 1);
     if (this.hull > this.hullMax) this.hull = this.hullMax;
     if (this.shield > this.shieldMax) this.shield = this.shieldMax;
   }
@@ -91,6 +97,25 @@ export class Tower {
 
   setPosition(x, y) { this.x = x; this.y = y; this.glow.setPosition(x, y); }
 
+  /** drift mode: wrecks are pulled from inside the weapon range circle, nothing further out */
+  get magnetR() { return Math.max(DRIFT.magnetMin, this.maxRange()); }
+
+  /**
+   * Drift mode movement. The held direction becomes a target velocity the blob eases into, so it
+   * feels like swimming rather than sliding on ice. Nothing held: it coasts to a stop.
+   */
+  swim(dt) {
+    const dir = this.scene.driftInput.vector();
+    const top = DRIFT.speed;
+    const tx = dir.x * top, ty = dir.y * top;
+    const rate = dir.x || dir.y ? DRIFT.accel : DRIFT.drag;
+    const f = 1 - Math.exp(-rate * dt);
+    this.vx += (tx - this.vx) * f; this.vy += (ty - this.vy) * f;
+    if (Math.abs(this.vx) < 0.5) this.vx = 0;
+    if (Math.abs(this.vy) < 0.5) this.vy = 0;
+    if (this.vx || this.vy) this.setPosition(this.x + this.vx * dt, this.y + this.vy * dt);
+  }
+
   /** `source` is the ship type that dealt it, for the damage-taken stats */
   takeDamage(amount, hx, hy, quiet = false, source = 'other') {
     if (!Number.isFinite(amount) || amount <= 0) return;
@@ -125,6 +150,8 @@ export class Tower {
 
   update(dt, mobs) {
     this.spin += dt;
+    this.absorbT = Math.max(0, this.absorbT - dt);
+    if (this.scene.mode === 'drift') { this.swim(dt); tickBlink(this, dt); }
     this.hitTimer = Math.max(0, this.hitTimer - dt);
     this.regenDelay = Math.max(0, this.regenDelay - dt);
     this.sinceHit += dt;
@@ -139,5 +166,5 @@ export class Tower {
     this.draw(dt);
   }
 
-  draw(dt = 0) { drawTower(this, this.gfx, dt); }
+  draw(dt = 0) { (this.scene.mode === 'drift' ? drawBlob : drawTower)(this, this.gfx, dt); }
 }

@@ -4,4 +4,5 @@ export const COLORS = {
   magenta: 0xff3df2, red: 0xff4d6d, orange: 0xff9f43,
   gold: 0xffd166, violet: 0xc084fc, green: 0x5eead4,
   ice: 0x9be7ff, sky: 0x60a5fa,
+  lime: 0xb8ff3d,   // salvage only: no ship, weapon or effect uses this hue, so wrecks never read as a threat
 };

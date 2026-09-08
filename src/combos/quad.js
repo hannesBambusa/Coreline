@@ -21,6 +21,9 @@ const BOSS = ['boss', 'warlord', 'titan', 'warden'];
 export const MIN_MATCH = 3;   // three of an ultimate's four weapons mounted is enough to show it, at full power
 const BAR_MAX = 4;
 const KEYS = ['Q', 'W', 'E', 'R'];
+// drift mode steers with WASD, so the ultimate on W moves to F
+const KEYS_DRIFT = ['Q', 'E', 'R', 'F'];
+export const ultKeys = (scene) => scene.mode === 'drift' ? KEYS_DRIFT : KEYS;
 export const power = n => n >= MIN_MATCH ? 1 : 0.2 + 0.2 * n;   // full power from MIN_MATCH weapons up
 
 export const ULTS = {
@@ -113,7 +116,7 @@ export class Quads {
     // the bar always fills: full-power ultimates first, then the best partial matches at reduced power, then Overdrive (only four full groups push it off)
     const list = full.length >= BAR_MAX ? full.slice(0, BAR_MAX) : scored.slice(0, BAR_MAX - 1);
     if (list.length < BAR_MAX) list.push('overdrive');
-    return list.map((id, i) => ({ id, key: KEYS[i], ...ULTS[id] }));
+    return list.map((id, i) => ({ id, key: ultKeys(this.scene)[i], ...ULTS[id] }));
   }
   need(id) { const u = ULTS[id]; return u.need + u.needPerTier * Math.max(0, Math.floor(this.scene.tier) - 1); }
   add(id, amount) { if (!this.ult || this.ult.id !== id) this.charge[id] = Math.min(1, (this.charge[id] || 0) + amount / this.need(id)); }

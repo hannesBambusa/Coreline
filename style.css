@@ -558,6 +558,12 @@ body.starting #btn-pause { opacity: 0.25; pointer-events: none; }
 #acc-google:hover { background: #eee; }
 #acc-google .g { display: inline-block; width: 18px; height: 18px; line-height: 18px; border-radius: 50%; background: linear-gradient(135deg, #4285f4, #34a853, #fbbc05, #ea4335); color: #fff; font-weight: 800; text-align: center; margin-right: 6px; }
 #acc-msg { font-size: 12px; margin-top: 6px; min-height: 14px; }
+/* game mode picker on the start card */
+#start-mode { display: flex; gap: 10px; justify-content: center; }
+.mode-btn { font-family: var(--font-head); font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 8px 18px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); color: var(--muted); cursor: pointer; transition: transform 0.1s, color 0.1s, border-color 0.1s; }
+.mode-btn:hover { color: var(--text); transform: scale(1.05); }
+.mode-btn.cur { color: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 12px rgba(79,242,255,0.35); }
+
 .diff-btn { font-family: var(--font-head); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; padding: 6px 10px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); cursor: pointer; opacity: 0.6; transition: transform 0.1s, opacity 0.1s, border-color 0.1s; }
 .diff-btn:hover { opacity: 1; transform: scale(1.06); }
 .diff-btn.cur { opacity: 1; border-color: currentColor; box-shadow: 0 0 10px currentColor; }

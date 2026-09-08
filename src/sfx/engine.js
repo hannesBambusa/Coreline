@@ -42,6 +42,7 @@ export class SFXEngine {
     window.addEventListener('pointerdown', resume);
     window.addEventListener('keydown', resume);
     this.width = DEFAULT_WIDTH;
+    this.originX = 0;      // world x of the left screen edge; non-zero once the camera scrolls (drift mode)
   }
 
   ensure() {
@@ -128,7 +129,7 @@ export class SFXEngine {
 
   get ok() { return this.enabled && this.ctx && this.ctx.state === 'running'; }
   now() { return this.ctx.currentTime; }
-  panFor(x) { if (x === undefined) return 0; return Math.max(-1, Math.min(1, (x - this.width / 2) / (this.width / 2))) * PAN_WIDTH; }
+  panFor(x) { if (x === undefined) return 0; return Math.max(-1, Math.min(1, (x - this.originX - this.width / 2) / (this.width / 2))) * PAN_WIDTH; }
 
   // output chain for one voice: gain envelope -> optional panner -> master (+ reverb send)
   out(node, t0, attack, peak, dur, pan = 0, wet = 0.3) {

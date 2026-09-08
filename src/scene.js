@@ -1,7 +1,7 @@
 // The one Phaser scene. Owns the run state and the game objects; the mechanics live in ./scene/*.js as
 // plain functions that take the scene first. The thin methods at the bottom keep the old `scene.x()` API
 // for everything else in the game (mobs, weapons, ui, saves).
-import { COLORS, PRESTIGE, ABILITIES, DIFFICULTY, WEAPONS, FRESH_START_FRAGMENTS, SPAWN } from './config.js';
+import { COLORS, PRESTIGE, ABILITIES, DIFFICULTY, WEAPONS, FRESH_START_FRAGMENTS, SPAWN, MODES, DRIFT } from './config.js';
 import { Tree } from './tree.js';
 import { Abilities } from './abilities.js';
 import { SFX } from './sfx.js';
@@ -24,6 +24,9 @@ import { pushBucket } from './utils.js';
 import * as choices from './scene/choices.js';
 import * as damage from './scene/damage.js';
 import * as projectiles from './scene/projectiles.js';
+import * as pickups from './scene/pickups.js';
+import { DriftInput } from './drift/input.js';
+import { drawBlinkFx } from './drift/blink.js';
 
 const BG_COLOR = 0x05060d;
 const MAX_DT = 0.05;                  // clamp frame time so tab switches do not teleport everything
@@ -31,6 +34,7 @@ const MUSIC_TICK = 0.5;               // seconds between music state updates
 const HULL_LOW_FRAC = 0.3;
 const STAR_DRIFT = 4;
 const STAR_WRAP = 1.4;                // stars live over 1.4x the viewport width (see textures.js)
+const STAR_MARGIN = 40;               // px past the edge before a star wraps to the other side (drift mode)
 
 export class GameScene extends Phaser.Scene {
   constructor() { super('game'); }
@@ -40,6 +44,7 @@ export class GameScene extends Phaser.Scene {
 
     // run + meta state
     this.state = { scrap: 0, fragments: 0, time: 0, tier: 1, kills: 0, bestTime: 0, swapsUsed: 0, difficulty: 'normal' };
+    this.mode = 'tower';               // 'tower' or 'drift' (MODES); picked on the start screen
     this.profile = { totalKills: 0, prestige: 0, bestTiers: {}, seenIntro: false };   // bestTiers: difficulty -> highest threat reached
     this.settings = { shake: true, sound: true, volume: 0.7, music: true, transmissions: true };
     this.speed = 1;            // game speed multiplier, set from the top bar (SPEEDS in ui/hud.js)
@@ -53,6 +58,7 @@ export class GameScene extends Phaser.Scene {
     // entities
     this.mobs = []; this.bullets = []; this.enemyBullets = [];
     this.missiles = []; this.wellShots = []; this.wells = [];
+    this.wrecks = []; this.wreckPicks = 0;   // drift mode scrap on the field
 
     // flow flags
     this.gameOver = false;
@@ -76,6 +82,7 @@ export class GameScene extends Phaser.Scene {
     this.combos = new Combos(this);
     this.autobuy = new AutoBuy(this);
     this.tx = new Transmissions(this);
+    this.driftInput = new DriftInput(this);
     this.music = new Music(this.sfx);
 
     // display
@@ -88,9 +95,13 @@ export class GameScene extends Phaser.Scene {
     this.tower = new Tower(this, width / 2, height / 2);
     this.tree.recompute();
     this.mobGfx = this.add.graphics().setDepth(5);
+    this.wreckGfx = this.add.graphics().setDepth(3);
+    this.blinkGfx = this.add.graphics().setDepth(6);   // the blink animation draws over the blob
     this.screenFlash = this.add.rectangle(0, 0, width, height, 0xffffff).setOrigin(0).setDepth(20).setAlpha(0);
     this.bulletGfx = this.add.graphics().setDepth(4);
     this.perf.apply('full');   // bloom lives here; the effects level can change it later
+    this.bg.setScrollFactor(0); this.screenFlash.setScrollFactor(0);
+    this.applyMode();
     this.scale.on('resize', this.onResize, this);
 
     // ui + saves last: they read everything above
@@ -115,7 +126,43 @@ export class GameScene extends Phaser.Scene {
     this.bg.setSize(gs.width, gs.height);
     this.sfx.width = gs.width;
     this.screenFlash.setSize(gs.width, gs.height);
-    this.tower.setPosition(gs.width / 2, gs.height / 2);
+    // in drift mode the blob keeps its place in the world and the camera re-centres on it instead
+    if (this.mode === 'drift') this.followBlob();
+    else this.tower.setPosition(gs.width / 2, gs.height / 2);
+  }
+
+  // ---------- game mode ----------
+  /** Mode can only change on the start screen; it sticks for the next runs. */
+  setMode(key) {
+    if (!this.starting || !MODES[key] || key === this.mode) return;
+    this.mode = key;
+    this.applyMode();
+    this.ui.renderStartWeapons();
+    this.ui.render();
+    this.saves.save();
+  }
+
+  /** Camera, background parallax and the blob's own numbers all follow the mode. */
+  applyMode() {
+    const drift = this.mode === 'drift';
+    const cam = this.cameras.main;
+    pickups.clearWrecks(this);
+    this.blinkFx = null;
+    if (this.blinkGfx) this.blinkGfx.clear();
+    document.body.classList.toggle('drift', drift);
+    if (this.nebula) this.nebula.setScrollFactor(drift ? 0 : 1);
+    for (const s of this.starLayers) s.setScrollFactor(drift ? 0.25 + s.layer * 0.28 : 1);
+    if (drift) this.followBlob();
+    else { cam.setScroll(0, 0); this.tower.setPosition(this.scale.width / 2, this.scale.height / 2); this.tower.vx = 0; this.tower.vy = 0; }
+    this.sfx.originX = drift ? cam.scrollX : 0;
+    this.tower.recompute();
+  }
+
+  /** keep the blob in the middle of the screen and the stereo image centred on it */
+  followBlob() {
+    const cam = this.cameras.main;
+    cam.setScroll(this.tower.x - this.scale.width / 2, this.tower.y - this.scale.height / 2);
+    this.sfx.originX = cam.scrollX;
   }
 
   spawnRadius() { return Math.hypot(this.scale.width, this.scale.height) / 2 + 60; }
@@ -132,7 +179,9 @@ export class GameScene extends Phaser.Scene {
   /** called by the spawner on every new threat level */
   noteTier(tierInt) {
     const bt = this.profile.bestTiers || (this.profile.bestTiers = {}), k = this.state.difficulty;
-    if (tierInt > (bt[k] || 0)) bt[k] = tierInt;
+    if (tierInt > (bt[k] || 0)) bt[k] = tierInt;   // difficulty unlocks are shared between the modes
+    const mk = this.mode + ':' + k;
+    if (tierInt > (bt[mk] || 0)) bt[mk] = tierInt;
   }
   /** difficulty can only change on the start screen; the pick sticks for the next runs */
   setDifficulty(key) {
@@ -176,7 +225,11 @@ export class GameScene extends Phaser.Scene {
     if (this.ui.activeTab === 'skills') this.ui.showTab('tower');
     document.getElementById('start').hidden = true;
     this.setPaused(false);
-    this.ui.banner('Hold the line', false);
+    if (this.mode === 'drift') {
+      this.ui.banner('Break loose', false);
+      this.fx.floater(this.tower.x, this.tower.y - 110, 'WASD or hold the mouse to swim · swallow the wrecks', '#4ff2ff', 15);
+      this.fx.floater(this.tower.x, this.tower.y - 85, 'double-tap a direction to blink', '#9be7ff', 14);
+    } else this.ui.banner('Hold the line', false);
     this.tx.say('start', 0);
   }
 
@@ -234,11 +287,19 @@ export class GameScene extends Phaser.Scene {
     this.quads.onKill(m, src);
     const lm = this.levelMods;
     const scrap = Math.round(m.scrap * this.tree.mods.scrap * lm.scrap * this.diff.scrap * (m.type === 'swarm' ? lm.swarmScrap : 1) * (lm.typeScrap[m.type] || 1) * (m.elite ? lm.eliteScrap : 1));
-    this.state.scrap += scrap;
-    pushBucket(this.scrapLog, Math.floor(this.state.time), scrap);
-    for (const w of this.tower.weapons) if (w.onScrap) w.onScrap(scrap);
     this.sfx.play(m.type === 'boss' ? 'bigExplode' : 'explode', m.r, m.x);
-    this.fx.floater(m.x, m.y + 6, `+${scrap}`, '#ffd166', 13);
+    // drift mode: the scrap stays on the field as a wreck until the blob swallows it
+    if (this.mode === 'drift') pickups.spawnWreck(this, m.x, m.y, scrap, m.def.scrap * (m.elite ? DRIFT.wreckEliteMul : 1));
+    else this.creditScrap(scrap, m.x, m.y + 6);
+  }
+
+  /** Bank scrap and let everything that watches it (weapons, the rate log, the floater) see it. */
+  creditScrap(amount, x, y, floater = true) {
+    if (amount <= 0) return;
+    this.state.scrap += amount;
+    pushBucket(this.scrapLog, Math.floor(this.state.time), amount);
+    for (const w of this.tower.weapons) if (w.onScrap) w.onScrap(amount);
+    if (floater) this.fx.floater(x, y, `+${amount}`, this.mode === 'drift' ? '#b8ff3d' : '#ffd166', 13);   // lime is the salvage colour
   }
 
   onTowerDestroyed() {
@@ -263,6 +324,9 @@ export class GameScene extends Phaser.Scene {
     for (const e of [this.fx.burst, this.fx.sparks, this.fx.trail]) e.killAll();
     this.tower.gfx.destroy(); this.tower.glow.destroy();
     this.tower = new Tower(this, this.scale.width / 2, this.scale.height / 2);
+    pickups.clearWrecks(this);
+    this.blinkFx = null; this.blinkGfx.clear();
+    this.applyMode();   // re-centre the camera on the new core and re-apply the mode's numbers
     this.state.scrap = SPAWN.startScrap + this.tree.mods.startScrap; this.state.time = 0; this.state.tier = 1; this.state.kills = 0; this.state.swapsUsed = 0;
     this.showStart();
     this.spawnTimer = 2; this.scrapLog = []; this.dmgLog = []; this.ultDmgLog = []; this.takenLog = []; this.warlord = null; this.siege = null; this.siegesCleared = 0; this.surgeType = null; this.ui.removeEffect('surge');
@@ -307,6 +371,7 @@ export class GameScene extends Phaser.Scene {
     this.quads.update(dt, this.mobs);
     this.afterglow = Math.max(0, (this.afterglow || 0) - dt);
     this.tower.update(dt, this.mobs);
+    if (this.mode === 'drift') { this.followBlob(); pickups.updateWrecks(this, dt); }
     for (const m of this.mobs) if (!m.dead) { if (m.marked > 0) m.marked -= dt; if (m.stun > 0) m.stunned(dt); else m.update(dt); }
     this.updateHums();
     this.mobs = this.mobs.filter(m => !m.dead);
@@ -316,14 +381,33 @@ export class GameScene extends Phaser.Scene {
     this.updateSpawning(dt);
     this.drawBullets();
     this.drawMobBars();
+    if (this.mode === 'drift') { pickups.drawWrecks(this, this.wreckGfx); drawBlinkFx(this, this.blinkGfx, dt); }
     this.fx.update(dt);
   }
 
-  /** Slow parallax drift; stars wrap once they leave the left edge. */
+  /**
+   * Tower mode: a slow leftward drift, wrapping once a star leaves the left edge.
+   * Drift mode: the camera moves instead, so stars wrap around the view on both axes and their
+   * per-layer scroll factor (set in applyMode) does the parallax.
+   */
   driftStars(dt) {
+    if (this.mode === 'drift') return this.wrapStars();
     const w = this.scale.width * STAR_WRAP;
     for (const s of this.starLayers) {
       s.x -= (0.5 + s.layer * 0.8) * dt * STAR_DRIFT; if (s.x < -10) s.x += w;
+    }
+  }
+
+  /** Keep every star inside the view by teleporting it a whole screen at a time. */
+  wrapStars() {
+    const cam = this.cameras.main, w = this.scale.width + STAR_MARGIN * 2, h = this.scale.height + STAR_MARGIN * 2;
+    for (const s of this.starLayers) {
+      const f = s.scrollFactorX;
+      let sx = s.x - cam.scrollX * f, sy = s.y - cam.scrollY * f;
+      while (sx < -STAR_MARGIN) { s.x += w; sx += w; }
+      while (sx > w - STAR_MARGIN) { s.x -= w; sx -= w; }
+      while (sy < -STAR_MARGIN) { s.y += h; sy += h; }
+      while (sy > h - STAR_MARGIN) { s.y -= h; sy -= h; }
     }
   }
 

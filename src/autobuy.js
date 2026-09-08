@@ -1,3 +1,6 @@
+import { ICONS } from './icons.js';
+import { ABILITIES, COLORS } from './config.js';
+
 // Auto-buy: spends scrap on run upgrades following a priority list the player can reorder.
 // Each tick it walks the enabled items in order and buys the first one it can afford.
 // "Weapon levels" upgrades the cheapest mounted weapon so all guns grow together.
@@ -29,21 +32,21 @@ export class AutoBuy {
     switch (key) {
       case 'weapons': {
         let best = null;
-        t.slots.forEach((w, i) => { if (w && !w.atCap && (!best || w.upgradeCost() < best.cost)) best = { cost: w.upgradeCost(), id: 'weapon:' + i, label: w.def.name + ' Lv ' + (w.level + 1) }; });
+        t.slots.forEach((w, i) => { if (w && !w.atCap && (!best || w.upgradeCost() < best.cost)) best = { cost: w.upgradeCost(), id: 'weapon:' + i, label: w.def.name + ' Lv ' + (w.level + 1), icon: ICONS[w.type], color: w.def.color }; });
         return best;
       }
       case 'shieldRegen': case 'shieldMax': case 'hull':
-        return t.atCap(key) ? null : { cost: t.upgradeCost(key), id: 'tower:' + key, label: AUTO_ITEMS[key].name };
+        return t.atCap(key) ? null : { cost: t.upgradeCost(key), id: 'tower:' + key, label: `${AUTO_ITEMS[key].name} Lv ${t.upgrades[key] + 1}`, icon: ICONS[key], color: COLORS.cyan };
       case 'slot': {
         const c = t.nextSlotCost();
-        return c === null ? null : { cost: c, id: 'slot', label: 'Hardpoint ' + (t.slots.length + 1) };
+        return c === null ? null : { cost: c, id: 'slot', label: 'Hardpoint ' + (t.slots.length + 1), icon: ICONS.slot, color: COLORS.cyan };
       }
       case 'abilities': {
         const a = s.abilities;
         let best = null;
         for (const k in a.state) if (!a.state[k].unlocked) {
           const cost = s.abilityCost(k);
-          if (!best || cost < best.cost) best = { cost, id: 'ability:' + k, label: k };
+          if (!best || cost < best.cost) best = { cost, id: 'ability:' + k, label: ABILITIES[k].name, icon: ICONS['ab_' + k], color: COLORS.ice };
         }
         return best;
       }
@@ -63,7 +66,7 @@ export class AutoBuy {
       if (!o || o.cost > budget) continue;
       s.ui.buy(o.id, true);
       this.lastBuy = { label: o.label, at: s.state.time };
-      s.fx.floater(s.tower.x, s.tower.y + 70, 'auto: ' + o.label, '#7d8bb0', 12);
+      s.ui.toast({ title: 'Auto-buy', label: o.label, cost: o.cost, icon: o.icon, color: o.color });
       return;
     }
   }

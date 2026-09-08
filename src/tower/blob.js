@@ -49,6 +49,7 @@ export function drawBlob(tower, g, dt) {
   const sx = 1 + k, sy = 1 / (1 + k);
 
   drawRangeAura(tower, g, pulse);
+  drawMagnetAura(tower, g, t);
   drawShield(tower, g, dt, pulse);
   drawBlinkRing(tower, g, pulse);
 
@@ -109,5 +110,21 @@ function drawBlinkRing(tower, g, pulse) {
     const a = -Math.PI / 2 + i * TAU / 4 + tower.spin * 0.5;
     g.lineStyle(2, COLORS.white, 0.5 + pulse * 0.4);
     g.lineBetween(x + Math.cos(a) * (R - 4), y + Math.sin(a) * (R - 4), x + Math.cos(a) * (R + 4), y + Math.sin(a) * (R + 4));
+  }
+}
+
+/**
+ * The pickup ring: everything lime is salvage, so the aura that swallows wrecks is lime too and
+ * dashed, which keeps it apart from the solid cyan weapon-range circle it sits inside.
+ */
+function drawMagnetAura(tower, g, t) {
+  const { x, y } = tower, R = tower.magnetR;
+  const n = DRIFT.magnetTicks, span = TAU / n * 0.55, spin = t * 0.12;
+  g.fillStyle(COLORS.lime, 0.018);
+  g.fillCircle(x, y, R);
+  g.lineStyle(1.5, COLORS.lime, 0.28);
+  for (let i = 0; i < n; i++) {
+    const a0 = spin + i * TAU / n;
+    g.beginPath(); g.arc(x, y, R, a0, a0 + span, false); g.strokePath();
   }
 }

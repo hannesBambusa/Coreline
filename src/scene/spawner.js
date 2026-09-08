@@ -1,5 +1,5 @@
 // Continuous spawning: threat tier, surge levels, mob type rolls, and the level-start events.
-import { SPAWN, MOBS, ELITES, SLOT_GATES, SIEGE } from '../config.js';
+import { SPAWN, MOBS, ELITES, SLOT_GATES, SIEGE, DRIFT } from '../config.js';
 import { createMob } from '../mobs.js';
 import { baseLevelMods } from '../choices.js';
 import { TAU, pick, rnd } from '../utils.js';
@@ -27,7 +27,8 @@ export function surgeMultiplier(scene) {
 export function spawnRate(scene) {
   const base = SPAWN.baseRate + SPAWN.ratePerSecond * scene.state.time;
   // difficulty multiplies after the cap so it still bites late in a run
-  return Math.min(SPAWN.maxRate * 2, base * surgeMultiplier(scene) * scene.levelMods.spawn) * scene.diff.spawn;
+  const drift = scene.mode === 'drift' ? DRIFT.spawnMul : 1;
+  return Math.min(SPAWN.maxRate * 2, base * surgeMultiplier(scene) * scene.levelMods.spawn) * scene.diff.spawn * drift;
 }
 
 /** Pick a surge type among everything unlocked by this tier, excluding bosses and static hazards. */
@@ -164,6 +165,25 @@ export function updateSpawning(scene, dt) {
   scene.state.bestTime = Math.max(scene.state.bestTime, scene.state.time);
   const tierInt = Math.floor(scene.tier);
   if (tierInt !== scene.state.tier) onNewTier(scene, tierInt);
+  if (scene.mode === 'drift') recycleStragglers(scene);
   scene.spawnTimer -= dt;
-  if (scene.spawnTimer <= 0 && scene.mobs.length < SPAWN.softCap * scene.diff.cap * scene.levelMods.cap) spawnBurst(scene);
+  const cap = SPAWN.softCap * scene.diff.cap * scene.levelMods.cap * (scene.mode === 'drift' ? DRIFT.capMul : 1);
+  if (scene.spawnTimer <= 0 && scene.mobs.length < cap) spawnBurst(scene);
+}
+
+/**
+ * Drift mode: a ship the blob has swum away from is doing nothing but holding a slot under the cap.
+ * Anything that far out is put back on the spawn ring, keeping the pressure with the player.
+ * Static hazards (mines, pylons) are left where they were placed.
+ */
+function recycleStragglers(scene) {
+  const t = scene.tower, far = scene.spawnRadius() * DRIFT.recycleAt, far2 = far * far;
+  for (const m of scene.mobs) {
+    if (m.dead || !m.def.speed) continue;
+    const dx = m.x - t.x, dy = m.y - t.y;
+    if (dx * dx + dy * dy < far2) continue;
+    const a = Math.random() * TAU, R = scene.spawnRadius() + Math.random() * SPAWN_RADIUS_JITTER;
+    m.x = t.x + Math.cos(a) * R; m.y = t.y + Math.sin(a) * R;
+    m.vx = 0; m.vy = 0; m.dodgeVx = 0; m.dodgeVy = 0;
+  }
 }

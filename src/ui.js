@@ -246,6 +246,7 @@ export class UI {
   syncMute() { syncMute(this); }
 
   banner(text, boss = false) { hud.banner(this, text, boss); }
+  toast(o) { fx.toast(this, o); }
   comboBanner(c) { hud.comboBanner(this, c); }
 
   addEffect(id, def) { fx.addEffect(this, id, def); }

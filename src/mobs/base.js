@@ -1,4 +1,4 @@
-import { MOBS, SPAWN, hpGrowthAt } from '../config.js';
+import { MOBS, SPAWN, DRIFT, hpGrowthAt } from '../config.js';
 import { TAU, distXY, angleTo, randomSign } from '../utils.js';
 import { createMob } from './index.js';
 import { makeElite, eliteTick, drawElite, spawnSplit } from './elite.js';
@@ -182,7 +182,7 @@ export class Mob {
   // ---- movement / per-frame ----
 
   move(dt, ax, ay) {
-    const k = this.slow * this.speedMul * (this.scene.levelMods ? this.scene.levelMods.mobSpeed : 1) * this.scene.diff.speed;
+    const k = this.slow * this.speedMul * (this.scene.levelMods ? this.scene.levelMods.mobSpeed : 1) * this.scene.diff.speed * (this.scene.mode === 'drift' ? DRIFT.mobSpeedMul : 1);
     this.vx = ax * k + this.dodgeVx; this.vy = ay * k + this.dodgeVy;
     this.slow = 1;
     this.dodgeVx *= Math.pow(DRIFT_DECAY, dt); this.dodgeVy *= Math.pow(DRIFT_DECAY, dt);

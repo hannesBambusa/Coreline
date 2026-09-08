@@ -11,18 +11,27 @@ export const DRIFT = {
   drag: 9,                // slowdown rate when nothing is held
   pointerDead: 26,        // pointer closer than this to the blob: stand still
   hullMul: 1,             // hull multiplier in this mode (dodging is the defence, so no free tanking)
+
+  // A moving target is a much easier one: nearly every ship is slower than the blob, so drift mode
+  // sends more of them, lets more live at once, speeds them up a little, and pulls the ones that
+  // have been left far behind back onto the spawn ring instead of letting them trail uselessly.
+  spawnMul: 2,            // spawn rate multiplier
+  capMul: 1.8,            // multiplier on the alive-ship cap
+  mobSpeedMul: 1.12,      // every ship moves this much faster
+  recycleAt: 2.2,         // ships further out than this many spawn radii come back around the blob
   shieldRegenMul: 0.8,    // shields come back slower: you are meant to move, not to soak
 
-  // blink: double-tap a movement key to jump that way
+  // blink: T or right-click jumps the way the blob is heading
   blinkMinDist: 150,      // floor for the jump; normally it is the range of the longest weapon mounted
-  blinkWindow: 0.3,       // seconds between the two taps
   blinkCooldown: 10,      // seconds before it can be used again
   blinkGhosts: 6,         // afterimages drawn along the jump
   blinkFxDur: 0.5,        // seconds the departure and arrival animation runs
   blinkRingR: 18,         // cooldown ring, px outside the shield ring
+  magnetTicks: 32,        // dashes in the pickup aura ring
 
   // wrecks
-  magnetMin: 160,         // floor for the magnet; normally it is the weapon range circle around the blob
+  magnetFrac: 0.45,       // pickup radius as a share of the weapon range: a tighter ring inside it
+  magnetMin: 160,         // floor for the pickup radius, whatever the guns reach
   // A pulled wreck steers its whole velocity at the blob rather than just accelerating toward it:
   // plain acceleration builds up sideways speed and makes the wreck orbit instead of arriving.
   magnetStart: 230,       // px/s the moment the pull takes hold

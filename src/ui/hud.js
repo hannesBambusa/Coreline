@@ -9,6 +9,9 @@ import { $, $$, fmt, fmtTime, hex, swapHtml, restartAnimation, bindBuy, attrQuot
 import { queueItem } from './rows.js';
 import { QUEUE_LEN } from './panel.js';
 import { wreckValue } from '../scene/pickups.js';
+import { ICONS_BLINK } from '../scene/icons.js';
+import { blinkCharge } from '../drift/blink.js';
+import { DRIFT } from '../config.js';
 
 const BANNER_MS = 1800;
 const COMBO_BANNER_MS = 1600;
@@ -123,12 +126,21 @@ const abilityButton = (k, d) =>
   `<span class="key">${d.key}</span><span class="cdmask"></span><span class="ab-icon">${ICONS['ab_' + k]}</span>` +
   `<span class="ab-name">${d.name}</span><span class="ab-cost">${d.cost} scrap</span></button>`;
 
+// Drift mode only: the blink sits on the same bar as the abilities, with the same cooldown mask.
+const blinkButton = () =>
+  `<button class="ab blink" data-blink title="Blink&#10;Jump the way you are heading&#10;T or right-click" hidden>` +
+  `<span class="key">T</span><span class="cdmask"></span><span class="ab-icon">${ICONS_BLINK}</span>` +
+  `<span class="ab-name">Blink</span><span class="ab-cost">ready</span></button>`;
+
 /** Builds the buttons once and caches the parts renderAbilities touches every tick. */
 export function buildAbilityBar(ui) {
   const bar = $('#abilities');
-  bar.innerHTML = Object.entries(ABILITIES).map(([k, d]) => abilityButton(k, d)).join('');
-  ui.abilityButtons = [...$$('.ab', bar)].map(el => ({ key: el.dataset.ab, el, mask: el.querySelector('.cdmask'), cost: el.querySelector('.ab-cost') }));
+  bar.innerHTML = Object.entries(ABILITIES).map(([k, d]) => abilityButton(k, d)).join('') + blinkButton();
+  ui.abilityButtons = [...$$('.ab[data-ab]', bar)].map(el => ({ key: el.dataset.ab, el, mask: el.querySelector('.cdmask'), cost: el.querySelector('.ab-cost') }));
   for (const b of ui.abilityButtons) b.el.onclick = () => ui.abilityClick(b.key);
+  const el = $('.ab.blink', bar);
+  ui.blinkButton = { el, mask: el.querySelector('.cdmask'), cost: el.querySelector('.ab-cost') };
+  el.onclick = () => ui.scene.driftInput.tryBlink();
 }
 
 /** Ultimate buttons above the ability bar: the loadout's matched ultimates plus the universal ones, keys Q W E R. */
@@ -169,6 +181,20 @@ export function renderAbilities(ui) {
     b.mask.style.height = (st.unlocked ? st.cd / d.cd * 100 : 0) + '%';
     b.cost.textContent = st.unlocked ? (st.cd > 0 ? Math.ceil(st.cd) + 's' : 'ready') : d.cost + ' scrap';
   }
+  renderBlinkButton(ui);
+}
+
+/** The blink button: only in drift mode, cooldown drains the same mask the abilities use. */
+function renderBlinkButton(ui) {
+  const b = ui.blinkButton, scene = ui.scene;
+  if (!b) return;
+  const drift = scene.mode === 'drift';
+  b.el.hidden = !drift;
+  if (!drift) return;
+  const cd = scene.tower.blinkCd || 0, ready = blinkCharge(scene.tower) >= 1;
+  b.el.classList.toggle('ready', ready);
+  b.mask.style.height = (cd / DRIFT.blinkCooldown * 100) + '%';
+  b.cost.textContent = ready ? 'ready' : Math.ceil(cd) + 's';
 }
 
 /** Click on an ability button: unlock it if affordable, otherwise use it. */

@@ -1,4 +1,4 @@
-// Drift mode blink: double-tap a movement key and the blob folds space in that direction.
+// Drift mode blink: T or right-click, and the blob folds space the way it is heading.
 // Costs nothing but time - one shared cooldown, shown on a ring around the blob and in the proc list.
 import { COLORS, DRIFT } from '../config.js';
 import { ICONS_BLINK } from '../scene/icons.js';
@@ -50,7 +50,7 @@ export function blink(scene, dir) {
   scene.sfx.play('blink', null, t.x);
   scene.ui.addEffect('blink', {
     name: 'Blink', icon: ICONS_BLINK, color: COLORS.ice, dur: DRIFT.blinkCooldown,
-    sub: 'recharging', tip: 'Blink\nDouble-tap a movement key to jump.\nReady again when this runs out.',
+    sub: 'recharging', tip: 'Blink\nT or right-click to jump the way you are heading.\nReady again when this runs out.',
   });
   return true;
 }

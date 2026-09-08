@@ -248,3 +248,27 @@ export function showGameOver(scene) {
   $('#overlay-stats').innerHTML = statsHtml(scene, true);
   $('#overlay').hidden = false;
 }
+
+// ---- Toasts ---------------------------------------------------------------
+// Small cards in the top centre. Auto-buy uses them to say what it just bought.
+
+const TOAST_MS = 2800;
+const TOAST_FADE_MS = 200;
+const TOAST_MAX = 3;
+
+export function toast(ui, { title, label, cost, icon, color }) {
+  const box = $('#toasts');
+  while (box.children.length >= TOAST_MAX) box.firstChild.remove();
+  const el = document.createElement('div');
+  el.className = 'toast';
+  if (color) el.style.setProperty('--tc', typeof color === 'number' ? hex(color) : color);
+  el.innerHTML = `<span class="ic">${icon || ''}</span>` +
+    `<span><span class="tt">${title}</span><br><span class="tl">${label}</span></span>` +
+    (cost === undefined ? '' : `<span class="tc">-${fmt(cost)}</span>`);
+  box.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), TOAST_FADE_MS);
+  }, TOAST_MS);
+}

@@ -97,8 +97,8 @@ export class Tower {
 
   setPosition(x, y) { this.x = x; this.y = y; this.glow.setPosition(x, y); }
 
-  /** drift mode: wrecks are pulled from inside the weapon range circle, nothing further out */
-  get magnetR() { return Math.max(DRIFT.magnetMin, this.maxRange()); }
+  /** drift mode: wrecks are pulled from inside this ring, a tighter one than the weapon range */
+  get magnetR() { return Math.max(DRIFT.magnetMin, this.maxRange() * DRIFT.magnetFrac); }
 
   /**
    * Drift mode movement. The held direction becomes a target velocity the blob eases into, so it

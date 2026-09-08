@@ -10,6 +10,7 @@
   --violet: #c084fc;
   --red: #ff4d6d;
   --green: #5eead4;
+  --ice: #9be7ff;      /* blink and other cold effects; matches COLORS.ice */
   --text: #dbe7ff;
   --muted: #7d8bb0;
   --font-head: 'Orbitron', system-ui, sans-serif;
@@ -303,6 +304,25 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 #banner.show { opacity: 1; transform: translateY(0); }
 #banner.boss { color: var(--red); text-shadow: 0 0 20px rgba(255,77,109,0.9); }
 
+/* Top-centre toast stack: auto-buy tells you what it just spent your scrap on. */
+#toasts {
+  position: fixed; top: 68px; left: 0; right: 0; z-index: 8; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.toast {
+  --tc: var(--cyan);
+  display: flex; align-items: center; gap: 10px; padding: 7px 14px 7px 10px; border-radius: 9px;
+  background: rgba(10,14,28,0.92); border: 1px solid var(--tc); box-shadow: 0 0 16px rgba(0,0,0,0.6);
+  opacity: 0; transform: translateY(-8px); transition: opacity 0.18s, transform 0.18s;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.out { opacity: 0; transform: translateY(-6px); }
+.toast .ic { display: flex; width: 20px; height: 20px; color: var(--tc); }
+.toast .ic svg { width: 20px; height: 20px; }
+.toast .tt { font-family: var(--font-head); font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.toast .tl { font-size: 13px; color: var(--text); }
+.toast .tc { font-size: 13px; color: var(--gold); }
+
 #combo-banner {
   --cb: var(--cyan);
   position: fixed; left: 50%; top: 150px; transform: translateX(-50%) scale(0.6); opacity: 0;
@@ -443,6 +463,11 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 .ab.ready:hover { box-shadow: 0 0 22px rgba(79,242,255,0.6); }
 .ab.ready .ab-cost { color: var(--cyan); }
 .ab.active { border-color: #ff9f43; box-shadow: 0 0 22px rgba(255,159,67,0.6); color: #ff9f43; }
+.ab.blink[hidden] { display: none; }
+.ab.blink { color: var(--ice); }
+.ab.blink .ab-cost { color: var(--muted); }
+.ab.blink.ready { border-color: var(--ice); box-shadow: 0 0 14px rgba(155,231,255,0.4); }
+.ab.blink.ready .ab-cost { color: var(--ice); }
 
 /* ==========================================================================
    Auto-buy queue and loadout card (right side, panel collapsed)
@@ -503,7 +528,6 @@ button.mode.on { color: #60a5fa; border-color: #60a5fa; background: rgba(96,165,
 .lo-c .plus { color: var(--muted); font-size: 11px; margin: 0 1px; }
 .lo-c.cd { opacity: 0.4; }
 .lo-c.active { border-color: var(--gold); box-shadow: 0 0 10px rgba(255,209,102,0.5); }
-  background: rgba(10,14,28,0.85); border: 1px solid color-mix(in srgb, var(--qc) 45%, transparent); transition: transform 0.1s, box-shadow 0.15s; }
 
 /* ==========================================================================
    Tooltip

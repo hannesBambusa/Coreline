@@ -228,7 +228,7 @@ export class GameScene extends Phaser.Scene {
     if (this.mode === 'drift') {
       this.ui.banner('Break loose', false);
       this.fx.floater(this.tower.x, this.tower.y - 110, 'WASD or hold the mouse to swim · swallow the wrecks', '#4ff2ff', 15);
-      this.fx.floater(this.tower.x, this.tower.y - 85, 'double-tap a direction to blink', '#9be7ff', 14);
+      this.fx.floater(this.tower.x, this.tower.y - 85, 'T or right-click to blink', '#9be7ff', 14);
     } else this.ui.banner('Hold the line', false);
     this.tx.say('start', 0);
   }

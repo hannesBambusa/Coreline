@@ -1,10 +1,12 @@
-// Movement input for drift mode: WASD / arrow keys, or hold the pointer to swim toward it.
+// Movement input for drift mode: WASD / arrow keys, or hold the left button to swim toward the pointer.
+// Blink is T on the keyboard and right-click on the mouse; both jump the way the blob is heading.
 // The keyboard state is global (window), the pointer state comes from Phaser so clicks on the
 // sidebar and the HUD never move the blob.
 import { DRIFT } from '../config.js';
 import { blink, canBlink } from './blink.js';
 
 const TEXT_INPUTS = ['INPUT', 'TEXTAREA'];
+const BLINK_KEY = 'KeyT';
 const KEY_AXIS = {
   KeyW: [0, -1], ArrowUp: [0, -1],
   KeyS: [0, 1], ArrowDown: [0, 1],
@@ -17,36 +19,47 @@ export class DriftInput {
     this.scene = scene;
     this.held = new Set();
     this.pointerDown = false;
-    this.lastTap = {};      // key code -> time of its last fresh press, for the double-tap blink
+    this.lastDir = { x: 0, y: -1 };   // where a blink goes when the blob has never moved
 
     window.addEventListener('keydown', (e) => {
-      if (!KEY_AXIS[e.code] || TEXT_INPUTS.includes(document.activeElement.tagName)) return;
-      if (scene.mode !== 'drift') return;
+      if (scene.mode !== 'drift' || TEXT_INPUTS.includes(document.activeElement.tagName)) return;
+      if (e.code === BLINK_KEY) { if (!e.repeat) this.tryBlink(); return; }
+      if (!KEY_AXIS[e.code]) return;
       e.preventDefault();   // arrow keys would scroll the page
-      const fresh = !e.repeat && !this.held.has(e.code);
       this.held.add(e.code);
-      if (fresh) this.onTap(e.code);
     });
     window.addEventListener('keyup', (e) => this.held.delete(e.code));
     window.addEventListener('blur', () => { this.held.clear(); this.pointerDown = false; });
-    scene.input.on('pointerdown', () => { this.pointerDown = true; });
+
+    scene.input.mouse.disableContextMenu();   // right-click is the blink, not a browser menu
+    scene.input.on('pointerdown', (p) => {
+      if (p.rightButtonDown()) { this.tryBlink(); return; }
+      this.pointerDown = true;
+    });
     scene.input.on('pointerup', () => { this.pointerDown = false; });
     scene.input.on('pointerupoutside', () => { this.pointerDown = false; });
   }
 
-  /**
-   * A second press of the same key inside DRIFT.blinkWindow is a blink. The direction is the whole
-   * held vector, so holding W and double-tapping D jumps diagonally.
-   */
-  onTap(code) {
-    const now = performance.now() / 1000, prev = this.lastTap[code] || -99;
-    this.lastTap[code] = now;
-    if (now - prev > DRIFT.blinkWindow) return;
-    this.lastTap[code] = -99;                       // a third tap has to start a fresh pair
+  /** T or right-click: jump the way the blob is heading, or say no when it is still cooling. */
+  tryBlink() {
     const scene = this.scene;
-    if (!canBlink(scene)) { if (scene.mode === 'drift' && (scene.tower.blinkCd || 0) > 0) scene.sfx.play('deny'); return; }
-    const v = this.vector(), a = KEY_AXIS[code];
-    blink(scene, v.x || v.y ? v : { x: a[0], y: a[1] });
+    if (!canBlink(scene)) {
+      if (scene.mode === 'drift' && !scene.paused && (scene.tower.blinkCd || 0) > 0) scene.sfx.play('deny');
+      return;
+    }
+    blink(scene, this.heading());
+  }
+
+  /**
+   * Which way the blob counts as heading: what is being steered right now, else the way it is still
+   * drifting, else the last direction it moved in.
+   */
+  heading() {
+    const v = this.vector();
+    if (v.x || v.y) return v;
+    const t = this.scene.tower, sp = Math.hypot(t.vx || 0, t.vy || 0);
+    if (sp > 1) return { x: t.vx / sp, y: t.vy / sp };
+    return this.lastDir;
   }
 
   /** true while the player is steering, so the blob can stretch and trail */
@@ -59,11 +72,16 @@ export class DriftInput {
   vector() {
     let x = 0, y = 0;
     for (const code of this.held) { const a = KEY_AXIS[code]; x += a[0]; y += a[1]; }
-    if (x || y) { const len = Math.hypot(x, y); return { x: x / len, y: y / len }; }
+    if (x || y) { const len = Math.hypot(x, y); return this.remember(x / len, y / len); }
     if (!this.pointerDown) return { x: 0, y: 0 };
     const p = this.scene.input.activePointer, t = this.scene.tower;
     const dx = p.worldX - t.x, dy = p.worldY - t.y, d = Math.hypot(dx, dy);
     if (d < DRIFT.pointerDead) return { x: 0, y: 0 };
-    return { x: dx / d, y: dy / d };
+    return this.remember(dx / d, dy / d);
+  }
+
+  remember(x, y) {
+    this.lastDir = { x, y };
+    return this.lastDir;
   }
 }
